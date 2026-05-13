@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="delivery_map.DeliveryMap">
+        <div id="delivery_map" style="height:500px; width:100%;
+        border:1px solid #ccc;">
+        </div>
+    </t>
+</templates>

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="payment_form">
+        <div name="o_braintree_form"
+             class="o_braintree_form mt-3 mb-3"
+             style="max-width: 450px;"
+             t-att-data-braintree-client-token="provider_sudo._braintree_get_inline_form_values()">
+            <!-- BRAINTREE UI CONTAINER -->
+            <div id="dropin-container"></div>
+        </div>
+    </template>
+</odoo>

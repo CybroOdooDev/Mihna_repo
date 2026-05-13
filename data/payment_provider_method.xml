@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="payment_method_braintree" model="payment.method">
+        <field name="name">Braintree</field>
+        <field name="code">braintree</field>
+        <field name="active">True</field>
+        <field name="image" type="base64" file="payment/static/img/card.png"/>
+    </record>
+
+    <record id="account_payment_method_braintree" model="account.payment.method">
+        <field name="name">Braintree</field>
+        <field name="code">braintree</field>
+        <field name="payment_type">inbound</field>
+    </record>
+</odoo>

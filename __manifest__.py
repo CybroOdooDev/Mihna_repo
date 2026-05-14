@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Delivery Map',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.0.1',
     'category': 'Inventory',
     'summary': 'Delivery map in stock picking',
     'author': 'Mihna',

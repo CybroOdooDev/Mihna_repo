@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Root Menu -->
+    <menuitem id="subscription_menu_root" 
+              name="Subscriptions" 
+              web_icon="subscription_management,static/description/icon.png"
+              sequence="45"/>
+
+    <!-- Top Level Menus -->
+    <menuitem id="subscription_menu_subscriptions" 
+              name="Subscriptions" 
+              parent="subscription_menu_root" 
+              sequence="10"/>
+
+    <menuitem id="subscription_menu_products" 
+              name="Products" 
+              parent="subscription_menu_root" 
+              sequence="20"/>
+
+    <menuitem id="subscription_menu_reporting" 
+              name="Reporting" 
+              parent="subscription_menu_root" 
+              sequence="30"/>
+
+    <menuitem id="subscription_menu_configuration" 
+              name="Configuration" 
+              parent="subscription_menu_root" 
+              sequence="100"/>
+              
+    <!-- Standard Actions -->
+    <record id="action_subscription_customers" model="ir.actions.act_window">
+        <field name="name">Customers</field>
+        <field name="res_model">res.partner</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="domain">[('customer_rank', '>', 0)]</field>
+    </record>
+
+    <record id="action_subscription_products" model="ir.actions.act_window">
+        <field name="name">Subscription Products</field>
+        <field name="res_model">product.template</field>
+        <field name="view_mode">kanban,list,form</field>
+        <field name="domain">[('recurring_ok', '=', True)]</field>
+        <field name="context">{'default_recurring_ok': True}</field>
+    </record>
+
+    <!-- Reporting Actions -->
+    <record id="action_subscription_reporting_subscriptions" model="ir.actions.act_window">
+        <field name="name">Subscriptions Analysis</field>
+        <field name="res_model">subscription.analysis.report</field>
+        <field name="view_mode">graph,pivot</field>
+        <field name="context">{'search_default_in_progress_or_paused': 1, 'search_default_recurring': 1, 'graph_measure': 'monthly_recurring'}</field>
+    </record>
+
+    <record id="action_subscription_reporting_retention" model="ir.actions.act_window">
+        <field name="name">Retention Analysis</field>
+        <field name="res_model">subscription.retention.analysis</field>
+        <field name="view_mode">pivot,graph</field>
+        <field name="domain">[]</field>
+        <field name="context">{'pivot_measures': ['count', 'retention_rate']}</field>
+    </record>
+
+    <record id="action_subscription_reporting_mrr_breakdown" model="ir.actions.act_window">
+        <field name="name">MRR Breakdown</field>
+        <field name="res_model">subscription.mrr.breakdown</field>
+        <field name="view_mode">graph,pivot</field>
+        <field name="context">{'graph_measure': 'mrr_change', 'graph_group_by': 'event_date', 'graph_stacked': True, 'graph_mode': 'bar'}</field>
+    </record>
+
+    <record id="action_subscription_reporting_mrr_timeline" model="ir.actions.act_window">
+        <field name="name">MRR Analysis</field>
+        <field name="res_model">subscription.mrr.analysis</field>
+        <field name="view_mode">graph,pivot</field>
+        <field name="context">{'graph_measure': 'mrr_change', 'graph_group_by': 'date', 'graph_mode': 'line'}</field>
+    </record>
+
+    <!-- Sub Menus under Subscriptions -->
+    <menuitem id="menu_subscription_customers" 
+              name="Customers" 
+              parent="subscription_menu_subscriptions" 
+              action="action_subscription_customers" 
+              sequence="14"/>
+
+    <!-- Sub Menus under Products -->
+    <menuitem id="menu_subscription_product_template" 
+              name="Products" 
+              parent="subscription_menu_products" 
+              action="action_subscription_products" 
+              sequence="10"/>
+
+    <menuitem id="menu_subscription_pricelists" 
+              name="Pricelists" 
+              parent="subscription_menu_products" 
+              action="product.product_pricelist_action2" 
+              sequence="20"/>
+
+    <!-- Sub Menus under Reporting -->
+    <menuitem id="menu_subscription_reporting_subs" 
+              name="Subscriptions" 
+              parent="subscription_menu_reporting" 
+              action="action_subscription_reporting_subscriptions" 
+              sequence="10"/>
+
+    <menuitem id="menu_subscription_reporting_retention" 
+              name="Retention" 
+              parent="subscription_menu_reporting" 
+              action="action_subscription_reporting_retention" 
+              sequence="20"/>
+
+    <menuitem id="menu_subscription_reporting_mrr_breakdown" 
+              name="MRR Breakdown" 
+              parent="subscription_menu_reporting" 
+              action="action_subscription_reporting_mrr_breakdown" 
+              sequence="30"/>
+
+    <menuitem id="menu_subscription_reporting_mrr_timeline" 
+              name="MRR Timeline" 
+              parent="subscription_menu_reporting" 
+              action="action_subscription_reporting_mrr_timeline" 
+              sequence="40"/>
+
+    <!-- Sub Menus under Configuration -->
+    <menuitem id="menu_subscription_settings" 
+              name="Settings" 
+              parent="subscription_menu_configuration" 
+              action="sale.action_sale_config_settings" 
+              sequence="5"/>
+
+    <menuitem id="menu_subscription_quotation_templates" 
+              name="Quotation Templates" 
+              parent="subscription_menu_configuration" 
+              action="sale_management.sale_order_template_action" 
+              sequence="15"/>
+
+    <menuitem id="menu_subscription_activity_types" 
+              name="Activity Types" 
+              parent="subscription_menu_configuration" 
+              action="mail.mail_activity_type_action" 
+              sequence="30"/>
+
+    <menuitem id="menu_subscription_activity_plans" 
+              name="Activity Plans" 
+              parent="subscription_menu_configuration" 
+              action="mail.mail_activity_plan_action" 
+              sequence="40"/>
+
+    <!-- Direct Frontend Link Action -->
+    <record id="action_subscription_go_to_website" model="ir.actions.act_url">
+        <field name="name">Go to Website</field>
+        <field name="url">/subscriptions</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_subscription_go_to_website" 
+              name="Go to Website" 
+              parent="subscription_menu_root" 
+              action="action_subscription_go_to_website" 
+              sequence="90"/>
+</odoo>

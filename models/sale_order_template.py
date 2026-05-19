@@ -1,8 +1,14 @@
+<<<<<<< HEAD
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api
 
 class SaleOrderTemplate(models.Model):
     """Inherited Sale Order Template model to embed subscription recurring billing structures into default quote presets."""
+=======
+from odoo import models, fields, api
+
+class SaleOrderTemplate(models.Model):
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
     _inherit = 'sale.order.template'
 
     plan_id = fields.Many2one('subscription.plan', string='Recurring Plan', help="Select the default recurring billing plan for orders created with this template.")

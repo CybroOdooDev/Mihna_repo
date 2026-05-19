@@ -235,6 +235,7 @@
                     </div>
                 </div>
 
+<<<<<<< HEAD
                 <!-- Upcoming Invoice Preview Engine (Step 5) -->
                 <div t-if="preview" class="card border-0 shadow-sm mb-4" style="border-radius: 12px; overflow: hidden; border: 2px dashed #17a2b8 !important;">
                     <div class="card-body p-4 bg-light border-bottom d-flex justify-content-between align-items-center" style="background-color: rgba(23, 162, 184, 0.05) !important;">
@@ -286,6 +287,8 @@
                     </div>
                 </div>
 
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
                 <!-- Tabs for Linked Records (Invoices & Deliveries) -->
                 <div class="row">
                     <div class="col-lg-6 mb-4">
@@ -659,7 +662,11 @@
                         <!-- Pricing Grid -->
                         <div class="row align-items-stretch justify-content-center">
                             <t t-foreach="plans" t-as="plan">
+<<<<<<< HEAD
                                 <t t-set="is_popular" t-value="plan.is_popular"/>
+=======
+                                <t t-set="is_popular" t-value="'pro' in plan.name.lower() or 'gold' in plan.name.lower() or 'premium' in plan.name.lower() or plan_index == 1"/>
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
                                 
                                 <div class="col-lg-4 col-md-6 mb-4 d-flex animate-fade-in-up" t-attf-style="animation-delay: #{plan_index * 150}ms;">
                                     <div t-attf-class="card pricing-card-modern w-100 border-0 #{'pricing-card-featured' if is_popular else ''}">
@@ -711,7 +718,11 @@
                                         </div>
                                         
                                         <!-- Action CTA -->
+<<<<<<< HEAD
                                         <a t-attf-href="/subscriptions/checkout/#{plan.id}" t-attf-class="btn cta-btn-modern #{'cta-btn-featured' if is_popular else ''} mt-auto">Subscribe Now</a>
+=======
+                                        <a t-attf-href="/subscriptions/subscribe/#{plan.id}" t-attf-class="btn cta-btn-modern #{'cta-btn-featured' if is_popular else ''} mt-auto">Subscribe Now</a>
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
                                     </div>
                                 </div>
                             </t>
@@ -729,6 +740,7 @@
         </t>
     </template>
 
+<<<<<<< HEAD
     <!-- Checkout Page Template -->
     <template id="subscription_checkout_page" name="Subscription Checkout">
         <t t-call="website.layout">
@@ -1212,6 +1224,8 @@
         </t>
     </template>
 
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
     <!-- Success Screen -->
     <template id="subscription_success_page" name="Subscription Success">
         <t t-call="website.layout">

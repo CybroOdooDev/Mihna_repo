@@ -7,12 +7,15 @@
               sequence="45"/>
 
     <!-- Top Level Menus -->
+<<<<<<< HEAD
     <menuitem id="subscription_menu_dashboard" 
               name="Dashboard" 
               parent="subscription_menu_root" 
               action="action_subscription_dashboard"
               sequence="5"/>
 
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
     <menuitem id="subscription_menu_subscriptions" 
               name="Subscriptions" 
               parent="subscription_menu_root" 
@@ -149,6 +152,7 @@
               action="mail.mail_activity_plan_action" 
               sequence="40"/>
 
+<<<<<<< HEAD
     <menuitem id="menu_subscription_coupons" 
               name="Coupons" 
               parent="subscription_menu_configuration" 
@@ -160,4 +164,18 @@
               parent="subscription_menu_configuration" 
               action="payment.action_payment_provider" 
               sequence="60"/>
+=======
+    <!-- Direct Frontend Link Action -->
+    <record id="action_subscription_go_to_website" model="ir.actions.act_url">
+        <field name="name">Go to Website</field>
+        <field name="url">/subscriptions</field>
+        <field name="target">new</field>
+    </record>
+
+    <menuitem id="menu_subscription_go_to_website" 
+              name="Go to Website" 
+              parent="subscription_menu_root" 
+              action="action_subscription_go_to_website" 
+              sequence="90"/>
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
 </odoo>

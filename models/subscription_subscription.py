@@ -1,11 +1,17 @@
+<<<<<<< HEAD
 # -*- coding: utf-8 -*-
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
 from odoo import models, fields, api, _
 from datetime import timedelta, date
 from dateutil.relativedelta import relativedelta
 from odoo.exceptions import UserError
 
 class Subscription(models.Model):
+<<<<<<< HEAD
     """Subscription model representing the active recurring client contract, managing billing dates and fulfillment metrics."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
     _name = 'subscription.subscription'
     _description = 'Subscription'
     _inherit = ['mail.thread', 'mail.activity.mixin']
@@ -14,10 +20,13 @@ class Subscription(models.Model):
     name = fields.Char(string='Reference', required=True, copy=False, readonly=True, default=lambda self: _('New'))
     
     partner_id = fields.Many2one('res.partner', string='Customer', required=True, tracking=True)
+<<<<<<< HEAD
     partner_invoice_id = fields.Many2one('res.partner', string='Invoice Address', related='sale_order_id.partner_invoice_id', readonly=True)
     partner_shipping_id = fields.Many2one('res.partner', string='Delivery Address', related='sale_order_id.partner_shipping_id', readonly=True)
     payment_term_id = fields.Many2one('account.payment.term', string='Payment Terms', related='sale_order_id.payment_term_id', readonly=True)
     referrer_id = fields.Many2one('res.partner', string='Referrer', related='sale_order_id.referrer_id', readonly=True)
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
     plan_id = fields.Many2one('subscription.plan', string='Subscription Plan', required=True, tracking=True)
     
     company_id = fields.Many2one('res.company', string='Company', required=True, default=lambda self: self.env.company)
@@ -26,14 +35,22 @@ class Subscription(models.Model):
     state = fields.Selection([
         ('draft', 'Draft'),
         ('in_trial', 'In Trial'),
+<<<<<<< HEAD
         ('in_progress', 'In Progress'),
+=======
+        ('in_progress', 'Active'),
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         ('paused', 'Paused'),
         ('in_dunning', 'In Dunning'),
         ('suspended', 'Suspended'),
         ('expired', 'Expired'),
         ('renewed', 'Renewed'),
         ('cancelled', 'Cancelled'),
+<<<<<<< HEAD
         ('closed', 'Closed / Churned')
+=======
+        ('closed', 'Closed')
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
     ], string='Status', required=True, default='draft', tracking=True)
 
     start_date = fields.Date(string='Start Date', default=fields.Date.context_today, tracking=True)
@@ -57,6 +74,7 @@ class Subscription(models.Model):
     
     close_reason_id = fields.Many2one('subscription.close.reason', string='Close/Cancel Reason', tracking=True)
     mrr_total = fields.Monetary(string='MRR', compute='_compute_mrr_total', store=True, currency_field='currency_id')
+<<<<<<< HEAD
     
     # Coupons & Churn Prediction
     coupon_id = fields.Many2one('subscription.coupon', string='Applied Coupon', tracking=True)
@@ -83,6 +101,11 @@ class Subscription(models.Model):
     @api.depends('line_ids.price_subtotal', 'plan_id')
     def _compute_mrr_total(self):
         """Compute the total Monthly Recurring Revenue (MRR) for this contract."""
+=======
+
+    @api.depends('line_ids.price_subtotal', 'plan_id')
+    def _compute_mrr_total(self):
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         for sub in self:
             mrr_total = 0.0
             if sub.plan_id:
@@ -110,19 +133,28 @@ class Subscription(models.Model):
 
     @api.depends('invoice_ids')
     def _compute_invoice_count(self):
+<<<<<<< HEAD
         """Compute the total count of invoices generated for this subscription."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         for rec in self:
             rec.invoice_count = len(rec.invoice_ids)
 
     @api.depends('picking_ids')
     def _compute_picking_count(self):
+<<<<<<< HEAD
         """Compute the total count of physical deliveries generated for this subscription."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         for rec in self:
             rec.picking_count = len(rec.picking_ids)
 
     @api.model_create_multi
     def create(self, vals_list):
+<<<<<<< HEAD
         """Override create to automatically generate unique subscription contract serial references (SUB prefix)."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         for vals in vals_list:
             if vals.get('name', _('New')) == _('New'):
                 vals['name'] = self.env['ir.sequence'].next_by_code('subscription.subscription') or _('New')
@@ -130,7 +162,10 @@ class Subscription(models.Model):
 
     @api.onchange('sale_order_id')
     def _onchange_sale_order_id(self):
+<<<<<<< HEAD
         """Pre-populate fields automatically when linked sale_order_id changes."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         if self.sale_order_id:
             if self.sale_order_id.partner_id:
                 self.partner_id = self.sale_order_id.partner_id.id
@@ -139,7 +174,10 @@ class Subscription(models.Model):
 
     @api.onchange('plan_id')
     def _onchange_plan_id(self):
+<<<<<<< HEAD
         """Pre-populate contract line items automatically when plan_id is changed."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         if self.plan_id:
             new_lines = []
             if self.plan_id.product_id:
@@ -160,6 +198,7 @@ class Subscription(models.Model):
             if new_lines:
                 self.line_ids = [(5, 0, 0)] + new_lines
 
+<<<<<<< HEAD
     @api.onchange('grandfathered')
     def _onchange_grandfathered(self):
         """Immediately update subscription lines to latest master prices in the UI if grandfathering is deactivated."""
@@ -176,6 +215,9 @@ class Subscription(models.Model):
 
     def action_start_trial(self):
         """Start the free trial phase, computing starting and trial end dates."""
+=======
+    def action_start_trial(self):
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         for rec in self:
             if rec.state == 'draft' and rec.plan_id.trial_period_days > 0:
                 rec.state = 'in_trial'
@@ -185,7 +227,10 @@ class Subscription(models.Model):
                 rec.message_post(body=_("Trial started. End of trial: %s") % rec.trial_end_date)
     
     def action_activate(self):
+<<<<<<< HEAD
         """Activate the subscription contract and set state to in progress."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         for rec in self:
             if rec.state in ['draft', 'in_trial', 'paused']:
                 rec.state = 'in_progress'
@@ -196,7 +241,10 @@ class Subscription(models.Model):
                 rec.message_post(body=_("Subscription activated! Next renewal date set to: %s") % rec.next_invoice_date)
 
     def action_pause(self):
+<<<<<<< HEAD
         """Pause the subscription contract, preserving dates while halting billing."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         for rec in self:
             if rec.state == 'in_progress':
                 rec.state = 'paused'
@@ -204,7 +252,10 @@ class Subscription(models.Model):
                 rec.message_post(body=_("Subscription paused on %s.") % rec.pause_date)
 
     def action_resume(self):
+<<<<<<< HEAD
         """Resume the paused subscription contract, setting next invoice date to resume date."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         for rec in self:
             if rec.state == 'paused':
                 rec.state = 'in_progress'
@@ -212,6 +263,7 @@ class Subscription(models.Model):
                 # If next invoice date was during pause, set it to today so billing catch up occurs
                 if rec.next_invoice_date and rec.next_invoice_date < fields.Date.context_today(self):
                     rec.next_invoice_date = fields.Date.context_today(self)
+<<<<<<< HEAD
                 rec.message_post(body=_("Subscription resumed! Next billing cycle: %s") % rec.next_invoice_date)
 
     def action_change_plan_wizard(self):
@@ -315,13 +367,21 @@ class Subscription(models.Model):
 
     def action_cancel(self):
         """Cancel and terminate the subscription contract."""
+=======
+                rec.message_post(body=_("Subscription resumed! Next renewal date: %s") % rec.next_invoice_date)
+
+    def action_cancel(self):
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         for rec in self:
             rec.state = 'cancelled'
             rec.cancel_date = fields.Date.context_today(self)
             rec.message_post(body=_("Subscription cancelled on %s.") % rec.cancel_date)
 
     def action_close(self):
+<<<<<<< HEAD
         """Trigger the backend close reason wizard to terminate the active subscription."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         self.ensure_one()
         return {
             'name': _('Close Subscription Reason'),
@@ -348,6 +408,7 @@ class Subscription(models.Model):
             'invoice_date': fields.Date.context_today(self),
             'currency_id': self.currency_id.id,
             'company_id': self.company_id.id,
+<<<<<<< HEAD
             'ref': f"Subscription Invoice - {self.name}",
             'invoice_line_ids': [],
         }
@@ -437,6 +498,21 @@ class Subscription(models.Model):
                         'tax_ids': [(6, 0, first_line.tax_ids.ids)],
                     })]
                 })
+=======
+            'invoice_line_ids': [],
+        }
+
+        for line in self.line_ids:
+            invoice_vals['invoice_line_ids'].append((0, 0, {
+                'product_id': line.product_id.id,
+                'name': line.name,
+                'quantity': line.quantity,
+                'price_unit': line.price_unit,
+                'discount': line.discount,
+            }))
+
+        invoice = self.env['account.move'].create(invoice_vals)
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         
         # Post the invoice automatically
         try:
@@ -447,6 +523,7 @@ class Subscription(models.Model):
 
         # Update Next Invoice Date
         self._increment_next_invoice_date()
+<<<<<<< HEAD
         return {
             'name': _('Customer Invoice'),
             'type': 'ir.actions.act_window',
@@ -490,6 +567,11 @@ class Subscription(models.Model):
 
     def _increment_next_invoice_date(self):
         """Increment the contract billing next_invoice_date forward based on the selected plan interval."""
+=======
+        return invoice
+
+    def _increment_next_invoice_date(self):
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         self.ensure_one()
         current_date = self.next_invoice_date or fields.Date.context_today(self)
         period = self.plan_id.billing_period
@@ -542,12 +624,21 @@ class Subscription(models.Model):
             'location_id': source_loc,
             'location_dest_id': dest_loc,
             'origin': self.name,
+<<<<<<< HEAD
             'move_ids': []
         }
 
         for line in physical_lines:
             picking_vals['move_ids'].append((0, 0, {
                 'description_picking': line.product_id.display_name,
+=======
+            'move_ids_without_package': []
+        }
+
+        for line in physical_lines:
+            picking_vals['move_ids_without_package'].append((0, 0, {
+                'name': line.product_id.display_name,
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
                 'product_id': line.product_id.id,
                 'product_uom_qty': line.quantity,
                 'product_uom': line.product_id.uom_id.id,
@@ -558,6 +649,7 @@ class Subscription(models.Model):
         picking = self.env['stock.picking'].create(picking_vals)
         picking.action_confirm()
         self.message_post(body=_("Auto-created Delivery Order %s.") % picking.name)
+<<<<<<< HEAD
         return {
             'name': _('Delivery Order'),
             'type': 'ir.actions.act_window',
@@ -566,6 +658,9 @@ class Subscription(models.Model):
             'res_id': picking.id,
             'target': 'current',
         }
+=======
+        return picking
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
 
     @api.model
     def _cron_recurring_billing(self):
@@ -589,7 +684,10 @@ class Subscription(models.Model):
 
     # Smart Buttons Actions
     def action_view_invoices(self):
+<<<<<<< HEAD
         """Return a window action showing all customer invoices generated for this subscription."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         self.ensure_one()
         action = self.env["ir.actions.actions"]._for_xml_id("account.action_move_out_invoice_type")
         action['domain'] = [('subscription_id', '=', self.id)]
@@ -597,7 +695,10 @@ class Subscription(models.Model):
         return action
 
     def action_view_pickings(self):
+<<<<<<< HEAD
         """Return a window action showing all stock pickings generated for this subscription."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         self.ensure_one()
         action = self.env["ir.actions.actions"]._for_xml_id("stock.action_picking_tree_all")
         action['domain'] = [('subscription_id', '=', self.id)]
@@ -605,7 +706,10 @@ class Subscription(models.Model):
         return action
 
     def action_view_sales_orders(self):
+<<<<<<< HEAD
         """Return a window action displaying the linked Sales Order for this subscription."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         self.ensure_one()
         action = self.env["ir.actions.actions"]._for_xml_id("sale.action_orders")
         action['domain'] = [('id', '=', self.sale_order_id.id)]
@@ -615,7 +719,10 @@ class Subscription(models.Model):
         return action
 
     def action_preview_subscription(self):
+<<<<<<< HEAD
         """Open a new browser tab redirecting to the customer portal preview of this subscription."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         self.ensure_one()
         return {
             'type': 'ir.actions.act_url',
@@ -623,6 +730,7 @@ class Subscription(models.Model):
             'target': 'new',
         }
 
+<<<<<<< HEAD
     def action_calculate_churn_risk(self):
         """AI churn risk heuristic analyzer."""
         for rec in self:
@@ -651,6 +759,9 @@ class Subscription(models.Model):
 
 class SubscriptionCloseWizard(models.TransientModel):
     """Subscription Close Wizard transient model assisting users in selecting a termination reason and churning contracts."""
+=======
+class SubscriptionCloseWizard(models.TransientModel):
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
     _name = 'subscription.close.wizard'
     _description = 'Subscription Close Wizard'
 
@@ -659,7 +770,10 @@ class SubscriptionCloseWizard(models.TransientModel):
     description = fields.Text(string='Details')
 
     def action_close_subscription(self):
+<<<<<<< HEAD
         """Process subscription termination within the close reason wizard, updating the parent contract."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         self.ensure_one()
         sub = self.subscription_id
         sub.write({
@@ -677,6 +791,7 @@ class SubscriptionCloseWizard(models.TransientModel):
         if sub.sale_order_id:
             sub.sale_order_id.message_post(body=_("Linked subscription was closed. Reason: %s") % self.close_reason_id.name)
         return {'type': 'ir.actions.act_window_close'}
+<<<<<<< HEAD
 
 
 class SubscriptionLineRamp(models.Model):
@@ -772,3 +887,5 @@ class SubscriptionChangePlanWizard(models.TransientModel):
 
         sub.message_post(body=msg)
         return {'type': 'ir.actions.act_window_close'}
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0

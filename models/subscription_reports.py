@@ -1,8 +1,14 @@
+<<<<<<< HEAD
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api
 
 class SubscriptionMrrBreakdown(models.Model):
     """MRR Breakdown Report model calculating and classifying recurring revenue fluctuations."""
+=======
+from odoo import models, fields, api
+
+class SubscriptionMrrBreakdown(models.Model):
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
     _name = 'subscription.mrr.breakdown'
     _description = 'MRR Breakdown Report'
     _order = 'event_date asc'
@@ -17,7 +23,10 @@ class SubscriptionMrrBreakdown(models.Model):
     mrr_change = fields.Float(string='MRR Change')
 
     def init(self):
+<<<<<<< HEAD
         """Initialize the MRR Breakdown table with enterprise mock dataset."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         super().init()
         # Insert mock data if table is empty
         self.env.cr.execute("SELECT COUNT(*) FROM subscription_mrr_breakdown")
@@ -37,7 +46,10 @@ class SubscriptionMrrBreakdown(models.Model):
 
 
 class SubscriptionMrrAnalysis(models.Model):
+<<<<<<< HEAD
     """MRR Analysis Report model tracking monthly recurring revenue progression."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
     _name = 'subscription.mrr.analysis'
     _description = 'MRR Analysis Report'
     _order = 'date asc'
@@ -46,7 +58,10 @@ class SubscriptionMrrAnalysis(models.Model):
     mrr_change = fields.Float(string='MRR Change')
 
     def init(self):
+<<<<<<< HEAD
         """Initialize the MRR Analysis table with enterprise mock dataset."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         super().init()
         # Insert mock data if table is empty
         self.env.cr.execute("SELECT COUNT(*) FROM subscription_mrr_analysis")
@@ -63,7 +78,10 @@ class SubscriptionMrrAnalysis(models.Model):
 
 
 class SubscriptionAnalysisReport(models.Model):
+<<<<<<< HEAD
     """Subscription Analysis Report model compiling total recurring contract valuations."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
     _name = 'subscription.analysis.report'
     _description = 'Subscriptions Analysis Report'
 
@@ -75,7 +93,10 @@ class SubscriptionAnalysisReport(models.Model):
     is_recurring = fields.Boolean(string='Recurring', default=True)
 
     def init(self):
+<<<<<<< HEAD
         """Initialize the Subscription Analysis table with enterprise mock dataset."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         super().init()
         # Insert mock data if table is empty
         self.env.cr.execute("SELECT COUNT(*) FROM subscription_analysis_report")
@@ -88,7 +109,10 @@ class SubscriptionAnalysisReport(models.Model):
 
 
 class SubscriptionRetentionAnalysis(models.Model):
+<<<<<<< HEAD
     """Subscription Retention Analysis model computing cohorts and customer churn rates."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
     _name = 'subscription.retention.analysis'
     _description = 'Retention Analysis'
     _order = 'first_contract_date asc'
@@ -99,7 +123,10 @@ class SubscriptionRetentionAnalysis(models.Model):
     end_date_month = fields.Char(string='End Date - By Month')
 
     def init(self):
+<<<<<<< HEAD
         """Initialize the Retention Analysis table with enterprise mock dataset."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         super().init()
         # Insert mock data if table is empty
         self.env.cr.execute("SELECT COUNT(*) FROM subscription_retention_analysis")

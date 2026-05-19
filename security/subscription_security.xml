@@ -45,6 +45,7 @@
             <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
         </record>
         
+<<<<<<< HEAD
         <!-- Record Rules for Users / Managers -->
         
         <!-- Portal User Record Rule -->
@@ -69,5 +70,8 @@
             <field name="perm_create" eval="False"/>
             <field name="perm_unlink" eval="False"/>
         </record>
+=======
+        <!-- Record Rules for Users / Managers could be added here (e.g. users only see their assigned subscriptions) -->
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
     </data>
 </odoo>

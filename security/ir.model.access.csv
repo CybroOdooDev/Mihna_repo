@@ -19,6 +19,7 @@ access_subscription_analysis_report_user,subscription.analysis.report.user,model
 access_subscription_analysis_report_manager,subscription.analysis.report.manager,model_subscription_analysis_report,group_subscription_manager,1,1,1,1
 access_subscription_retention_analysis_user,subscription.retention.analysis.user,model_subscription_retention_analysis,group_subscription_user,1,1,1,1
 access_subscription_retention_analysis_manager,subscription.retention.analysis.manager,model_subscription_retention_analysis,group_subscription_manager,1,1,1,1
+<<<<<<< HEAD
 access_subscription_coupon_user,subscription.coupon.user,model_subscription_coupon,group_subscription_user,1,0,0,0
 access_subscription_coupon_manager,subscription.coupon.manager,model_subscription_coupon,group_subscription_manager,1,1,1,1
 access_subscription_usage_user,subscription.usage.user,model_subscription_usage,group_subscription_user,1,1,1,0
@@ -34,4 +35,6 @@ access_subscription_line_ramp_manager,subscription.line.ramp.manager,model_subsc
 access_subscription_line_ramp_portal,subscription.line.ramp.portal,model_subscription_line_ramp,base.group_portal,1,0,0,0
 access_subscription_change_plan_wizard_user,subscription.change_plan_wizard.user,model_subscription_change_plan_wizard,group_subscription_user,1,1,1,1
 access_subscription_change_plan_wizard_manager,subscription.change_plan_wizard.manager,model_subscription_change_plan_wizard,group_subscription_manager,1,1,1,1
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
 

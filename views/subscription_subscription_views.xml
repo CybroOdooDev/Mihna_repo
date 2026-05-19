@@ -29,6 +29,7 @@
         <field name="name">subscription.subscription.tree</field>
         <field name="model">subscription.subscription</field>
         <field name="arch" type="xml">
+<<<<<<< HEAD
             <list string="Subscriptions" create="0" multi_edit="1" sample="1">
                 <field name="name" string="Number" readonly="1" decoration-bf="1"/>
                 <field name="partner_id" string="Customer" readonly="1"/>
@@ -41,6 +42,15 @@
                        decoration-danger="state in ('closed', 'cancelled')"
                        decoration-warning="state == 'paused'"
                        decoration-info="state in ('draft', 'in_trial')"/>
+=======
+            <list string="Subscriptions">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="plan_id"/>
+                <field name="next_invoice_date"/>
+                <field name="state" widget="badge" decoration-info="state in ('draft', 'in_trial')" decoration-success="state == 'in_progress'" decoration-warning="state in ('paused', 'in_dunning')" decoration-danger="state in ('suspended', 'expired', 'cancelled', 'closed')"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
             </list>
         </field>
     </record>
@@ -50,19 +60,29 @@
         <field name="name">subscription.subscription.form</field>
         <field name="model">subscription.subscription</field>
         <field name="arch" type="xml">
+<<<<<<< HEAD
             <form string="Subscription" create="0">
+=======
+            <form string="Subscription">
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
                 <header>
                     <button name="action_start_trial" string="Start Trial" type="object" class="oe_highlight" invisible="state != 'draft' or not plan_id"/>
                     <button name="action_activate" string="Activate" type="object" class="oe_highlight" invisible="state not in ('draft', 'in_trial', 'paused')"/>
                     
                     <!-- Manual Billing & Shipping -->
+<<<<<<< HEAD
                     <button name="action_create_invoice" string="Invoice" type="object" class="oe_highlight" invisible="state not in ('in_trial', 'in_progress', 'in_dunning')"/>
                     <button name="action_create_delivery" string="Delivery" type="object" invisible="state not in ('in_trial', 'in_progress')"/>
+=======
+                    <button name="action_create_invoice" string="Create Invoice" type="object" class="oe_highlight" invisible="state not in ('in_trial', 'in_progress', 'in_dunning')"/>
+                    <button name="action_create_delivery" string="Create Delivery" type="object" invisible="state not in ('in_trial', 'in_progress')"/>
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
                     
                     <!-- Pause/Resume -->
                     <button name="action_pause" string="Pause" type="object" invisible="state != 'in_progress'"/>
                     <button name="action_resume" string="Resume" type="object" class="oe_highlight" invisible="state != 'paused'"/>
                     
+<<<<<<< HEAD
                     <button name="action_change_plan_wizard" string="Upgrade" type="object" class="oe_highlight" invisible="state not in ('in_trial', 'in_progress', 'paused')"/>
                     <button name="action_cancel" string="Cancel" type="object" invisible="state in ('cancelled', 'closed')"/>
                     <button name="action_close" string="Close" type="object" invisible="state in ('cancelled', 'closed')"/>
@@ -70,6 +90,13 @@
                     <button name="action_calculate_churn_risk" string="AI Churn" type="object" class="btn-info" icon="fa-cogs"/>
                     
                     <field name="state" widget="statusbar" statusbar_visible="draft,in_progress,paused,closed"/>
+=======
+                    <button name="action_cancel" string="Cancel Subscription" type="object" invisible="state in ('cancelled', 'closed')"/>
+                    <button name="action_close" string="Close Subscription" type="object" invisible="state in ('cancelled', 'closed')"/>
+                    <button name="action_preview_subscription" string="Customer Preview" type="object" class="btn-secondary"/>
+                    
+                    <field name="state" widget="statusbar" statusbar_visible="draft,in_trial,in_progress,cancelled,closed"/>
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
                 </header>
                 <sheet>
                     <div class="oe_button_box" name="button_box">
@@ -97,6 +124,7 @@
                         </button>
                     </div>
                     
+<<<<<<< HEAD
                     <div class="oe_title" style="max-width: 100% !important; width: 100% !important;">
                         <div class="d-flex justify-content-between align-items-center w-100" style="width: 100% !important; display: flex !important; min-width: 0; margin-bottom: 1rem;">
                             <h1 class="m-0">
@@ -119,10 +147,22 @@
                             <field name="partner_shipping_id" string="Delivery Address"/>
                             <field name="coupon_id" placeholder="Select coupon..."/>
                             <field name="grandfathered"/>
+=======
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="partner_id"/>
+                            <field name="plan_id"/>
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
                             <field name="company_id" groups="base.group_multi_company"/>
                             <field name="currency_id" invisible="1"/>
                         </group>
                         <group>
+<<<<<<< HEAD
                             <field name="start_date" string="Order Date"/>
                             <field name="payment_term_id" string="Payment Terms"/>
                             <label for="plan_id" string="Recurring Plan"/>
@@ -137,6 +177,11 @@
                                 <field name="churn_risk_level" widget="badge" decoration-success="churn_risk_level == 'low'" decoration-warning="churn_risk_level == 'medium'" decoration-danger="churn_risk_level == 'high'"/>
                                 <span>(<field name="churn_risk_score" class="oe_inline"/>%)</span>
                             </div>
+=======
+                            <field name="start_date"/>
+                            <field name="next_invoice_date"/>
+                            <field name="end_date"/>
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
                         </group>
                     </group>
                     <notebook>
@@ -145,7 +190,10 @@
                                 <list editable="bottom">
                                     <field name="product_id"/>
                                     <field name="name"/>
+<<<<<<< HEAD
                                     <field name="billing_type"/>
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
                                     <field name="quantity"/>
                                     <field name="price_unit"/>
                                     <field name="discount"/>
@@ -154,6 +202,7 @@
                                 </list>
                             </field>
                         </page>
+<<<<<<< HEAD
                         <page string="Ramp Pricing Rules" name="ramp_rules">
                             <field name="ramp_ids">
                                 <list editable="bottom">
@@ -164,6 +213,8 @@
                                 </list>
                             </field>
                         </page>
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
                         <page string="Other Info" name="other_info">
                             <group>
                                 <group string="Trial / Pause Status">
@@ -229,8 +280,12 @@
                 <field name="subscription_state" string="Subscription Status" widget="badge" 
                        decoration-success="subscription_state == 'in_progress'" 
                        decoration-danger="subscription_state == 'churned'"
+<<<<<<< HEAD
                        decoration-warning="subscription_state == 'draft'"
                        decoration-info="subscription_state == 'paused'"/>
+=======
+                       decoration-warning="subscription_state == 'draft'"/>
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
             </list>
         </field>
     </record>
@@ -253,7 +308,11 @@
         <field name="name">Quotations</field>
         <field name="res_model">sale.order</field>
         <field name="view_mode">list,kanban,form,pivot,graph</field>
+<<<<<<< HEAD
         <field name="domain">[('plan_id', '!=', False), ('state', 'in', ('draft', 'sent'))]</field>
+=======
+        <field name="domain">[('plan_id', '!=', False)]</field>
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         <field name="context">{'search_default_my_subscriptions': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
@@ -270,7 +329,11 @@
         <field name="name">Subscriptions</field>
         <field name="res_model">sale.order</field>
         <field name="view_mode">list,form,pivot,graph</field>
+<<<<<<< HEAD
         <field name="domain">[('plan_id', '!=', False), ('state', 'in', ('sale', 'done'))]</field>
+=======
+        <field name="domain">[('plan_id', '!=', False)]</field>
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
         <field name="context">{'search_default_in_progress_or_paused': 1}</field>
         <field name="help" type="html">
             <p class="o_view_nocontent_smiling_face">
@@ -279,6 +342,7 @@
         </field>
     </record>
 
+<<<<<<< HEAD
     <!-- Action for To Renew Subscriptions -->
     <record id="action_subscription_to_renew" model="ir.actions.act_window">
         <field name="name">To Renew</field>
@@ -313,6 +377,8 @@
         </field>
     </record>
 
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
     <!-- Force view ids to use the custom subscription tree view -->
     <record id="action_subscription_sale_orders_view_tree" model="ir.actions.act_window.view">
         <field name="sequence" eval="1"/>
@@ -397,6 +463,43 @@
               action="action_subscription_sale_orders" 
               sequence="11"/>
 
+<<<<<<< HEAD
+=======
+    <!-- Action for To Renew Subscriptions -->
+    <record id="action_subscription_to_renew" model="ir.actions.act_window">
+        <field name="name">To Renew</field>
+        <field name="res_model">sale.order</field>
+        <field name="view_mode">list,kanban,form,pivot,graph</field>
+        <field name="domain">[('plan_id', '!=', False), ('state', '=', 'sale')]</field>
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No subscriptions to renew
+            </p>
+            <p>
+                Odoo will display subscription orders here that are close to their expiration date and require customer renewal.
+            </p>
+        </field>
+    </record>
+
+    <!-- Action for Upsells Subscriptions -->
+    <record id="action_subscription_upsells" model="ir.actions.act_window">
+        <field name="name">Upsells</field>
+        <field name="res_model">sale.order</field>
+        <field name="view_mode">list,kanban,form,pivot,graph</field>
+        <field name="domain">[('plan_id', '!=', False), ('state', '=', 'sale')]</field>
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No upsell opportunities found
+            </p>
+            <p>
+                Use this menu to track active subscription contracts with pending additions or modifications (upsell opportunities).
+            </p>
+        </field>
+    </record>
+
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
     <!-- Menu for To Renew Subscriptions -->
     <menuitem id="menu_subscription_to_renew" 
               name="To Renew" 

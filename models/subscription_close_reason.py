@@ -1,8 +1,14 @@
+<<<<<<< HEAD
 # -*- coding: utf-8 -*-
 from odoo import models, fields
 
 class SubscriptionCloseReason(models.Model):
     """Subscription Close Reason model to log retention details, portal cancellation triggers, and survey messages."""
+=======
+from odoo import models, fields
+
+class SubscriptionCloseReason(models.Model):
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
     _name = 'subscription.close.reason'
     _description = 'Subscription Close Reason'
     _order = 'sequence, id'

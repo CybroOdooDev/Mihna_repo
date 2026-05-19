@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Tree View -->
+    <record id="subscription_plan_view_tree" model="ir.ui.view">
+        <field name="name">subscription.plan.tree</field>
+        <field name="model">subscription.plan</field>
+        <field name="arch" type="xml">
+            <list string="Subscription Plans">
+                <field name="name"/>
+                <field name="code"/>
+                <field name="billing_period_value"/>
+                <field name="billing_period_unit"/>
+                <field name="trial_period_days"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="subscription_plan_view_form" model="ir.ui.view">
+        <field name="name">subscription.plan.form</field>
+        <field name="model">subscription.plan</field>
+        <field name="arch" type="xml">
+            <form string="Subscription Plan">
+                <sheet>
+                    <widget name="web_ribbon" title="Archived" bg_color="bg-danger" invisible="active"/>
+                    
+                    <!-- Stat Buttons Box -->
+                    <div class="oe_button_box" name="button_box">
+                        <button class="oe_stat_button" icon="fa-refresh" type="object" name="action_view_subscriptions">
+                            <field name="subscription_count" string="Subscriptions" widget="statinfo"/>
+                        </button>
+                        <button class="oe_stat_button" icon="fa-list" type="object" name="action_view_subscription_items">
+                            <field name="item_count" string="Subscription Items" widget="statinfo"/>
+                        </button>
+                    </div>
+
+                    <!-- Title Block -->
+                    <div class="oe_title">
+                        <label for="name" string="Name"/>
+                        <h1>
+                            <field name="name" placeholder="Monthly"/>
+                        </h1>
+                    </div>
+
+                    <!-- Side-by-side Configuration Groups -->
+                    <group>
+                        <group string="DETAILS">
+                            <field name="active" invisible="1"/>
+                            <label for="billing_period_value" string="Billing Period"/>
+                            <div class="o_row">
+                                <field name="billing_period_value" class="oe_inline"/>
+                                <field name="billing_period_unit" class="oe_inline"/>
+                            </div>
+                            <field name="align_to_period_start" string="Align to Period Start"/>
+                            <label for="automatic_closing_days" string="Automatic Closing"/>
+                            <div class="o_row">
+                                <field name="automatic_closing_days" class="oe_inline"/>
+                                <span class="oe_grey">Days</span>
+                            </div>
+                            <field name="company_id" string="Company" groups="base.group_multi_company"/>
+                            <field name="invoice_mail_template_id" string="Invoice Email Template"/>
+                        </group>
+
+                        <group string="SELF-SERVICE">
+                            <field name="is_closable" string="Closable"/>
+                            <field name="is_pausable" string="Pausable"/>
+                            <field name="is_add_products" string="Add Products"/>
+                            <field name="is_renew" string="Renew"/>
+                            <field name="optional_plan_ids" string="Optional Plans" widget="many2many_tags" placeholder="Select plans..."/>
+                        </group>
+                    </group>
+
+                    <!-- Tab notebook with Pricing lines -->
+                    <notebook>
+                        <page string="Pricing" name="pricing">
+                            <field name="pricing_ids">
+                                <list editable="bottom">
+                                    <field name="product_id" string="Product"/>
+                                    <field name="variant_id" string="Variant"/>
+                                    <field name="pricelist_id" string="Pricelist"/>
+                                    <field name="price" string="Unit Price" widget="monetary"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_subscription_plan" model="ir.actions.act_window">
+        <field name="name">Plans</field>
+        <field name="res_model">subscription.plan</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create a new Subscription Plan
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu -->
+    <menuitem id="menu_subscription_plan" 
+              name="Recurring Plans" 
+              parent="subscription_management.subscription_menu_configuration" 
+              action="action_subscription_plan" 
+              sequence="10"/>
+</odoo>

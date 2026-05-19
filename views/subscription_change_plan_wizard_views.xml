@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="subscription_change_plan_wizard_view_form" model="ir.ui.view">
+        <field name="name">subscription.change.plan.wizard.form</field>
+        <field name="model">subscription.change.plan.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Upgrade / Change Plan">
+                <sheet>
+                    <group>
+                        <field name="subscription_id" readonly="1" invisible="1"/>
+                        <field name="new_plan_id" string="New Subscription Plan" required="1" options="{'no_create': True, 'no_open': True}"/>
+                        <field name="prorate" string="Prorate active billing cycle" help="If checked, delta price unit calculation is applied for the remaining days."/>
+                    </group>
+                    <footer>
+                        <button name="action_change_plan" string="Apply Plan Change" type="object" class="btn-primary" data-hotkey="q"/>
+                        <button string="Discard" class="btn-secondary" special="cancel" data-hotkey="x"/>
+                    </footer>
+                </sheet>
+            </form>
+        </field>
+    </record>
+</odoo>

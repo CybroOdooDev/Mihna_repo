@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+    <t t-name="subscription_management.Dashboard" owl="1">
+        <div class="o_subscription_dashboard container-fluid py-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="dashboard-title">Subscription Overview</h1>
+            </div>
+            
+            <t t-if="state.isLoading">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="mt-2 text-muted">Loading Analytics...</p>
+                </div>
+            </t>
+            <t t-else="">
+                <!-- KPI Cards -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-4 col-sm-6">
+                        <div class="kpi-card card-mrr">
+                            <div class="kpi-icon"><i class="fa fa-line-chart"></i></div>
+                            <div class="kpi-content">
+                                <h3>$<t t-esc="state.kpi.mrr"/></h3>
+                                <span>Monthly Recurring Revenue (MRR)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="kpi-card card-arr">
+                            <div class="kpi-icon"><i class="fa fa-bar-chart"></i></div>
+                            <div class="kpi-content">
+                                <h3>$<t t-esc="state.kpi.arr"/></h3>
+                                <span>Annual Recurring Revenue (ARR)</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4 col-sm-6">
+                        <div class="kpi-card card-users" t-on-click="openSubscriptions" style="cursor: pointer;">
+                            <div class="kpi-icon"><i class="fa fa-users"></i></div>
+                            <div class="kpi-content">
+                                <h3><t t-esc="state.kpi.active_subscriptions"/></h3>
+                                <span>Active Subscriptions</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-6">
+                        <div class="kpi-card card-churn">
+                            <div class="kpi-icon"><i class="fa fa-level-down"></i></div>
+                            <div class="kpi-content">
+                                <h3><t t-esc="state.kpi.churn_rate"/>%</h3>
+                                <span>30-Day Churn Rate</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-6">
+                        <div class="kpi-card card-arpu">
+                            <div class="kpi-icon"><i class="fa fa-user-plus"></i></div>
+                            <div class="kpi-content">
+                                <h3>$<t t-esc="state.kpi.arpu"/></h3>
+                                <span>Average Revenue Per User (ARPU)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="row g-4">
+                    <div class="col-lg-8">
+                        <div class="chart-card">
+                            <h4 class="chart-title">MRR Growth (6 Months)</h4>
+                            <div class="chart-container" style="position: relative; height:300px;">
+                                <canvas t-ref="mrrChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="chart-card">
+                            <h4 class="chart-title">Active Plans</h4>
+                            <div class="chart-container" style="position: relative; height:300px;">
+                                <canvas t-ref="planChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </div>
+    </t>
+</templates>

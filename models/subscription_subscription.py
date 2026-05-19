@@ -1,0 +1,774 @@
+# -*- coding: utf-8 -*-
+from odoo import models, fields, api, _
+from datetime import timedelta, date
+from dateutil.relativedelta import relativedelta
+from odoo.exceptions import UserError
+
+class Subscription(models.Model):
+    """Subscription model representing the active recurring client contract, managing billing dates and fulfillment metrics."""
+    _name = 'subscription.subscription'
+    _description = 'Subscription'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _order = 'id desc'
+
+    name = fields.Char(string='Reference', required=True, copy=False, readonly=True, default=lambda self: _('New'))
+    
+    partner_id = fields.Many2one('res.partner', string='Customer', required=True, tracking=True)
+    partner_invoice_id = fields.Many2one('res.partner', string='Invoice Address', related='sale_order_id.partner_invoice_id', readonly=True)
+    partner_shipping_id = fields.Many2one('res.partner', string='Delivery Address', related='sale_order_id.partner_shipping_id', readonly=True)
+    payment_term_id = fields.Many2one('account.payment.term', string='Payment Terms', related='sale_order_id.payment_term_id', readonly=True)
+    referrer_id = fields.Many2one('res.partner', string='Referrer', related='sale_order_id.referrer_id', readonly=True)
+    plan_id = fields.Many2one('subscription.plan', string='Subscription Plan', required=True, tracking=True)
+    
+    company_id = fields.Many2one('res.company', string='Company', required=True, default=lambda self: self.env.company)
+    currency_id = fields.Many2one('res.currency', string='Currency', related='plan_id.currency_id', store=True)
+
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('in_trial', 'In Trial'),
+        ('in_progress', 'In Progress'),
+        ('paused', 'Paused'),
+        ('in_dunning', 'In Dunning'),
+        ('suspended', 'Suspended'),
+        ('expired', 'Expired'),
+        ('renewed', 'Renewed'),
+        ('cancelled', 'Cancelled'),
+        ('closed', 'Closed / Churned')
+    ], string='Status', required=True, default='draft', tracking=True)
+
+    start_date = fields.Date(string='Start Date', default=fields.Date.context_today, tracking=True)
+    next_invoice_date = fields.Date(string='Next Invoice Date', tracking=True)
+    end_date = fields.Date(string='End Date', tracking=True, help='Date when the subscription expires if not renewed.')
+    
+    trial_end_date = fields.Date(string='Trial End Date', tracking=True)
+    pause_date = fields.Date(string='Pause Date', tracking=True)
+    resume_date = fields.Date(string='Expected Resume Date', tracking=True)
+    cancel_date = fields.Date(string='Cancel Date', tracking=True)
+
+    line_ids = fields.One2many('subscription.line', 'subscription_id', string='Subscription Lines')
+
+    # New Relationships for integration
+    sale_order_id = fields.Many2one('sale.order', string='Origin Sales Order', readonly=True, copy=False)
+    invoice_ids = fields.One2many('account.move', 'subscription_id', string='Invoices', readonly=True)
+    invoice_count = fields.Integer(string='Invoice Count', compute='_compute_invoice_count')
+    
+    picking_ids = fields.One2many('stock.picking', 'subscription_id', string='Deliveries', readonly=True)
+    picking_count = fields.Integer(string='Delivery Count', compute='_compute_picking_count')
+    
+    close_reason_id = fields.Many2one('subscription.close.reason', string='Close/Cancel Reason', tracking=True)
+    mrr_total = fields.Monetary(string='MRR', compute='_compute_mrr_total', store=True, currency_field='currency_id')
+    
+    # Coupons & Churn Prediction
+    coupon_id = fields.Many2one('subscription.coupon', string='Applied Coupon', tracking=True)
+    grandfathered = fields.Boolean(string='Grandfathered Price', default=True, help="If checked, historical line prices are frozen and protected against plan master updates.")
+    ramp_ids = fields.One2many('subscription.line.ramp', 'subscription_id', string='Ramp Pricing Rules')
+    churn_risk_score = fields.Float(string='Churn Risk Score (%)', readonly=True, tracking=True)
+    churn_risk_level = fields.Selection([
+        ('low', 'Low Risk'),
+        ('medium', 'Medium Risk'),
+        ('high', 'High Risk')
+    ], string='Churn Risk Level', compute='_compute_churn_risk_level', store=True)
+
+    @api.depends('churn_risk_score')
+    def _compute_churn_risk_level(self):
+        """Compute the qualitative risk level based on the numerical churn risk score."""
+        for rec in self:
+            if rec.churn_risk_score >= 70:
+                rec.churn_risk_level = 'high'
+            elif rec.churn_risk_score >= 30:
+                rec.churn_risk_level = 'medium'
+            else:
+                rec.churn_risk_level = 'low'
+
+    @api.depends('line_ids.price_subtotal', 'plan_id')
+    def _compute_mrr_total(self):
+        """Compute the total Monthly Recurring Revenue (MRR) for this contract."""
+        for sub in self:
+            mrr_total = 0.0
+            if sub.plan_id:
+                period = sub.plan_id.billing_period
+                for line in sub.line_ids:
+                    subtotal = line.price_subtotal
+                    if period == 'daily':
+                        mrr = subtotal * 30.0
+                    elif period == 'weekly':
+                        mrr = subtotal * 4.33
+                    elif period == 'monthly':
+                        mrr = subtotal
+                    elif period == 'quarterly':
+                        mrr = subtotal / 3.0
+                    elif period == 'semi_annually':
+                        mrr = subtotal / 6.0
+                    elif period == 'yearly':
+                        mrr = subtotal / 12.0
+                    elif period == 'custom' and sub.plan_id.custom_days:
+                        mrr = subtotal * (30.0 / sub.plan_id.custom_days)
+                    else:
+                        mrr = subtotal
+                    mrr_total += mrr
+            sub.mrr_total = mrr_total
+
+    @api.depends('invoice_ids')
+    def _compute_invoice_count(self):
+        """Compute the total count of invoices generated for this subscription."""
+        for rec in self:
+            rec.invoice_count = len(rec.invoice_ids)
+
+    @api.depends('picking_ids')
+    def _compute_picking_count(self):
+        """Compute the total count of physical deliveries generated for this subscription."""
+        for rec in self:
+            rec.picking_count = len(rec.picking_ids)
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Override create to automatically generate unique subscription contract serial references (SUB prefix)."""
+        for vals in vals_list:
+            if vals.get('name', _('New')) == _('New'):
+                vals['name'] = self.env['ir.sequence'].next_by_code('subscription.subscription') or _('New')
+        return super().create(vals_list)
+
+    @api.onchange('sale_order_id')
+    def _onchange_sale_order_id(self):
+        """Pre-populate fields automatically when linked sale_order_id changes."""
+        if self.sale_order_id:
+            if self.sale_order_id.partner_id:
+                self.partner_id = self.sale_order_id.partner_id.id
+            if self.sale_order_id.plan_id:
+                self.plan_id = self.sale_order_id.plan_id.id
+
+    @api.onchange('plan_id')
+    def _onchange_plan_id(self):
+        """Pre-populate contract line items automatically when plan_id is changed."""
+        if self.plan_id:
+            new_lines = []
+            if self.plan_id.product_id:
+                new_lines.append((0, 0, {
+                    'product_id': self.plan_id.product_id.id,
+                    'name': self.plan_id.product_id.name,
+                    'quantity': 1.0,
+                    'price_unit': self.plan_id.product_id.list_price,
+                }))
+            elif self.plan_id.pricing_ids:
+                for line in self.plan_id.pricing_ids:
+                    new_lines.append((0, 0, {
+                        'product_id': line.product_id.id,
+                        'name': line.product_id.name,
+                        'quantity': 1.0,
+                        'price_unit': line.price,
+                    }))
+            if new_lines:
+                self.line_ids = [(5, 0, 0)] + new_lines
+
+    @api.onchange('grandfathered')
+    def _onchange_grandfathered(self):
+        """Immediately update subscription lines to latest master prices in the UI if grandfathering is deactivated."""
+        if not self.grandfathered and self.plan_id:
+            for line in self.line_ids:
+                pricing = self.plan_id.pricing_ids.filtered(lambda p: p.product_id == line.product_id)
+                if pricing:
+                    if line.product_id.list_price != line.price_unit:
+                        line.price_unit = line.product_id.list_price
+                    else:
+                        line.price_unit = pricing[0].price
+                else:
+                    line.price_unit = line.product_id.list_price
+
+    def action_start_trial(self):
+        """Start the free trial phase, computing starting and trial end dates."""
+        for rec in self:
+            if rec.state == 'draft' and rec.plan_id.trial_period_days > 0:
+                rec.state = 'in_trial'
+                rec.start_date = fields.Date.context_today(self)
+                rec.trial_end_date = rec.start_date + timedelta(days=rec.plan_id.trial_period_days)
+                rec.next_invoice_date = rec.trial_end_date
+                rec.message_post(body=_("Trial started. End of trial: %s") % rec.trial_end_date)
+    
+    def action_activate(self):
+        """Activate the subscription contract and set state to in progress."""
+        for rec in self:
+            if rec.state in ['draft', 'in_trial', 'paused']:
+                rec.state = 'in_progress'
+                if not rec.start_date:
+                    rec.start_date = fields.Date.context_today(self)
+                if not rec.next_invoice_date:
+                    rec.next_invoice_date = fields.Date.context_today(self)
+                rec.message_post(body=_("Subscription activated! Next renewal date set to: %s") % rec.next_invoice_date)
+
+    def action_pause(self):
+        """Pause the subscription contract, preserving dates while halting billing."""
+        for rec in self:
+            if rec.state == 'in_progress':
+                rec.state = 'paused'
+                rec.pause_date = fields.Date.context_today(self)
+                rec.message_post(body=_("Subscription paused on %s.") % rec.pause_date)
+
+    def action_resume(self):
+        """Resume the paused subscription contract, setting next invoice date to resume date."""
+        for rec in self:
+            if rec.state == 'paused':
+                rec.state = 'in_progress'
+                rec.resume_date = fields.Date.context_today(self)
+                # If next invoice date was during pause, set it to today so billing catch up occurs
+                if rec.next_invoice_date and rec.next_invoice_date < fields.Date.context_today(self):
+                    rec.next_invoice_date = fields.Date.context_today(self)
+                rec.message_post(body=_("Subscription resumed! Next billing cycle: %s") % rec.next_invoice_date)
+
+    def action_change_plan_wizard(self):
+        """Open the subscription plan change and proration wizard in a modal view."""
+        self.ensure_one()
+        return {
+            'name': _('Upgrade / Change Plan'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'subscription.change.plan.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_subscription_id': self.id,
+            }
+        }
+
+    def action_preview_next_invoice(self):
+        """Calculate and return a dynamic forecast/preview of the next cycle's invoice details."""
+        self.ensure_one()
+        today = fields.Date.context_today(self)
+        next_invoice = self.next_invoice_date or today
+        current_cycle = len(self.invoice_ids) + 1
+
+        lines_preview = []
+        for line in self.line_ids:
+            # 1. Seat-based prediction
+            quantity = line.quantity
+            if line.billing_type == 'seat':
+                partner_ids = [self.partner_id.id]
+                if self.partner_id.commercial_partner_id:
+                    partner_ids.append(self.partner_id.commercial_partner_id.id)
+                child_partners = self.env['res.partner'].search([('parent_id', '=', self.partner_id.commercial_partner_id.id)])
+                partner_ids.extend(child_partners.ids)
+                user_count = self.env['res.users'].search_count([
+                    ('active', '=', True),
+                    ('partner_id', 'in', partner_ids)
+                ])
+                quantity = max(1, user_count)
+            elif line.billing_type == 'usage':
+                usages = self.env['subscription.usage'].search([
+                    ('subscription_id', '=', self.id),
+                    ('product_id', '=', line.product_id.id),
+                    ('billed', '=', False)
+                ])
+                quantity = sum(usages.mapped('quantity'))
+
+            # 2. Grandfathering
+            price_unit = line.price_unit
+            if not self.grandfathered:
+                pricing = self.plan_id.pricing_ids.filtered(lambda p: p.product_id == line.product_id)
+                if pricing:
+                    if line.product_id.list_price != line.price_unit:
+                        price_unit = line.product_id.list_price
+                    else:
+                        price_unit = pricing[0].price
+                else:
+                    price_unit = line.product_id.list_price
+
+            # 3. Ramp Pricing
+            ramp_rule = self.ramp_ids.filtered(lambda r: r.start_cycle <= current_cycle <= r.end_cycle)
+            if not ramp_rule:
+                ramp_rule = self.plan_id.ramp_ids.filtered(lambda r: r.start_cycle <= current_cycle <= r.end_cycle)
+            if ramp_rule:
+                price_unit = ramp_rule[0].price_unit
+
+            subtotal = quantity * price_unit * (1.0 - (line.discount or 0.0) / 100.0)
+            lines_preview.append({
+                'product_id': line.product_id.id,
+                'product_name': line.product_id.display_name or line.name,
+                'quantity': quantity,
+                'price_unit': price_unit,
+                'discount': line.discount,
+                'subtotal': subtotal
+            })
+
+        # Calculate Coupon discounts
+        total_before_discount = sum(l['subtotal'] for l in lines_preview)
+        discount_amount = 0.0
+        if self.coupon_id:
+            coupon = self.coupon_id
+            if coupon.discount_type == 'percentage':
+                discount_amount = total_before_discount * (coupon.discount_value / 100.0)
+            elif coupon.discount_type == 'fixed':
+                discount_amount = min(total_before_discount, coupon.discount_value)
+
+        total_after_discount = max(0.0, total_before_discount - discount_amount)
+        tax_amount = total_after_discount * 0.18
+        grand_total = total_after_discount + tax_amount
+
+        return {
+            'next_invoice_date': next_invoice,
+            'lines': lines_preview,
+            'total_before_discount': total_before_discount,
+            'coupon_code': self.coupon_id.code if self.coupon_id else None,
+            'discount_amount': discount_amount,
+            'subtotal': total_after_discount,
+            'tax_amount': tax_amount,
+            'grand_total': grand_total,
+            'currency_symbol': self.currency_id.symbol or '$'
+        }
+
+    def action_cancel(self):
+        """Cancel and terminate the subscription contract."""
+        for rec in self:
+            rec.state = 'cancelled'
+            rec.cancel_date = fields.Date.context_today(self)
+            rec.message_post(body=_("Subscription cancelled on %s.") % rec.cancel_date)
+
+    def action_close(self):
+        """Trigger the backend close reason wizard to terminate the active subscription."""
+        self.ensure_one()
+        return {
+            'name': _('Close Subscription Reason'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'subscription.close.wizard',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_subscription_id': self.id,
+            }
+        }
+
+    def action_create_invoice(self):
+        """Generates a recurring invoice for this subscription."""
+        self.ensure_one()
+        if not self.line_ids:
+            raise UserError(_("Cannot generate invoice for subscription with no lines."))
+
+        # Create Invoice
+        invoice_vals = {
+            'partner_id': self.partner_id.id,
+            'move_type': 'out_invoice',
+            'subscription_id': self.id,
+            'invoice_date': fields.Date.context_today(self),
+            'currency_id': self.currency_id.id,
+            'company_id': self.company_id.id,
+            'ref': f"Subscription Invoice - {self.name}",
+            'invoice_line_ids': [],
+        }
+
+        # Determine the current billing cycle number
+        current_cycle = len(self.invoice_ids) + 1
+
+        for line in self.line_ids:
+            # 1. Seat-Based Recalculation
+            if line.billing_type == 'seat':
+                partner_ids = [self.partner_id.id]
+                if self.partner_id.commercial_partner_id:
+                    partner_ids.append(self.partner_id.commercial_partner_id.id)
+                child_partners = self.env['res.partner'].search([('parent_id', '=', self.partner_id.commercial_partner_id.id)])
+                partner_ids.extend(child_partners.ids)
+                
+                user_count = self.env['res.users'].search_count([
+                    ('active', '=', True),
+                    ('partner_id', 'in', partner_ids)
+                ])
+                line.quantity = max(1, user_count)
+
+            quantity = line.quantity
+            if line.billing_type == 'usage':
+                # Sum all unbilled usage for this subscription and product
+                usages = self.env['subscription.usage'].search([
+                    ('subscription_id', '=', self.id),
+                    ('product_id', '=', line.product_id.id),
+                    ('billed', '=', False)
+                ])
+                quantity = sum(usages.mapped('quantity'))
+                usages.write({'billed': True})
+            
+            # 2. Grandfathering Pricing Lock vs Dynamic Master Update
+            price_unit = line.price_unit
+            if not self.grandfathered:
+                pricing = self.plan_id.pricing_ids.filtered(lambda p: p.product_id == line.product_id)
+                if pricing:
+                    if line.product_id.list_price != line.price_unit:
+                        price_unit = line.product_id.list_price
+                    else:
+                        price_unit = pricing[0].price
+                else:
+                    price_unit = line.product_id.list_price
+                line.price_unit = price_unit
+
+            # 3. Ramp Pricing Engine check
+            ramp_rule = self.ramp_ids.filtered(lambda r: r.start_cycle <= current_cycle <= r.end_cycle)
+            if not ramp_rule:
+                ramp_rule = self.plan_id.ramp_ids.filtered(lambda r: r.start_cycle <= current_cycle <= r.end_cycle)
+            
+            if ramp_rule:
+                price_unit = ramp_rule[0].price_unit
+
+            if quantity > 0 or line.billing_type != 'usage':
+                invoice_vals['invoice_line_ids'].append((0, 0, {
+                    'product_id': line.product_id.id,
+                    'name': line.name,
+                    'quantity': quantity,
+                    'price_unit': price_unit,
+                    'discount': line.discount,
+                }))
+
+        invoice = self.env['account.move'].create(invoice_vals)
+
+        # Apply Coupon Discount
+        if self.coupon_id and invoice.invoice_line_ids:
+            coupon = self.coupon_id
+            
+            # Manually sum line subtotals to avoid Odoo lazy-load compute gotcha
+            total_before_discount = sum(l.quantity * l.price_unit * (1.0 - l.discount / 100.0) for l in invoice.invoice_line_ids)
+            
+            discount_amount = 0.0
+            if coupon.discount_type == 'percentage':
+                discount_amount = total_before_discount * (coupon.discount_value / 100.0)
+            elif coupon.discount_type == 'fixed':
+                discount_amount = min(coupon.discount_value, total_before_discount)
+                
+            if discount_amount > 0:
+                first_line = invoice.invoice_line_ids[0]
+                invoice.write({
+                    'invoice_line_ids': [(0, 0, {
+                        'name': f"Coupon Discount - {coupon.name} ({coupon.code})",
+                        'quantity': 1.0,
+                        'price_unit': -discount_amount,
+                        'account_id': first_line.account_id.id,
+                        'tax_ids': [(6, 0, first_line.tax_ids.ids)],
+                    })]
+                })
+        
+        # Post the invoice automatically
+        try:
+            invoice.action_post()
+            self.message_post(body=_("Auto-generated and posted Invoice %s.") % invoice.name)
+        except Exception as e:
+            self.message_post(body=_("Created draft Invoice %s. Auto-post failed: %s") % (invoice.name, str(e)))
+
+        # Update Next Invoice Date
+        self._increment_next_invoice_date()
+        return {
+            'name': _('Customer Invoice'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'account.move',
+            'view_mode': 'form',
+            'res_id': invoice.id,
+            'target': 'current',
+        }
+
+    def action_pay_and_reconcile(self, invoice, provider_name=""):
+        """Programmatically pay and reconcile the given invoice with a transaction memo."""
+        self.ensure_one()
+        if invoice.payment_state == 'paid':
+            return True
+            
+        # Create payment record
+        memo = f"Payment for Subscription {self.name} via {provider_name}" if provider_name else f"Payment for Subscription {self.name}"
+        payment_vals = {
+            'payment_type': 'inbound',
+            'partner_type': 'customer',
+            'partner_id': self.partner_id.id,
+            'amount': invoice.amount_total,
+            'currency_id': invoice.currency_id.id,
+            'journal_id': self.env['account.journal'].search([
+                ('type', '=', 'bank'),
+                ('company_id', '=', self.company_id.id)
+            ], limit=1).id or self.env['account.journal'].search([('type', '=', 'bank')], limit=1).id,
+            'memo': memo,
+        }
+        payment = self.env['account.payment'].create(payment_vals)
+        payment.action_post()
+        
+        # Reconcile invoice line with payment line
+        receivable_line = invoice.line_ids.filtered(lambda l: l.account_id.account_type == 'asset_receivable')
+        payment_receivable_line = payment.move_id.line_ids.filtered(lambda l: l.account_id.account_type == 'asset_receivable')
+        
+        if receivable_line and payment_receivable_line:
+            (receivable_line + payment_receivable_line).reconcile()
+            self.message_post(body=_("Payment reconciled successfully for Invoice %s. Memo: %s") % (invoice.name, payment.memo))
+        return True
+
+    def _increment_next_invoice_date(self):
+        """Increment the contract billing next_invoice_date forward based on the selected plan interval."""
+        self.ensure_one()
+        current_date = self.next_invoice_date or fields.Date.context_today(self)
+        period = self.plan_id.billing_period
+        custom_days = self.plan_id.custom_days or 1
+
+        if period == 'daily':
+            next_date = current_date + timedelta(days=1)
+        elif period == 'weekly':
+            next_date = current_date + timedelta(weeks=1)
+        elif period == 'monthly':
+            next_date = current_date + relativedelta(months=1)
+        elif period == 'quarterly':
+            next_date = current_date + relativedelta(months=3)
+        elif period == 'semi_annually':
+            next_date = current_date + relativedelta(months=6)
+        elif period == 'yearly':
+            next_date = current_date + relativedelta(years=1)
+        elif period == 'custom':
+            next_date = current_date + timedelta(days=custom_days)
+        else:
+            next_date = current_date + relativedelta(months=1)
+
+        self.next_invoice_date = next_date
+
+    def action_create_delivery(self):
+        """Generates a stock picking for physical subscription lines."""
+        self.ensure_one()
+        physical_lines = self.line_ids.filtered(lambda l: l.product_id.type == 'consu')
+        if not physical_lines:
+            return False
+
+        # Find picking type outgoing
+        picking_type = self.env['stock.picking.type'].search([
+            ('code', '=', 'outgoing'),
+            ('company_id', '=', self.company_id.id)
+        ], limit=1)
+        if not picking_type:
+            picking_type = self.env['stock.picking.type'].search([('code', '=', 'outgoing')], limit=1)
+        if not picking_type:
+            raise UserError(_("No outgoing picking type found for company."))
+
+        # Find default source and destination locations
+        source_loc = picking_type.default_location_src_id.id
+        dest_loc = self.partner_id.property_stock_customer.id
+
+        picking_vals = {
+            'partner_id': self.partner_id.id,
+            'picking_type_id': picking_type.id,
+            'subscription_id': self.id,
+            'location_id': source_loc,
+            'location_dest_id': dest_loc,
+            'origin': self.name,
+            'move_ids': []
+        }
+
+        for line in physical_lines:
+            picking_vals['move_ids'].append((0, 0, {
+                'description_picking': line.product_id.display_name,
+                'product_id': line.product_id.id,
+                'product_uom_qty': line.quantity,
+                'product_uom': line.product_id.uom_id.id,
+                'location_id': source_loc,
+                'location_dest_id': dest_loc,
+            }))
+
+        picking = self.env['stock.picking'].create(picking_vals)
+        picking.action_confirm()
+        self.message_post(body=_("Auto-created Delivery Order %s.") % picking.name)
+        return {
+            'name': _('Delivery Order'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'stock.picking',
+            'view_mode': 'form',
+            'res_id': picking.id,
+            'target': 'current',
+        }
+
+    @api.model
+    def _cron_recurring_billing(self):
+        """Daily Cron method to identify subscriptions due for billing and process them."""
+        today = fields.Date.context_today(self)
+        # Find active subscriptions that are due
+        due_subs = self.search([
+            ('state', 'in', ['in_progress', 'in_trial']),
+            ('next_invoice_date', '<=', today)
+        ])
+
+        for sub in due_subs:
+            try:
+                # Generate Invoice
+                invoice = sub.action_create_invoice()
+                # Generate physical delivery if physical items exist
+                sub.action_create_delivery()
+            except Exception as e:
+                # Log any errors to chatter to make it visible to admins
+                sub.message_post(body=_("Cron recurring billing failed: %s") % str(e))
+
+    # Smart Buttons Actions
+    def action_view_invoices(self):
+        """Return a window action showing all customer invoices generated for this subscription."""
+        self.ensure_one()
+        action = self.env["ir.actions.actions"]._for_xml_id("account.action_move_out_invoice_type")
+        action['domain'] = [('subscription_id', '=', self.id)]
+        action['context'] = {'default_move_type': 'out_invoice', 'default_subscription_id': self.id}
+        return action
+
+    def action_view_pickings(self):
+        """Return a window action showing all stock pickings generated for this subscription."""
+        self.ensure_one()
+        action = self.env["ir.actions.actions"]._for_xml_id("stock.action_picking_tree_all")
+        action['domain'] = [('subscription_id', '=', self.id)]
+        action['context'] = {'default_subscription_id': self.id}
+        return action
+
+    def action_view_sales_orders(self):
+        """Return a window action displaying the linked Sales Order for this subscription."""
+        self.ensure_one()
+        action = self.env["ir.actions.actions"]._for_xml_id("sale.action_orders")
+        action['domain'] = [('id', '=', self.sale_order_id.id)]
+        action['res_id'] = self.sale_order_id.id
+        action['view_mode'] = 'form'
+        action['views'] = [(False, 'form')]
+        return action
+
+    def action_preview_subscription(self):
+        """Open a new browser tab redirecting to the customer portal preview of this subscription."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_url',
+            'url': '/my/subscription/%s' % self.id,
+            'target': 'new',
+        }
+
+    def action_calculate_churn_risk(self):
+        """AI churn risk heuristic analyzer."""
+        for rec in self:
+            score = 0.0
+            # 1. Unpaid invoices factor
+            unpaid_invoices = rec.invoice_ids.filtered(lambda inv: inv.payment_state in ['not_paid', 'partial'])
+            if unpaid_invoices:
+                score += min(len(unpaid_invoices) * 25.0, 50.0)
+                
+            # 2. Trial state factor
+            if rec.state == 'in_trial':
+                score += 15.0
+                
+            # 3. New contract factor
+            total_days = (fields.Date.context_today(self) - rec.start_date).days
+            if total_days < 30 and rec.state != 'in_trial':
+                score += 10.0
+                
+            # 4. Support and pauses history factor
+            if rec.state == 'paused':
+                score += 20.0
+                
+            rec.churn_risk_score = min(score, 100.0)
+            rec.message_post(body=_("AI Churn Risk Analyzed. Score: %s%%. Level: %s.") % (rec.churn_risk_score, rec.churn_risk_level.upper()))
+        return True
+
+class SubscriptionCloseWizard(models.TransientModel):
+    """Subscription Close Wizard transient model assisting users in selecting a termination reason and churning contracts."""
+    _name = 'subscription.close.wizard'
+    _description = 'Subscription Close Wizard'
+
+    subscription_id = fields.Many2one('subscription.subscription', string='Subscription', required=True)
+    close_reason_id = fields.Many2one('subscription.close.reason', string='Close Reason', required=True)
+    description = fields.Text(string='Details')
+
+    def action_close_subscription(self):
+        """Process subscription termination within the close reason wizard, updating the parent contract."""
+        self.ensure_one()
+        sub = self.subscription_id
+        sub.write({
+            'state': 'closed',
+            'close_reason_id': self.close_reason_id.id,
+            'end_date': fields.Date.context_today(self),
+        })
+        # Post a message inside subscription chatter
+        msg = _("Subscription closed. Reason: %s") % self.close_reason_id.name
+        if self.description:
+            msg += "<br/><b>Details:</b> %s" % self.description
+        sub.message_post(body=msg)
+
+        # Also cancel/close the linked Sales Order state if it's active
+        if sub.sale_order_id:
+            sub.sale_order_id.message_post(body=_("Linked subscription was closed. Reason: %s") % self.close_reason_id.name)
+        return {'type': 'ir.actions.act_window_close'}
+
+
+class SubscriptionLineRamp(models.Model):
+    """Subscription Line Ramp model defining graduated pricing cycles for active contracts."""
+    _name = 'subscription.line.ramp'
+    _description = 'Subscription Line Pricing Ramp'
+    _order = 'sequence, id'
+
+    subscription_id = fields.Many2one('subscription.subscription', string='Subscription', ondelete='cascade', required=True)
+    sequence = fields.Integer(string='Sequence', default=10)
+    start_cycle = fields.Integer(string='Start Cycle', default=1, required=True, help="Billing cycle sequence number where this price begins (1-indexed).")
+    end_cycle = fields.Integer(string='End Cycle', required=True, help="Billing cycle sequence number where this price ends.")
+    price_unit = fields.Float(string='Ramp Price', required=True, help="The unit price charged during this ramp interval.")
+
+
+class SubscriptionChangePlanWizard(models.TransientModel):
+    """Subscription Change Plan Wizard transient model managing mid-cycle proration, delta pricing calculation, and upgrade/downgrade invoicing."""
+    _name = 'subscription.change.plan.wizard'
+    _description = 'Subscription Change Plan Wizard'
+
+    subscription_id = fields.Many2one('subscription.subscription', string='Subscription', required=True)
+    new_plan_id = fields.Many2one('subscription.plan', string='New Plan', required=True)
+    prorate = fields.Boolean(string='Prorate Changes', default=True, help="If checked, calculate the delta price for remaining days in the active cycle.")
+
+    def action_change_plan(self):
+        """Execute the plan migration, calculate delta balances, and post prorated adjustment invoices/credits."""
+        self.ensure_one()
+        sub = self.subscription_id
+        old_plan = sub.plan_id
+        new_plan = self.new_plan_id
+
+        if old_plan == new_plan:
+            raise UserError(_("The selected plan is already active on this subscription."))
+
+        # 1. Gather baseline pricing info
+        old_price = old_plan.total_price or (old_plan.product_id.list_price if old_plan.product_id else 0.0)
+        new_price = new_plan.total_price or (new_plan.product_id.list_price if new_plan.product_id else 0.0)
+
+        # 2. Date calculations
+        today = fields.Date.context_today(self)
+        start_date = sub.start_date or today
+        next_invoice = sub.next_invoice_date or today
+
+        # Compute total days in current cycle (approximate to 30 days if not set, or compute using interval)
+        total_days = 30
+        if next_invoice > start_date:
+            total_days = (next_invoice - start_date).days or 30
+
+        remaining_days = max(0, (next_invoice - today).days)
+
+        # 3. Calculate proration value
+        if self.prorate and remaining_days > 0 and total_days > 0:
+            ratio = float(remaining_days) / float(total_days)
+            unused_value = old_price * ratio
+            new_plan_cost = new_price * ratio
+            delta_price = new_plan_cost - unused_value
+        else:
+            delta_price = new_price - old_price
+
+        # 4. Apply plan change
+        sub.write({
+            'plan_id': new_plan.id,
+        })
+        # Reset contract lines to match new plan
+        sub._onchange_plan_id()
+
+        # 5. Generate adjustment Invoice / Credit Note immediately
+        if delta_price != 0.0:
+            invoice_vals = {
+                'partner_id': sub.partner_id.id,
+                'move_type': 'out_invoice' if delta_price > 0 else 'out_refund',
+                'subscription_id': sub.id,
+                'invoice_date': today,
+                'currency_id': sub.currency_id.id,
+                'company_id': sub.company_id.id,
+                'ref': f"Plan Migration Adjustment: {old_plan.name} -> {new_plan.name}",
+                'invoice_line_ids': [(0, 0, {
+                    'product_id': new_plan.product_id.id or old_plan.product_id.id,
+                    'name': _("Prorated Plan Adjustment: %s to %s (%s remaining days)") % (old_plan.name, new_plan.name, remaining_days),
+                    'quantity': 1.0,
+                    'price_unit': abs(delta_price),
+                })],
+            }
+            invoice = self.env['account.move'].create(invoice_vals)
+            try:
+                invoice.action_post()
+            except Exception:
+                pass
+            
+            msg = _("Prorated plan changed to <b>%s</b>. Prorated adjustment invoice %s created.") % (new_plan.name, invoice.name)
+        else:
+            msg = _("Plan changed to <b>%s</b> with no proration delta.") % new_plan.name
+
+        sub.message_post(body=msg)
+        return {'type': 'ir.actions.act_window_close'}

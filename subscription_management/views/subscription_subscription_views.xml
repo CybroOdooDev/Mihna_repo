@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Search View -->
+    <record id="subscription_subscription_view_search" model="ir.ui.view">
+        <field name="name">subscription.subscription.search</field>
+        <field name="model">subscription.subscription</field>
+        <field name="arch" type="xml">
+            <search string="Subscriptions">
+                <field name="name" string="Subscription" filter_domain="['|', ('name', 'ilike', self), ('partner_id', 'ilike', self)]"/>
+                <field name="partner_id"/>
+                <field name="plan_id"/>
+                <field name="sale_order_id"/>
+                <filter string="Active" name="active" domain="[('state', '=', 'in_progress')]"/>
+                <filter string="In Trial" name="in_trial" domain="[('state', '=', 'in_trial')]"/>
+                <filter string="Paused" name="paused" domain="[('state', '=', 'paused')]"/>
+                <filter string="Dunning" name="dunning" domain="[('state', '=', 'in_dunning')]"/>
+                <filter string="Closed" name="closed" domain="[('state', '=', 'closed')]"/>
+                <group>
+                    <filter string="Customer" name="group_customer" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Plan" name="group_plan" context="{'group_by': 'plan_id'}"/>
+                    <filter string="Status" name="group_status" context="{'group_by': 'state'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Tree View -->
+    <record id="subscription_subscription_view_tree" model="ir.ui.view">
+        <field name="name">subscription.subscription.tree</field>
+        <field name="model">subscription.subscription</field>
+        <field name="arch" type="xml">
+            <list string="Subscriptions">
+                <field name="name"/>
+                <field name="partner_id"/>
+                <field name="plan_id"/>
+                <field name="next_invoice_date"/>
+                <field name="state" widget="badge" decoration-info="state in ('draft', 'in_trial')" decoration-success="state == 'in_progress'" decoration-warning="state in ('paused', 'in_dunning')" decoration-danger="state in ('suspended', 'expired', 'cancelled', 'closed')"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Form View -->
+    <record id="subscription_subscription_view_form" model="ir.ui.view">
+        <field name="name">subscription.subscription.form</field>
+        <field name="model">subscription.subscription</field>
+        <field name="arch" type="xml">
+            <form string="Subscription">
+                <header>
+                    <button name="action_start_trial" string="Start Trial" type="object" class="oe_highlight" invisible="state != 'draft' or not plan_id"/>
+                    <button name="action_activate" string="Activate" type="object" class="oe_highlight" invisible="state not in ('draft', 'in_trial', 'paused')"/>
+                    
+                    <!-- Manual Billing & Shipping -->
+                    <button name="action_create_invoice" string="Create Invoice" type="object" class="oe_highlight" invisible="state not in ('in_trial', 'in_progress', 'in_dunning')"/>
+                    <button name="action_create_delivery" string="Create Delivery" type="object" invisible="state not in ('in_trial', 'in_progress')"/>
+                    
+                    <!-- Pause/Resume -->
+                    <button name="action_pause" string="Pause" type="object" invisible="state != 'in_progress'"/>
+                    <button name="action_resume" string="Resume" type="object" class="oe_highlight" invisible="state != 'paused'"/>
+                    
+                    <button name="action_cancel" string="Cancel Subscription" type="object" invisible="state in ('cancelled', 'closed')"/>
+                    <button name="action_close" string="Close Subscription" type="object" invisible="state in ('cancelled', 'closed')"/>
+                    <button name="action_preview_subscription" string="Customer Preview" type="object" class="btn-secondary"/>
+                    
+                    <field name="state" widget="statusbar" statusbar_visible="draft,in_trial,in_progress,cancelled,closed"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <!-- Sales Order Button -->
+                        <button name="action_view_sales_orders" 
+                                type="object" 
+                                class="oe_stat_button" 
+                                icon="fa-shopping-cart" 
+                                invisible="not sale_order_id">
+                            <span class="o_stat_text">Sales Order</span>
+                        </button>
+                        <!-- Invoices Button -->
+                        <button name="action_view_invoices" 
+                                type="object" 
+                                class="oe_stat_button" 
+                                icon="fa-pencil-square-o">
+                            <field name="invoice_count" widget="statinfo" string="Invoices"/>
+                        </button>
+                        <!-- Deliveries Button -->
+                        <button name="action_view_pickings" 
+                                type="object" 
+                                class="oe_stat_button" 
+                                icon="fa-truck">
+                            <field name="picking_count" widget="statinfo" string="Deliveries"/>
+                        </button>
+                    </div>
+                    
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="partner_id"/>
+                            <field name="plan_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="currency_id" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="start_date"/>
+                            <field name="next_invoice_date"/>
+                            <field name="end_date"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Subscription Lines" name="lines">
+                            <field name="line_ids">
+                                <list editable="bottom">
+                                    <field name="product_id"/>
+                                    <field name="name"/>
+                                    <field name="quantity"/>
+                                    <field name="price_unit"/>
+                                    <field name="discount"/>
+                                    <field name="price_subtotal"/>
+                                    <field name="currency_id" column_invisible="1"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Other Info" name="other_info">
+                            <group>
+                                <group string="Trial / Pause Status">
+                                    <field name="trial_end_date" invisible="state != 'in_trial'"/>
+                                    <field name="pause_date" invisible="state != 'paused'"/>
+                                    <field name="resume_date" invisible="state != 'paused'"/>
+                                </group>
+                                <group string="Cancellation Details">
+                                    <field name="cancel_date" invisible="state not in ('cancelled', 'closed')"/>
+                                    <field name="close_reason_id" invisible="state not in ('cancelled', 'closed')" required="state in ('cancelled', 'closed')"/>
+                                    <field name="sale_order_id" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <!-- Pivot View -->
+    <record id="subscription_subscription_view_pivot" model="ir.ui.view">
+        <field name="name">subscription.subscription.pivot</field>
+        <field name="model">subscription.subscription</field>
+        <field name="arch" type="xml">
+            <pivot string="Subscriptions MRR Analysis" sample="1">
+                <field name="partner_id" type="row"/>
+                <field name="plan_id" type="col"/>
+                <field name="mrr_total" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- Graph View -->
+    <record id="subscription_subscription_view_graph" model="ir.ui.view">
+        <field name="name">subscription.subscription.graph</field>
+        <field name="model">subscription.subscription</field>
+        <field name="arch" type="xml">
+            <graph string="MRR Analysis" type="bar" sample="1">
+                <field name="plan_id"/>
+                <field name="mrr_total" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <!-- Custom List View for Subscription Orders -->
+    <record id="view_subscription_order_tree" model="ir.ui.view">
+        <field name="name">sale.order.tree.subscription</field>
+        <field name="model">sale.order</field>
+        <field name="priority">100</field>
+        <field name="arch" type="xml">
+            <list string="Subscriptions" multi_edit="1" sample="1">
+                <field name="name" string="Number" readonly="1" decoration-bf="1"/>
+                <field name="partner_id" string="Customer" readonly="1"/>
+                <field name="next_invoice_date" string="Next Invoice" optional="show"/>
+                <field name="user_id" string="Salesperson" widget="many2one_avatar_user" optional="show"/>
+                <field name="activity_ids" widget="list_activity" optional="show"/>
+                <field name="company_id" groups="base.group_multi_company" optional="show"/>
+                <field name="mrr_total" string="Recurring" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                <field name="plan_id" string="Recurring Plan"/>
+                <field name="amount_total" string="Total" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                <field name="subscription_state" string="Subscription Status" widget="badge" 
+                       decoration-success="subscription_state == 'in_progress'" 
+                       decoration-danger="subscription_state == 'churned'"
+                       decoration-warning="subscription_state == 'draft'"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Custom Search View inheritance to add Subscription search filters -->
+    <record id="sale_order_view_search_inherit_subscription" model="ir.ui.view">
+        <field name="name">sale.order.search.inherit.subscription</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_sales_order_filter"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='my_sale_orders_filter']" position="after">
+                <filter string="In Progress or Paused" name="in_progress_or_paused" domain="[('plan_id', '!=', False), ('state', '=', 'sale')]"/>
+                <filter string="My Subscriptions" name="my_subscriptions" domain="[('plan_id', '!=', False)]"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Action pointing to sale.order for recurring subscriptions (Quotations) -->
+    <record id="action_subscription_sale_orders" model="ir.actions.act_window">
+        <field name="name">Quotations</field>
+        <field name="res_model">sale.order</field>
+        <field name="view_mode">list,kanban,form,pivot,graph</field>
+        <field name="domain">[('plan_id', '!=', False)]</field>
+        <field name="context">{'search_default_my_subscriptions': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create a new Subscription Order
+            </p>
+            <p>
+                Manage recurring customer quotations, order details, and MRR.
+            </p>
+        </field>
+    </record>
+
+    <!-- Action for Subscriptions (Active Contracts) in the dropdown -->
+    <record id="action_subscription_contract_orders" model="ir.actions.act_window">
+        <field name="name">Subscriptions</field>
+        <field name="res_model">sale.order</field>
+        <field name="view_mode">list,form,pivot,graph</field>
+        <field name="domain">[('plan_id', '!=', False)]</field>
+        <field name="context">{'search_default_in_progress_or_paused': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No active subscriptions found
+            </p>
+        </field>
+    </record>
+
+    <!-- Force view ids to use the custom subscription tree view -->
+    <record id="action_subscription_sale_orders_view_tree" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="subscription_management.view_subscription_order_tree"/>
+        <field name="act_window_id" ref="action_subscription_sale_orders"/>
+    </record>
+
+    <record id="action_subscription_sale_orders_view_form" model="ir.actions.act_window.view">
+        <field name="sequence" eval="2"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="subscription_management.view_subscription_order_form"/>
+        <field name="act_window_id" ref="action_subscription_sale_orders"/>
+    </record>
+
+    <record id="action_subscription_contract_orders_view_tree" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="subscription_management.view_subscription_order_tree"/>
+        <field name="act_window_id" ref="action_subscription_contract_orders"/>
+    </record>
+
+    <record id="action_subscription_contract_orders_view_form" model="ir.actions.act_window.view">
+        <field name="sequence" eval="2"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="subscription_management.view_subscription_order_form"/>
+        <field name="act_window_id" ref="action_subscription_contract_orders"/>
+    </record>
+
+    <record id="action_subscription_to_renew_view_tree" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="subscription_management.view_subscription_order_tree"/>
+        <field name="act_window_id" ref="action_subscription_to_renew"/>
+    </record>
+
+    <record id="action_subscription_to_renew_view_form" model="ir.actions.act_window.view">
+        <field name="sequence" eval="2"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="subscription_management.view_subscription_order_form"/>
+        <field name="act_window_id" ref="action_subscription_to_renew"/>
+    </record>
+
+    <record id="action_subscription_upsells_view_tree" model="ir.actions.act_window.view">
+        <field name="sequence" eval="1"/>
+        <field name="view_mode">list</field>
+        <field name="view_id" ref="subscription_management.view_subscription_order_tree"/>
+        <field name="act_window_id" ref="action_subscription_upsells"/>
+    </record>
+
+    <record id="action_subscription_upsells_view_form" model="ir.actions.act_window.view">
+        <field name="sequence" eval="2"/>
+        <field name="view_mode">form</field>
+        <field name="view_id" ref="subscription_management.view_subscription_order_form"/>
+        <field name="act_window_id" ref="action_subscription_upsells"/>
+    </record>
+
+    <!-- Reverted Action for MRR Stat Button (Contract Cards) -->
+    <record id="action_subscription_subscription" model="ir.actions.act_window">
+        <field name="name">Active Contracts</field>
+        <field name="res_model">subscription.subscription</field>
+        <field name="view_mode">list,form,pivot,graph</field>
+        <field name="search_view_id" ref="subscription_subscription_view_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create a new Subscription Contract
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu for Subscription Contracts -->
+    <menuitem id="menu_subscription_contracts" 
+              name="Subscriptions" 
+              parent="subscription_menu_subscriptions" 
+              action="action_subscription_contract_orders" 
+              sequence="10"/>
+
+    <!-- Menu for Subscription Sales Orders (Quotations) -->
+    <menuitem id="menu_subscription_subscription" 
+              name="Quotations" 
+              parent="subscription_menu_subscriptions" 
+              action="action_subscription_sale_orders" 
+              sequence="11"/>
+
+    <!-- Action for To Renew Subscriptions -->
+    <record id="action_subscription_to_renew" model="ir.actions.act_window">
+        <field name="name">To Renew</field>
+        <field name="res_model">sale.order</field>
+        <field name="view_mode">list,kanban,form,pivot,graph</field>
+        <field name="domain">[('plan_id', '!=', False), ('state', '=', 'sale')]</field>
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No subscriptions to renew
+            </p>
+            <p>
+                Odoo will display subscription orders here that are close to their expiration date and require customer renewal.
+            </p>
+        </field>
+    </record>
+
+    <!-- Action for Upsells Subscriptions -->
+    <record id="action_subscription_upsells" model="ir.actions.act_window">
+        <field name="name">Upsells</field>
+        <field name="res_model">sale.order</field>
+        <field name="view_mode">list,kanban,form,pivot,graph</field>
+        <field name="domain">[('plan_id', '!=', False), ('state', '=', 'sale')]</field>
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                No upsell opportunities found
+            </p>
+            <p>
+                Use this menu to track active subscription contracts with pending additions or modifications (upsell opportunities).
+            </p>
+        </field>
+    </record>
+
+    <!-- Menu for To Renew Subscriptions -->
+    <menuitem id="menu_subscription_to_renew" 
+              name="To Renew" 
+              parent="subscription_menu_subscriptions" 
+              action="action_subscription_to_renew" 
+              sequence="12"/>
+
+    <!-- Subscription Close Reason Wizard Form View -->
+    <record id="view_subscription_close_wizard_form" model="ir.ui.view">
+        <field name="name">subscription.close.wizard.form</field>
+        <field name="model">subscription.close.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Close Subscription">
+                <group>
+                    <field name="subscription_id" invisible="1"/>
+                    <field name="close_reason_id" options="{'no_create': True, 'no_open': True}"/>
+                    <field name="description" placeholder="Specify any additional closing comments/notes here..."/>
+                </group>
+                <footer>
+                    <button name="action_close_subscription" string="Close Subscription" type="object" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <!-- Menu for Upsells Subscriptions -->
+    <menuitem id="menu_subscription_upsells" 
+              name="Upsells" 
+              parent="subscription_menu_subscriptions" 
+              action="action_subscription_upsells" 
+              sequence="13"/>
+</odoo>

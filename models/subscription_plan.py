@@ -1,8 +1,20 @@
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api
 
 class SubscriptionPlan(models.Model):
     """Subscription Plan model containing contract configurations, pricing, trial definitions, and renewal options."""
+<<<<<<< HEAD
+=======
+=======
+from odoo import models, fields, api
+
+class SubscriptionPlan(models.Model):
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     _name = 'subscription.plan'
     _description = 'Subscription Plan'
     _order = 'name'
@@ -54,7 +66,14 @@ class SubscriptionPlan(models.Model):
     is_pausable = fields.Boolean(string='Pausable')
     is_add_products = fields.Boolean(string='Add Products')
     is_renew = fields.Boolean(string='Renew')
+<<<<<<< HEAD
     is_popular = fields.Boolean(string='Most Popular')
+=======
+<<<<<<< HEAD
+    is_popular = fields.Boolean(string='Most Popular')
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     
     optional_plan_ids = fields.Many2many(
         'subscription.plan',
@@ -65,7 +84,14 @@ class SubscriptionPlan(models.Model):
     )
 
     pricing_ids = fields.One2many('subscription.plan.pricing', 'plan_id', string='Pricing')
+<<<<<<< HEAD
     ramp_ids = fields.One2many('subscription.plan.ramp', 'plan_id', string='Ramp Pricing Rules')
+=======
+<<<<<<< HEAD
+    ramp_ids = fields.One2many('subscription.plan.ramp', 'plan_id', string='Ramp Pricing Rules')
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
 
     # Dynamic Stat Count fields
     subscription_count = fields.Integer(string='Subscriptions', compute='_compute_counts')
@@ -74,7 +100,14 @@ class SubscriptionPlan(models.Model):
 
     @api.depends('product_id', 'product_id.list_price', 'pricing_ids.price')
     def _compute_total_price(self):
+<<<<<<< HEAD
         """Compute the total price of the subscription plan based on product list price or pricing lines."""
+=======
+<<<<<<< HEAD
+        """Compute the total price of the subscription plan based on product list price or pricing lines."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         for plan in self:
             if plan.product_id:
                 plan.total_price = plan.product_id.list_price
@@ -85,13 +118,27 @@ class SubscriptionPlan(models.Model):
 
     @api.depends('name')
     def _compute_counts(self):
+<<<<<<< HEAD
         """Compute stats for linked subscription sales orders and subscription line items."""
+=======
+<<<<<<< HEAD
+        """Compute stats for linked subscription sales orders and subscription line items."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         for plan in self:
             plan.subscription_count = self.env['sale.order'].search_count([('plan_id', '=', plan.id), ('state', '=', 'sale')])
             plan.item_count = self.env['sale.order.line'].search_count([('order_id.plan_id', '=', plan.id), ('order_id.state', '=', 'sale')])
 
     def action_view_subscriptions(self):
+<<<<<<< HEAD
         """Return an action displaying all confirmed subscription sales orders for this plan."""
+=======
+<<<<<<< HEAD
+        """Return an action displaying all confirmed subscription sales orders for this plan."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         self.ensure_one()
         return {
             'name': 'Subscriptions',
@@ -104,7 +151,14 @@ class SubscriptionPlan(models.Model):
         }
 
     def action_view_subscription_items(self):
+<<<<<<< HEAD
         """Return an action displaying all confirmed subscription sales order items for this plan."""
+=======
+<<<<<<< HEAD
+        """Return an action displaying all confirmed subscription sales order items for this plan."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         self.ensure_one()
         return {
             'name': 'Subscription Items',
@@ -117,7 +171,14 @@ class SubscriptionPlan(models.Model):
 
 
 class SubscriptionPlanPricing(models.Model):
+<<<<<<< HEAD
     """Subscription Plan Pricing model mapping optional pricelists, variants, and unit price values to plans."""
+=======
+<<<<<<< HEAD
+    """Subscription Plan Pricing model mapping optional pricelists, variants, and unit price values to plans."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     _name = 'subscription.plan.pricing'
     _description = 'Subscription Plan Pricing'
 
@@ -126,6 +187,10 @@ class SubscriptionPlanPricing(models.Model):
     variant_id = fields.Many2one('product.attribute.value', string='Variant')
     pricelist_id = fields.Many2one('product.pricelist', string='Pricelist')
     price = fields.Float(string='Unit Price', required=True)
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
 
 
 class SubscriptionPlanRamp(models.Model):
@@ -139,3 +204,8 @@ class SubscriptionPlanRamp(models.Model):
     start_cycle = fields.Integer(string='Start Cycle', default=1, required=True, help="Billing cycle sequence number where this price begins (1-indexed).")
     end_cycle = fields.Integer(string='End Cycle', required=True, help="Billing cycle sequence number where this price ends.")
     price_unit = fields.Float(string='Ramp Price', required=True, help="The unit price charged during this ramp interval.")
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986

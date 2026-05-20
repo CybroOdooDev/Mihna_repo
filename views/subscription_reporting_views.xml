@@ -49,6 +49,7 @@
     </record>
 
     <!-- 3. Subscriptions Analysis Views -->
+<<<<<<< HEAD
     <record id="view_subscription_analysis_report_list" model="ir.ui.view">
         <field name="name">subscription.analysis.report.list</field>
         <field name="model">subscription.analysis.report</field>
@@ -68,12 +69,17 @@
         </field>
     </record>
 
+=======
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     <record id="view_subscription_analysis_report_graph" model="ir.ui.view">
         <field name="name">subscription.analysis.report.graph</field>
         <field name="model">subscription.analysis.report</field>
         <field name="arch" type="xml">
             <graph string="Subscriptions Analysis" type="bar" sample="1">
+<<<<<<< HEAD
                 <field name="plan_id"/>
+=======
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                 <field name="monthly_recurring" type="measure"/>
             </graph>
         </field>
@@ -84,6 +90,7 @@
         <field name="model">subscription.analysis.report</field>
         <field name="arch" type="xml">
             <search string="Search Subscriptions Analysis">
+<<<<<<< HEAD
                 <field name="name" string="Order Reference"/>
                 <field name="partner_id"/>
                 <field name="plan_id"/>
@@ -97,6 +104,10 @@
                 <filter string="Subscription Template" name="group_plan" context="{'group_by': 'plan_id'}"/>
                 <filter string="Salesperson" name="group_user" context="{'group_by': 'user_id'}"/>
                 <filter string="State" name="group_state" context="{'group_by': 'state'}"/>
+=======
+                <filter string="In Progress or Paused" name="in_progress_or_paused" domain="[('state', 'in', ('in_progress', 'paused'))]"/>
+                <filter string="Recurring" name="recurring" domain="[('is_recurring', '=', True)]"/>
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
             </search>
         </field>
     </record>
@@ -110,11 +121,15 @@
                 <field name="first_contract_date" interval="month" type="row"/>
                 <field name="end_date_month" type="col"/>
                 <field name="count" type="measure"/>
+<<<<<<< HEAD
                 <field name="active_count" type="measure"/>
+=======
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                 <field name="retention_rate" type="measure"/>
             </pivot>
         </field>
     </record>
+<<<<<<< HEAD
 
     <record id="view_subscription_retention_analysis_list" model="ir.ui.view">
         <field name="name">subscription.retention.analysis.list</field>
@@ -128,4 +143,6 @@
             </list>
         </field>
     </record>
+=======
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
 </odoo>

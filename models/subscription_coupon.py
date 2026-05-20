@@ -15,6 +15,7 @@ class SubscriptionCoupon(models.Model):
     discount_value = fields.Float(string='Discount Value', required=True, default=0.0)
     active = fields.Boolean(string='Active', default=True)
 
+<<<<<<< HEAD
     # Advanced Validation Fields
     start_date = fields.Date(string='Start Date')
     end_date = fields.Date(string='End Date')
@@ -33,6 +34,8 @@ class SubscriptionCoupon(models.Model):
     ], string='Recurring Application', default='forever', required=True)
     recurring_invoices = fields.Integer(string='Number of Invoices', default=3, help="Number of invoices this coupon applies to, if Limited Invoices is selected.")
 
+=======
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     _sql_constraints = [
         ('code_unique', 'unique(code)', 'The coupon code must be unique!')
     ]
@@ -50,6 +53,7 @@ class SubscriptionCoupon(models.Model):
         if 'code' in vals and vals['code']:
             vals['code'] = vals['code'].strip().upper()
         return super().write(vals)
+<<<<<<< HEAD
 
     def _compute_current_uses(self):
         for coupon in self:
@@ -102,3 +106,5 @@ class SubscriptionCoupon(models.Model):
                     return False, "This coupon is only valid for first-time customers."
                     
         return True, "Coupon applied successfully!"
+=======
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986

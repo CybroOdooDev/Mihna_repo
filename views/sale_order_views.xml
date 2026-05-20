@@ -67,6 +67,7 @@
                             <field name="name" readonly="1"/>
                         </h1>
                         <div class="d-flex gap-2 ms-auto" style="overflow: visible !important; min-width: max-content !important; flex-shrink: 0 !important; margin-right: 10px;">
+<<<<<<< HEAD
                             <span class="badge rounded-pill text-bg-warning px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #ff9800 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '1_draft'">Waiting customer payment</span>
                             <span class="badge rounded-pill text-bg-secondary px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #6c757d !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '2_renewal'">Renewal</span>
                             <span class="badge rounded-pill text-bg-success px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #4caf50 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '3_progress'">In Progress</span>
@@ -74,6 +75,15 @@
                             <span class="badge rounded-pill text-bg-success px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #28a745 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '5_renewed'">Renewed</span>
                             <span class="badge rounded-pill text-bg-danger px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #dc3545 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '6_churn'">Churned</span>
                             <span class="badge rounded-pill text-bg-primary px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #007bff !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '7_upsell'">Upsell</span>
+=======
+                            <span class="badge rounded-pill text-bg-warning px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #ff9800 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != 'draft'">Waiting customer payment</span>
+                            <span class="badge rounded-pill text-bg-success px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #4caf50 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != 'in_progress'">In Progress</span>
+<<<<<<< HEAD
+                            <span class="badge rounded-pill text-bg-info px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #17a2b8 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != 'paused'">Paused</span>
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+                            <span class="badge rounded-pill text-bg-danger px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #dc3545 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != 'churned'">Churned</span>
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                         </div>
                     </div>
                 </div>
@@ -84,7 +94,14 @@
                 <field name="referrer_id" placeholder="Select referrer..."/>
                 <field name="partner_invoice_id" string="Invoice Address" options="{'no_open': True, 'no_create': True}" groups=""/>
                 <field name="partner_shipping_id" string="Delivery Address" options="{'no_open': True, 'no_create': True}" groups=""/>
+<<<<<<< HEAD
                 <field name="coupon_id" placeholder="Select coupon..."/>
+=======
+<<<<<<< HEAD
+                <field name="coupon_id" placeholder="Select coupon..."/>
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
             </xpath>
 
             <!-- 5. Right Column: Add Recurring Plan, Until, Next Invoice, and Promised Delivery -->
@@ -99,6 +116,7 @@
                 <field name="commitment_date" string="Promised Delivery"/>
             </xpath>
 
+<<<<<<< HEAD
 
 
             <!-- 7. Subtotals block: Inject MRR and Non Recurring totals -->
@@ -108,12 +126,31 @@
                     <field name="mrr_total" widget="monetary" options="{'currency_field': 'currency_id'}" style="font-weight: bold; color: #333;"/>
                 </div>
                 <div class="d-flex justify-content-between">
+=======
+<<<<<<< HEAD
+
+=======
+            <!-- 6. Order Lines Table: Inject Resource column -->
+            <xpath expr="//field[@name='order_line']/list/field[@name='product_id']" position="after">
+                <field name="resource_id" optional="show" placeholder="Select resource..."/>
+            </xpath>
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+
+            <!-- 7. Subtotals block: Inject MRR and Non Recurring totals -->
+            <xpath expr="//group[@name='sale_total']" position="inside">
+                <div class="d-flex justify-content-between border-top pt-2 mt-2" invisible="not mrr_total">
+                    <strong style="color: #666;">MRR:</strong>
+                    <field name="mrr_total" widget="monetary" options="{'currency_field': 'currency_id'}" style="font-weight: bold; color: #333;"/>
+                </div>
+                <div class="d-flex justify-content-between" invisible="not mrr_total">
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                     <strong style="color: #666;">Non Recurring:</strong>
                     <field name="non_recurring_total" widget="monetary" options="{'currency_field': 'currency_id'}" style="font-weight: bold; color: #333;"/>
                 </div>
             </xpath>
         </field>
     </record>
+<<<<<<< HEAD
 
     <!-- Custom Tree/List view for Subscription Sales Orders -->
     <record id="view_subscription_order_tree" model="ir.ui.view">
@@ -166,4 +203,6 @@
             </search>
         </field>
     </record>
+=======
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
 </odoo>

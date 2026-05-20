@@ -14,8 +14,13 @@ class SubscriptionDashboard(models.AbstractModel):
         # Active Subscriptions
         active_subs = self.env['subscription.subscription'].search([('state', 'in', ['in_progress', 'in_trial'])])
         
+<<<<<<< HEAD
         # Calculate MRR using Odoo's native computed mrr field
         mrr = sum(active_subs.mapped('mrr'))
+=======
+        # Calculate MRR using Odoo's native computed mrr_total field
+        mrr = sum(active_subs.mapped('mrr_total'))
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         
         arr = mrr * 12
         active_count = len(active_subs)

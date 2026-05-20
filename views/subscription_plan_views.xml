@@ -11,7 +11,14 @@
                 <field name="billing_period_value"/>
                 <field name="billing_period_unit"/>
                 <field name="trial_period_days"/>
+<<<<<<< HEAD
                 <field name="is_popular" string="Most Popular"/>
+=======
+<<<<<<< HEAD
+                <field name="is_popular" string="Most Popular"/>
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                 <field name="company_id" groups="base.group_multi_company"/>
             </list>
         </field>
@@ -48,7 +55,14 @@
                     <group>
                         <group string="DETAILS">
                             <field name="active" invisible="1"/>
+<<<<<<< HEAD
                             <field name="product_id" string="Linked Product"/>
+=======
+<<<<<<< HEAD
+                            <field name="product_id" string="Linked Product"/>
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                             <label for="billing_period_value" string="Billing Period"/>
                             <div class="o_row">
                                 <field name="billing_period_value" class="oe_inline"/>
@@ -69,7 +83,14 @@
                             <field name="is_pausable" string="Pausable"/>
                             <field name="is_add_products" string="Add Products"/>
                             <field name="is_renew" string="Renew"/>
+<<<<<<< HEAD
                             <field name="is_popular" string="Most Popular"/>
+=======
+<<<<<<< HEAD
+                            <field name="is_popular" string="Most Popular"/>
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                             <field name="optional_plan_ids" string="Optional Plans" widget="many2many_tags" placeholder="Select plans..."/>
                         </group>
                     </group>
@@ -86,6 +107,10 @@
                                 </list>
                             </field>
                         </page>
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                         <page string="Ramp Pricing Rules" name="ramp_rules">
                             <field name="ramp_ids">
                                 <list editable="bottom">
@@ -96,6 +121,11 @@
                                 </list>
                             </field>
                         </page>
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                     </notebook>
                 </sheet>
             </form>

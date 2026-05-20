@@ -1,16 +1,37 @@
+<<<<<<< HEAD
 # -*- coding: utf-8 -*-
+=======
+<<<<<<< HEAD
+# -*- coding: utf-8 -*-
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
 class SaleOrder(models.Model):
+<<<<<<< HEAD
     """Inherited Sale Order model representing customer quotation and order pipeline linked to active subscription contracts."""
+=======
+<<<<<<< HEAD
+    """Inherited Sale Order model representing customer quotation and order pipeline linked to active subscription contracts."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     _inherit = 'sale.order'
 
     subscription_ids = fields.One2many('subscription.subscription', 'sale_order_id', string='Subscriptions', readonly=True)
     subscription_count = fields.Integer(string='Subscription Count', compute='_compute_subscription_count')
     
     def _default_plan_id(self):
+<<<<<<< HEAD
         """Retrieve the default recurring billing plan for new Sales Orders."""
+=======
+<<<<<<< HEAD
+        """Retrieve the default recurring billing plan for new Sales Orders."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         plan = self.env['subscription.plan'].search([('billing_period', '=', 'monthly')], limit=1)
         if not plan:
             plan = self.env['subscription.plan'].search([], limit=1)
@@ -23,6 +44,7 @@ class SaleOrder(models.Model):
     non_recurring_total = fields.Monetary(string='Non Recurring Total', compute='_compute_mrr_totals', currency_field='currency_id')
     
     referrer_id = fields.Many2one('res.partner', string='Referrer', help="Select referring partner for this order.")
+<<<<<<< HEAD
     coupon_id = fields.Many2one('subscription.coupon', string='Applied Coupon', help="Applied coupon for discounts.")
  
     subscription_state = fields.Selection([
@@ -38,10 +60,37 @@ class SaleOrder(models.Model):
     @api.depends('state', 'plan_id', 'subscription_ids.state', 'origin')
     def _compute_subscription_state(self):
         """Compute the current subscription status based on order status and contract states."""
+=======
+<<<<<<< HEAD
+    coupon_id = fields.Many2one('subscription.coupon', string='Applied Coupon', help="Applied coupon for discounts.")
+ 
+    subscription_state = fields.Selection([
+        ('draft', 'Draft'),
+        ('paused', 'Paused'),
+        ('in_progress', 'In Progress'),
+        ('churned', 'Churned'),
+    ], string='Subscription Status', compute='_compute_subscription_state', store=True)
+ 
+    @api.depends('state', 'plan_id', 'subscription_ids.state')
+    def _compute_subscription_state(self):
+        """Compute the current subscription status based on order status and contract states."""
+=======
+
+    subscription_state = fields.Selection([
+        ('draft', 'Draft'),
+        ('in_progress', 'In Progress'),
+        ('churned', 'Churned'),
+    ], string='Subscription Status', compute='_compute_subscription_state', store=True)
+
+    @api.depends('state', 'plan_id', 'subscription_ids.state')
+    def _compute_subscription_state(self):
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         for order in self:
             if not order.plan_id:
                 order.subscription_state = False
             elif order.state in ('draft', 'sent'):
+<<<<<<< HEAD
                 if order.origin and "Renewal of" in order.origin:
                     order.subscription_state = '2_renewal'
                 elif order.origin and "Upsell of" in order.origin:
@@ -63,6 +112,28 @@ class SaleOrder(models.Model):
                 order.subscription_state = '3_progress'
             else:
                 order.subscription_state = False
+=======
+                order.subscription_state = 'draft'
+            elif order.state == 'cancel':
+                order.subscription_state = 'churned'
+            elif order.subscription_ids:
+                # If all subscriptions are closed/cancelled, order is churned
+                if all(s.state in ('closed', 'cancelled') for s in order.subscription_ids):
+                    order.subscription_state = 'churned'
+<<<<<<< HEAD
+                # If all non-closed subscriptions are paused, order status is paused
+                elif all(s.state == 'paused' for s in order.subscription_ids.filtered(lambda x: x.state not in ('closed', 'cancelled'))):
+                    order.subscription_state = 'paused'
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+                else:
+                    order.subscription_state = 'in_progress'
+            elif order.state == 'sale':
+                order.subscription_state = 'in_progress'
+            else:
+                order.subscription_state = False
+<<<<<<< HEAD
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
  
     @api.depends('subscription_ids')
     def _compute_subscription_count(self):
@@ -73,6 +144,19 @@ class SaleOrder(models.Model):
     @api.depends('order_line.price_subtotal', 'plan_id', 'order_line.product_id.recurring_ok', 'order_line.product_id.subscription_plan_id')
     def _compute_mrr_totals(self):
         """Compute the Monthly Recurring Revenue (MRR) and non-recurring revenue totals from order lines."""
+<<<<<<< HEAD
+=======
+=======
+
+    @api.depends('subscription_ids')
+    def _compute_subscription_count(self):
+        for order in self:
+            order.subscription_count = len(order.subscription_ids)
+
+    @api.depends('order_line.price_subtotal', 'plan_id', 'order_line.product_id.recurring_ok', 'order_line.product_id.subscription_plan_id')
+    def _compute_mrr_totals(self):
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         for order in self:
             mrr_total = 0.0
             non_recurring_total = 0.0
@@ -107,14 +191,28 @@ class SaleOrder(models.Model):
             order.non_recurring_total = non_recurring_total
 
     def action_confirm(self):
+<<<<<<< HEAD
         """Override standard action_confirm to auto-generate corresponding subscription contract records."""
+=======
+<<<<<<< HEAD
+        """Override standard action_confirm to auto-generate corresponding subscription contract records."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         res = super().action_confirm()
         for order in self:
             order._create_subscriptions_from_order()
         return res
 
     def _create_subscriptions_from_order(self):
+<<<<<<< HEAD
         """Find all recurring line items, group them by plan, and create the matching contracts."""
+=======
+<<<<<<< HEAD
+        """Find all recurring line items, group them by plan, and create the matching contracts."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         self.ensure_one()
         # Find lines that contain a product set as recurring_ok
         recurring_lines = self.order_line.filtered(lambda l: l.product_id.recurring_ok)
@@ -134,7 +232,10 @@ class SaleOrder(models.Model):
                 'partner_id': self.partner_id.id,
                 'plan_id': plan.id,
                 'sale_order_id': self.id,
+<<<<<<< HEAD
                 'coupon_id': self.coupon_id.id,
+=======
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                 'next_invoice_date': self.next_invoice_date or fields.Date.today(),
                 'state': 'draft',
             })
@@ -149,7 +250,11 @@ class SaleOrder(models.Model):
                     'name': line.name,
                     'quantity': line.product_uom_qty,
                     'price_unit': line.price_unit,
+<<<<<<< HEAD
                     'discount': 0.0 if self.coupon_id else line.discount,
+=======
+                    'discount': line.discount,
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                 }))
             sub.write({'line_ids': sub_lines})
             # If trial period exists, start trial, else activate
@@ -159,7 +264,14 @@ class SaleOrder(models.Model):
                 sub.action_activate()
 
     def action_upsell(self):
+<<<<<<< HEAD
         """Create a new draft Sales Order quotation specifically for upselling and adding items to this contract."""
+=======
+<<<<<<< HEAD
+        """Create a new draft Sales Order quotation specifically for upselling and adding items to this contract."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         self.ensure_one()
         # Create a new draft quotation for upsell
         upsell_order = self.env['sale.order'].create({
@@ -183,7 +295,14 @@ class SaleOrder(models.Model):
         }
 
     def action_renew(self):
+<<<<<<< HEAD
         """Create a new draft Sales Order quotation copying lines to renew the subscription contract."""
+=======
+<<<<<<< HEAD
+        """Create a new draft Sales Order quotation copying lines to renew the subscription contract."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         self.ensure_one()
         # Create a new draft quotation for renewal
         renew_order = self.env['sale.order'].create({
@@ -205,7 +324,14 @@ class SaleOrder(models.Model):
                 'product_uom_qty': line.product_uom_qty,
                 'price_unit': line.price_unit,
                 'discount': line.discount,
+<<<<<<< HEAD
                 'resource_id': line.resource_id.id if hasattr(line, 'resource_id') and line.resource_id else False,
+=======
+<<<<<<< HEAD
+=======
+                'resource_id': line.resource_id.id if line.resource_id else False,
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
             })
             
         # Redirect to the new quotation form view using the subscription form layout
@@ -220,7 +346,14 @@ class SaleOrder(models.Model):
         }
 
     def action_close(self):
+<<<<<<< HEAD
         """Trigger the close wizard to select a close reason and gracefully terminate active contracts."""
+=======
+<<<<<<< HEAD
+        """Trigger the close wizard to select a close reason and gracefully terminate active contracts."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         self.ensure_one()
         active_subs = self.subscription_ids.filtered(lambda s: s.state not in ('closed', 'cancelled', 'expired'))
         if not active_subs:
@@ -238,9 +371,20 @@ class SaleOrder(models.Model):
             }
         }
 
+<<<<<<< HEAD
 
 class SaleOrderLine(models.Model):
     """Inherited Sale Order Line to track specific physical or human resources associated with service items."""
     _inherit = 'sale.order.line'
 
     resource_id = fields.Many2one('res.partner', string='Resource', help="Select resource associated with this line.")
+=======
+<<<<<<< HEAD
+
+=======
+class SaleOrderLine(models.Model):
+    _inherit = 'sale.order.line'
+
+    resource_id = fields.Many2one('res.partner', string='Resource', help="Select resource associated with this line.")
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986

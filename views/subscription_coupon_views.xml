@@ -26,6 +26,7 @@
                             <field name="name" placeholder="e.g. Summer Promo 20%"/>
                         </h1>
                     </div>
+<<<<<<< HEAD
                     <notebook>
                         <page string="General configuration" name="general">
                             <group>
@@ -67,6 +68,18 @@
                             </group>
                         </page>
                     </notebook>
+=======
+                    <group>
+                        <group>
+                            <field name="code" placeholder="e.g. SAVE20"/>
+                            <field name="discount_type"/>
+                        </group>
+                        <group>
+                            <field name="discount_value"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                 </sheet>
             </form>
         </field>

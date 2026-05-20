@@ -1,15 +1,27 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_subscription_plan_user,subscription.plan.user,model_subscription_plan,group_subscription_user,1,0,0,0
 access_subscription_plan_manager,subscription.plan.manager,model_subscription_plan,group_subscription_manager,1,1,1,1
+<<<<<<< HEAD
+=======
+access_subscription_subscription_user,subscription.subscription.user,model_subscription_subscription,group_subscription_user,1,1,1,0
+access_subscription_subscription_manager,subscription.subscription.manager,model_subscription_subscription,group_subscription_manager,1,1,1,1
+access_subscription_line_user,subscription.line.user,model_subscription_line,group_subscription_user,1,1,1,0
+access_subscription_line_manager,subscription.line.manager,model_subscription_line,group_subscription_manager,1,1,1,1
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
 access_subscription_close_reason_user,subscription.close.reason.user,model_subscription_close_reason,group_subscription_user,1,0,0,0
 access_subscription_close_reason_manager,subscription.close.reason.manager,model_subscription_close_reason,group_subscription_manager,1,1,1,1
 access_subscription_plan_pricing_user,subscription.plan.pricing.user,model_subscription_plan_pricing,group_subscription_user,1,1,1,1
 access_subscription_plan_pricing_manager,subscription.plan.pricing.manager,model_subscription_plan_pricing,group_subscription_manager,1,1,1,1
+<<<<<<< HEAD
 access_subscription_subscription_user,subscription.subscription.user,model_subscription_subscription,group_subscription_user,1,1,1,0
 access_subscription_subscription_manager,subscription.subscription.manager,model_subscription_subscription,group_subscription_manager,1,1,1,1
 access_subscription_subscription_portal,subscription.subscription.portal,model_subscription_subscription,base.group_portal,1,0,0,0
 access_subscription_line_user,subscription.line.user,model_subscription_line,group_subscription_user,1,1,1,1
 access_subscription_line_manager,subscription.line.manager,model_subscription_line,group_subscription_manager,1,1,1,1
+=======
+access_subscription_close_wizard_user,subscription.close.wizard.user,model_subscription_close_wizard,group_subscription_user,1,1,1,1
+access_subscription_close_wizard_manager,subscription.close.wizard.manager,model_subscription_close_wizard,group_subscription_manager,1,1,1,1
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
 access_subscription_mrr_breakdown_user,subscription.mrr.breakdown.user,model_subscription_mrr_breakdown,group_subscription_user,1,1,1,1
 access_subscription_mrr_breakdown_manager,subscription.mrr.breakdown.manager,model_subscription_mrr_breakdown,group_subscription_manager,1,1,1,1
 access_subscription_mrr_analysis_user,subscription.mrr.analysis.user,model_subscription_mrr_analysis,group_subscription_user,1,1,1,1
@@ -18,12 +30,33 @@ access_subscription_analysis_report_user,subscription.analysis.report.user,model
 access_subscription_analysis_report_manager,subscription.analysis.report.manager,model_subscription_analysis_report,group_subscription_manager,1,1,1,1
 access_subscription_retention_analysis_user,subscription.retention.analysis.user,model_subscription_retention_analysis,group_subscription_user,1,1,1,1
 access_subscription_retention_analysis_manager,subscription.retention.analysis.manager,model_subscription_retention_analysis,group_subscription_manager,1,1,1,1
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
 access_subscription_coupon_user,subscription.coupon.user,model_subscription_coupon,group_subscription_user,1,0,0,0
 access_subscription_coupon_manager,subscription.coupon.manager,model_subscription_coupon,group_subscription_manager,1,1,1,1
 access_subscription_usage_user,subscription.usage.user,model_subscription_usage,group_subscription_user,1,1,1,0
 access_subscription_usage_manager,subscription.usage.manager,model_subscription_usage,group_subscription_manager,1,1,1,1
+<<<<<<< HEAD
 access_subscription_plan_portal,subscription.plan.portal,model_subscription_plan,base.group_portal,1,0,0,0
 access_subscription_close_wizard_user,subscription.close.wizard.user,model_subscription_close_wizard,group_subscription_user,1,1,1,1
 access_subscription_change_plan_wizard_user,subscription.change.plan.wizard.user,model_subscription_change_plan_wizard,group_subscription_user,1,1,1,1
 access_subscription_plan_ramp_user,subscription.plan.ramp.user,model_subscription_plan_ramp,group_subscription_user,1,0,0,0
 access_subscription_plan_ramp_manager,subscription.plan.ramp.manager,model_subscription_plan_ramp,group_subscription_manager,1,1,1,1
+=======
+access_subscription_subscription_portal,subscription.subscription.portal,model_subscription_subscription,base.group_portal,1,0,0,0
+access_subscription_line_portal,subscription.line.portal,model_subscription_line,base.group_portal,1,0,0,0
+access_subscription_plan_portal,subscription.plan.portal,model_subscription_plan,base.group_portal,1,0,0,0
+access_subscription_plan_ramp_user,subscription.plan.ramp.user,model_subscription_plan_ramp,group_subscription_user,1,1,1,1
+access_subscription_plan_ramp_manager,subscription.plan.ramp.manager,model_subscription_plan_ramp,group_subscription_manager,1,1,1,1
+access_subscription_plan_ramp_portal,subscription.plan.ramp.portal,model_subscription_plan_ramp,base.group_portal,1,0,0,0
+access_subscription_line_ramp_user,subscription.line.ramp.user,model_subscription_line_ramp,group_subscription_user,1,1,1,1
+access_subscription_line_ramp_manager,subscription.line.ramp.manager,model_subscription_line_ramp,group_subscription_manager,1,1,1,1
+access_subscription_line_ramp_portal,subscription.line.ramp.portal,model_subscription_line_ramp,base.group_portal,1,0,0,0
+access_subscription_change_plan_wizard_user,subscription.change_plan_wizard.user,model_subscription_change_plan_wizard,group_subscription_user,1,1,1,1
+access_subscription_change_plan_wizard_manager,subscription.change_plan_wizard.manager,model_subscription_change_plan_wizard,group_subscription_manager,1,1,1,1
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986

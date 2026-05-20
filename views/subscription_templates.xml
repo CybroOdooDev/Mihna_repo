@@ -235,6 +235,10 @@
                     </div>
                 </div>
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                 <!-- Upcoming Invoice Preview Engine (Step 5) -->
                 <div t-if="preview" class="card border-0 shadow-sm mb-4" style="border-radius: 12px; overflow: hidden; border: 2px dashed #17a2b8 !important;">
                     <div class="card-body p-4 bg-light border-bottom d-flex justify-content-between align-items-center" style="background-color: rgba(23, 162, 184, 0.05) !important;">
@@ -286,6 +290,11 @@
                     </div>
                 </div>
 
+<<<<<<< HEAD
+=======
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                 <!-- Tabs for Linked Records (Invoices & Deliveries) -->
                 <div class="row">
                     <div class="col-lg-6 mb-4">
@@ -659,7 +668,15 @@
                         <!-- Pricing Grid -->
                         <div class="row align-items-stretch justify-content-center">
                             <t t-foreach="plans" t-as="plan">
+<<<<<<< HEAD
                                 <t t-set="is_popular" t-value="plan.is_popular"/>
+=======
+<<<<<<< HEAD
+                                <t t-set="is_popular" t-value="plan.is_popular"/>
+=======
+                                <t t-set="is_popular" t-value="'pro' in plan.name.lower() or 'gold' in plan.name.lower() or 'premium' in plan.name.lower() or plan_index == 1"/>
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                                 
                                 <div class="col-lg-4 col-md-6 mb-4 d-flex animate-fade-in-up" t-attf-style="animation-delay: #{plan_index * 150}ms;">
                                     <div t-attf-class="card pricing-card-modern w-100 border-0 #{'pricing-card-featured' if is_popular else ''}">
@@ -711,7 +728,15 @@
                                         </div>
                                         
                                         <!-- Action CTA -->
+<<<<<<< HEAD
                                         <a t-attf-href="/subscriptions/checkout/#{plan.id}" t-attf-class="btn cta-btn-modern #{'cta-btn-featured' if is_popular else ''} mt-auto">Subscribe Now</a>
+=======
+<<<<<<< HEAD
+                                        <a t-attf-href="/subscriptions/checkout/#{plan.id}" t-attf-class="btn cta-btn-modern #{'cta-btn-featured' if is_popular else ''} mt-auto">Subscribe Now</a>
+=======
+                                        <a t-attf-href="/subscriptions/subscribe/#{plan.id}" t-attf-class="btn cta-btn-modern #{'cta-btn-featured' if is_popular else ''} mt-auto">Subscribe Now</a>
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                                     </div>
                                 </div>
                             </t>
@@ -729,6 +754,10 @@
         </t>
     </template>
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     <!-- Checkout Page Template -->
     <template id="subscription_checkout_page" name="Subscription Checkout">
         <t t-call="website.layout">
@@ -940,6 +969,7 @@
                                                 </div>
                                                 <div id="coupon_msg" class="mt-2 small" style="display: none;"/>
                                             </div>
+<<<<<<< HEAD
                                         </div>
 
                                         <!-- Complete Button -->
@@ -949,6 +979,146 @@
                                         
                                         <p class="text-center text-muted small mt-3 mb-0">
                                             By continuing, you agree to our Terms of Service. Future renewals occur automatically.
+=======
+
+                                            <div class="mb-4">
+                                                <label class="form-label checkout-form-label mb-3">Available Providers</label>
+                                                <div class="row g-3">
+                                                    <t t-if="providers">
+                                                        <t t-foreach="providers" t-as="provider">
+                                                            <div class="col-md-6 mb-3">
+                                                                <label class="payment-provider-card d-flex align-items-center p-3 border rounded-3 position-relative" t-att-for="'provider_' + str(provider.id)" style="cursor: pointer; transition: all 0.2s ease; border: 1px solid rgba(0,0,0,0.1) !important; border-radius: 8px;">
+                                                                    <input type="radio" name="payment_provider_id" t-att-id="'provider_' + str(provider.id)" t-att-value="provider.id" t-att-data-code="provider.code" t-att-checked="'checked' if provider_index == 0 else None" class="form-check-input me-3" required="1"/>
+                                                                    <div class="d-flex align-items-center">
+                                                                        <t t-if="provider.image_128">
+                                                                            <img t-attf-src="/web/image/payment.provider/#{provider.id}/image_128" style="height: 28px; width: auto; object-fit: contain;" class="me-2"/>
+                                                                        </t>
+                                                                        <span class="fw-bold text-dark small"><t t-esc="provider.name"/></span>
+                                                                    </div>
+                                                                </label>
+                                                            </div>
+                                                        </t>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <div class="col-12 mb-2">
+                                                            <label class="payment-provider-card d-flex align-items-center p-3 border rounded-3 position-relative" style="cursor: pointer; border: 1px solid rgba(0,0,0,0.1) !important; border-radius: 8px;">
+                                                                <input type="radio" name="payment_provider_id" value="0" data-code="stripe" checked="checked" class="form-check-input me-3" required="1"/>
+                                                                <div class="d-flex align-items-center">
+                                                                    <i class="fa fa-credit-card text-muted me-2" style="font-size: 1.2rem;"/>
+                                                                    <span class="fw-bold text-dark small">Credit / Debit Card (Stripe Sandbox)</span>
+                                                                </div>
+                                                            </label>
+                                                        </div>
+                                                        <div class="col-12">
+                                                            <label class="payment-provider-card d-flex align-items-center p-3 border rounded-3 position-relative" style="cursor: pointer; border: 1px solid rgba(0,0,0,0.1) !important; border-radius: 8px;">
+                                                                <input type="radio" name="payment_provider_id" value="0" data-code="demo" class="form-check-input me-3" required="1"/>
+                                                                <div class="d-flex align-items-center">
+                                                                    <i class="fa fa-magic text-info me-2" style="font-size: 1.2rem;"/>
+                                                                    <span class="fw-bold text-dark small">Demo Payment Simulator (No Card Required)</span>
+                                                                </div>
+                                                            </label>
+                                                        </div>
+                                                    </t>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Card Details input -->
+                                            <div id="card_details_section" style="display: block;">
+                                                <div class="mb-3">
+                                                    <label for="card_num" class="form-label checkout-form-label">Card Number</label>
+                                                    <div class="position-relative">
+                                                        <input type="text" class="form-control checkout-form-input ps-5" id="card_num" placeholder="4111 2222 3333 4444" required="1" pattern="\d{16}" maxlength="16"/>
+                                                        <i class="fa fa-credit-card position-absolute text-muted" style="left: 18px; top: 16px;"/>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="row">
+                                                    <div class="col-md-6 mb-3 mb-md-0">
+                                                        <label for="card_expiry" class="form-label checkout-form-label">Expiration Date</label>
+                                                        <input type="text" class="form-control checkout-form-input" id="card_expiry" placeholder="MM / YY" required="1" maxlength="5"/>
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <label for="card_cvc" class="form-label checkout-form-label">Security Code (CVC)</label>
+                                                        <input type="password" class="form-control checkout-form-input" id="card_cvc" placeholder="•••" required="1" pattern="\d{3,4}" maxlength="4"/>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <!-- PayPal Section -->
+                                            <div id="paypal_details_section" style="display: none;" class="p-3 border rounded bg-light mb-3">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <i class="fa fa-paypal text-primary me-2" style="font-size: 1.5rem;"/>
+                                                    <span class="fw-bold text-dark">PayPal Checkout</span>
+                                                </div>
+                                                <p class="text-muted small mb-0">
+                                                    You will be redirected to PayPal to complete your subscription authorization securely.
+                                                </p>
+                                            </div>
+
+                                            <!-- Wire Transfer Section -->
+                                            <div id="wire_details_section" style="display: none;" class="p-3 border rounded bg-light mb-3">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <i class="fa fa-university text-muted me-2" style="font-size: 1.3rem;"/>
+                                                    <span class="fw-bold text-dark">Bank Wire Transfer</span>
+                                                </div>
+                                                <div class="small text-muted mb-2">
+                                                    Please transfer the total due amount to the following bank account:
+                                                </div>
+                                                <table class="table table-sm table-borderless mb-0 small text-dark">
+                                                    <tr>
+                                                        <td class="font-weight-semibold p-0 text-muted" style="width: 100px;">Bank Name:</td>
+                                                        <td class="p-0 font-weight-bold text-dark">Global Commerce Bank</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="font-weight-semibold p-0 text-muted">IBAN:</td>
+                                                        <td class="p-0 font-weight-bold text-dark">US89 3000 0000 1234 5678 90</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td class="font-weight-semibold p-0 text-muted">SWIFT/BIC:</td>
+                                                        <td class="p-0 font-weight-bold text-dark">GLOBUS33XXX</td>
+                                                    </tr>
+                                                </table>
+                                                <div class="mt-2 small text-warning font-weight-semibold">
+                                                    * Please include your subscription email as the transfer reference memo.
+                                                </div>
+                                            </div>
+
+                                            <!-- Demo Gateway Section -->
+                                            <div id="demo_details_section" style="display: none;" class="p-3 border rounded bg-light mb-3">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <i class="fa fa-magic text-info me-2" style="font-size: 1.3rem;"/>
+                                                    <span class="fw-bold text-dark">Demo Payment Simulator</span>
+                                                </div>
+                                                <p class="text-muted small mb-0">
+                                                    Your subscription will be processed instantly and activated in test mode.
+                                                </p>
+                                            </div>
+
+                                            <!-- Paytrail Gateway Section -->
+                                            <div id="paytrail_details_section" style="display: none;" class="p-3 border rounded bg-light mb-3">
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <i class="fa fa-credit-card text-primary me-2" style="font-size: 1.3rem;"/>
+                                                    <span class="fw-bold text-dark">Paytrail Checkout</span>
+                                                </div>
+                                                <p class="text-muted small mb-0">
+                                                    Your payment will be processed securely via Paytrail. No card details required here.
+                                                </p>
+                                            </div>
+                                        </div>
+                                        
+                                        <!-- Complete Button -->
+                                        <button type="submit" class="btn btn-pay-modern">
+                                            <t t-if="plan.trial_period_days > 0">
+                                                <span>Start Free Trial</span>
+                                            </t>
+                                            <t t-else="">
+                                                <span>Pay &amp; Subscribe</span>
+                                            </t>
+                                        </button>
+                                        
+                                        <p class="text-center text-muted small mt-3 mb-0">
+                                            By checking out, you agree to our Terms of Service. Future renewals occur automatically.
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                                         </p>
                                     </form>
                                 </div>
@@ -1029,13 +1199,65 @@
                             });
                         }
 
+<<<<<<< HEAD
                         // We removed custom provider toggles because we are using Odoo's native payment system
+=======
+                        // Toggle Card Details dynamically based on selected Payment Provider
+                        const providers = document.querySelectorAll('input[name="payment_provider_id"]');
+                        const cardSec = document.getElementById('card_details_section');
+                        const paypalSec = document.getElementById('paypal_details_section');
+                        const wireSec = document.getElementById('wire_details_section');
+                        const demoSec = document.getElementById('demo_details_section');
+                        const paytrailSec = document.getElementById('paytrail_details_section');
+
+                        if (cardSec) {
+                            const cardInputs = cardSec.querySelectorAll('input');
+                            
+                            function toggleCardSection() {
+                                const selected = document.querySelector('input[name="payment_provider_id"]:checked');
+                                if (!selected) return;
+                                
+                                const code = selected.getAttribute('data-code');
+                                
+                                // Reset displays
+                                if (cardSec) cardSec.style.display = 'none';
+                                if (paypalSec) paypalSec.style.display = 'none';
+                                if (wireSec) wireSec.style.display = 'none';
+                                if (demoSec) demoSec.style.display = 'none';
+                                if (paytrailSec) paytrailSec.style.display = 'none';
+                                
+                                cardInputs.forEach(input => {
+                                    input.removeAttribute('required');
+                                });
+                                
+                                if (code === 'demo') {
+                                    if (demoSec) demoSec.style.display = 'block';
+                                } else if (code === 'paytrail') {
+                                    if (paytrailSec) paytrailSec.style.display = 'block';
+                                } else if (code === 'paypal') {
+                                    if (paypalSec) paypalSec.style.display = 'block';
+                                } else if (code === 'transfer' || code === 'custom') {
+                                    if (wireSec) wireSec.style.display = 'block';
+                                } else {
+                                    // Default credit card / live payment gateways (stripe, authorize, etc. or sandbox fallback "0")
+                                    if (cardSec) {
+                                        cardSec.style.display = 'block';
+                                        cardInputs.forEach(input => input.setAttribute('required', '1'));
+                                    }
+                                }
+                            }
+                            
+                            providers.forEach(p => p.addEventListener('change', toggleCardSection));
+                            toggleCardSection();
+                        }
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                     });
                 </script>
             </div>
         </t>
     </template>
 
+<<<<<<< HEAD
     <!-- Payment Page using Native Payment Gateways -->
     <template id="subscription_payment_page" name="Subscription Payment">
         <t t-call="website.layout">
@@ -1081,6 +1303,10 @@
         </t>
     </template>
 
+=======
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     <!-- Success Screen -->
     <template id="subscription_success_page" name="Subscription Success">
         <t t-call="website.layout">

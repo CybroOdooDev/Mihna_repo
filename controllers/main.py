@@ -1,14 +1,33 @@
+<<<<<<< HEAD
 # -*- coding: utf-8 -*-
+=======
+<<<<<<< HEAD
+# -*- coding: utf-8 -*-
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
 from odoo import http, _
 from odoo.http import request
 from odoo.addons.portal.controllers.portal import CustomerPortal, pager as portal_pager
 
 class SubscriptionController(http.Controller):
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     """Subscription Controller managing the public frontend website plans, subscribe routes, checkouts, and coupon validation endpoints."""
 
     @http.route(['/subscriptions'], type='http', auth="public", website=True)
     def subscription_plans(self, **kw):
         """Render the public subscription plans landing page listing all active plans."""
+<<<<<<< HEAD
+=======
+=======
+
+    @http.route(['/subscriptions'], type='http', auth="public", website=True)
+    def subscription_plans(self, **kw):
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         plans = request.env['subscription.plan'].sudo().search([('active', '=', True)])
         return request.render('subscription_management.subscription_plans_page', {
             'plans': plans
@@ -16,7 +35,14 @@ class SubscriptionController(http.Controller):
 
     @http.route(['/subscriptions/subscribe/<model("subscription.plan"):plan>'], type='http', auth="user", website=True)
     def subscription_subscribe(self, plan, **kw):
+<<<<<<< HEAD
         """Handle direct 1-click subscription registration, creating a sales order and contract."""
+=======
+<<<<<<< HEAD
+        """Handle direct 1-click subscription registration, creating a sales order and contract."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         partner = request.env.user.partner_id
         
         # Check if already has a draft/active subscription for this plan
@@ -33,6 +59,10 @@ class SubscriptionController(http.Controller):
                 'message': 'You already have an active or pending subscription for this plan.'
             })
             
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         # Create a new draft sales order
         order = request.env['sale.order'].sudo().create({
             'partner_id': partner.id,
@@ -66,6 +96,19 @@ class SubscriptionController(http.Controller):
                 'state': 'draft'
             })
             subscription._onchange_plan_id()
+<<<<<<< HEAD
+=======
+=======
+        # Create a new draft subscription
+        subscription = request.env['subscription.subscription'].sudo().create({
+            'partner_id': partner.id,
+            'plan_id': plan.id,
+            'state': 'draft'
+        })
+        # Trigger the onchange manually to populate lines since we are in backend code
+        subscription._onchange_plan_id()
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         
         return request.render('subscription_management.subscription_success_page', {
             'plan': plan,
@@ -73,6 +116,10 @@ class SubscriptionController(http.Controller):
             'message': 'Your subscription has been successfully created and is waiting for activation.'
         })
 
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     @http.route(['/subscriptions/checkout/<model("subscription.plan"):plan>'], type='http', auth="public", website=True)
     def subscription_checkout(self, plan, **kw):
         """Render the custom subscription checkout page with billing, coupon, and payment provider options."""
@@ -103,6 +150,7 @@ class SubscriptionController(http.Controller):
         ], limit=1)
         
         if not coupon:
+<<<<<<< HEAD
             return {'valid': False, 'message': 'Invalid coupon code.'}
             
         subtotal = plan.total_price or 0.0
@@ -112,6 +160,11 @@ class SubscriptionController(http.Controller):
         if not is_valid:
             return {'valid': False, 'message': msg}
             
+=======
+            return {'valid': False, 'message': 'Invalid or expired coupon code.'}
+            
+        subtotal = plan.total_price or 0.0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         discount_amount = 0.0
         if coupon.discount_type == 'percentage':
             discount_amount = subtotal * (coupon.discount_value / 100.0)
@@ -229,6 +282,7 @@ class SubscriptionController(http.Controller):
             
         if product:
             price = plan.total_price
+<<<<<<< HEAD
             discount_pct = 0.0
             
             if coupon_id:
@@ -349,6 +403,56 @@ class SubscriptionController(http.Controller):
             'plan': order_sudo.plan_id,
             'subscription': subscription,
             'message': 'Your transaction was successful, and your subscription is now active!'
+=======
+            if coupon_id:
+                coupon = request.env['subscription.coupon'].sudo().browse(coupon_id)
+                if coupon.discount_type == 'percentage':
+                    price = price * (1.0 - (coupon.discount_value / 100.0))
+                elif coupon.discount_type == 'fixed':
+                    price = max(0.0, price - coupon.discount_value)
+                    
+            request.env['sale.order.line'].sudo().create({
+                'order_id': order.id,
+                'product_id': product.id,
+                'product_uom_qty': 1.0,
+                'price_unit': price,
+            })
+            
+        # Confirm the sales order
+        order.action_confirm()
+        
+        # Find the created subscription
+        subscription = request.env['subscription.subscription'].sudo().search([('sale_order_id', '=', order.id)], limit=1)
+        if not subscription:
+            subscription = request.env['subscription.subscription'].sudo().create({
+                'partner_id': partner.id,
+                'plan_id': plan.id,
+                'coupon_id': coupon_id,
+                'sale_order_id': order.id,
+                'state': 'draft',
+            })
+            subscription._onchange_plan_id()
+            
+        if plan.trial_period_days > 0:
+            subscription.action_start_trial()
+            msg = 'Your subscription has been successfully started with a free trial!'
+        else:
+            invoice = subscription.action_create_invoice()
+            provider_id = kw.get('payment_provider_id')
+            provider_name = ""
+            if provider_id:
+                provider = request.env['payment.provider'].sudo().browse(int(provider_id))
+                if provider:
+                    provider_name = provider.name
+            subscription.action_pay_and_reconcile(invoice, provider_name=provider_name)
+            subscription.action_activate()
+            msg = 'Your payment was processed successfully, and your subscription is now active!'
+            
+        return request.render('subscription_management.subscription_success_page', {
+            'plan': plan,
+            'subscription': subscription,
+            'message': msg
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         })
 
 class CustomerPortalSubscription(CustomerPortal):
@@ -356,6 +460,14 @@ class CustomerPortalSubscription(CustomerPortal):
 
     def _prepare_home_portal_values(self, selectors=None):
         """Inject the active subscription count into the customer portal home values."""
+<<<<<<< HEAD
+=======
+=======
+class CustomerPortalSubscription(CustomerPortal):
+
+    def _prepare_home_portal_values(self, selectors=None):
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         values = super()._prepare_home_portal_values(selectors)
         partner = request.env.user.partner_id
         subscription_count = request.env['subscription.subscription'].sudo().search_count([
@@ -366,7 +478,14 @@ class CustomerPortalSubscription(CustomerPortal):
 
     @http.route(['/my/subscriptions', '/my/subscriptions/page/<int:page>'], type='http', auth="user", website=True)
     def portal_my_subscriptions(self, page=1, date_begin=None, date_end=None, sortby=None, **kw):
+<<<<<<< HEAD
         """Render the listing page for all the customer's active and historical subscription contracts."""
+=======
+<<<<<<< HEAD
+        """Render the listing page for all the customer's active and historical subscription contracts."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         values = self._prepare_portal_layout_values()
         partner = request.env.user.partner_id
         Subscription = request.env['subscription.subscription'].sudo()
@@ -395,13 +514,24 @@ class CustomerPortalSubscription(CustomerPortal):
 
     @http.route(['/my/subscription/<int:subscription_id>'], type='http', auth="user", website=True)
     def portal_my_subscription_detail(self, subscription_id, **kw):
+<<<<<<< HEAD
         """Render the detailed view page for a specific subscription contract."""
+=======
+<<<<<<< HEAD
+        """Render the detailed view page for a specific subscription contract."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         subscription = request.env['subscription.subscription'].sudo().browse(subscription_id)
         if not subscription.exists() or subscription.partner_id != request.env.user.partner_id:
             return request.redirect('/my/subscriptions')
             
         close_reasons = request.env['subscription.close.reason'].sudo().search([])
         
+<<<<<<< HEAD
+=======
+<<<<<<< HEAD
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         # Calculate dynamic next invoice preview
         try:
             preview = subscription.action_preview_next_invoice()
@@ -412,12 +542,27 @@ class CustomerPortalSubscription(CustomerPortal):
             'subscription': subscription,
             'close_reasons': close_reasons,
             'preview': preview,
+<<<<<<< HEAD
+=======
+=======
+        return request.render("subscription_management.portal_my_subscription_detail", {
+            'subscription': subscription,
+            'close_reasons': close_reasons,
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
             'page_name': 'subscription_detail',
         })
 
     @http.route(['/my/subscription/<int:subscription_id>/pause'], type='http', auth="user", methods=['POST'], website=True, csrf=True)
     def portal_my_subscription_pause(self, subscription_id, **kw):
+<<<<<<< HEAD
         """Pause the customer's subscription contract via portal interaction."""
+=======
+<<<<<<< HEAD
+        """Pause the customer's subscription contract via portal interaction."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         subscription = request.env['subscription.subscription'].sudo().browse(subscription_id)
         if subscription.exists() and subscription.partner_id == request.env.user.partner_id and subscription.plan_id.is_pausable:
             subscription.action_pause()
@@ -425,7 +570,14 @@ class CustomerPortalSubscription(CustomerPortal):
 
     @http.route(['/my/subscription/<int:subscription_id>/resume'], type='http', auth="user", methods=['POST'], website=True, csrf=True)
     def portal_my_subscription_resume(self, subscription_id, **kw):
+<<<<<<< HEAD
         """Resume the customer's paused subscription contract via portal interaction."""
+=======
+<<<<<<< HEAD
+        """Resume the customer's paused subscription contract via portal interaction."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         subscription = request.env['subscription.subscription'].sudo().browse(subscription_id)
         if subscription.exists() and subscription.partner_id == request.env.user.partner_id and subscription.plan_id.is_pausable:
             subscription.action_resume()
@@ -433,7 +585,14 @@ class CustomerPortalSubscription(CustomerPortal):
 
     @http.route(['/my/subscription/<int:subscription_id>/cancel'], type='http', auth="user", methods=['POST'], website=True, csrf=True)
     def portal_my_subscription_cancel(self, subscription_id, **kw):
+<<<<<<< HEAD
         """Cancel and churn the customer's subscription contract via portal interaction with close reasons."""
+=======
+<<<<<<< HEAD
+        """Cancel and churn the customer's subscription contract via portal interaction with close reasons."""
+=======
+>>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
+>>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         subscription = request.env['subscription.subscription'].sudo().browse(subscription_id)
         if subscription.exists() and subscription.partner_id == request.env.user.partner_id and subscription.plan_id.is_closable:
             close_reason_id = kw.get('close_reason_id')

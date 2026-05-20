@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- 1. MRR Breakdown Views -->
+    <record id="view_subscription_mrr_breakdown_graph" model="ir.ui.view">
+        <field name="name">subscription.mrr.breakdown.graph</field>
+        <field name="model">subscription.mrr.breakdown</field>
+        <field name="arch" type="xml">
+            <graph string="MRR Breakdown" type="bar" sample="1">
+                <field name="event_date" interval="month"/>
+                <field name="event_type"/>
+                <field name="mrr_change" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_subscription_mrr_breakdown_pivot" model="ir.ui.view">
+        <field name="name">subscription.mrr.breakdown.pivot</field>
+        <field name="model">subscription.mrr.breakdown</field>
+        <field name="arch" type="xml">
+            <pivot string="MRR Breakdown" sample="1">
+                <field name="event_date" interval="month" type="row"/>
+                <field name="event_type" type="col"/>
+                <field name="mrr_change" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- 2. MRR Analysis Views -->
+    <record id="view_subscription_mrr_analysis_graph" model="ir.ui.view">
+        <field name="name">subscription.mrr.analysis.graph</field>
+        <field name="model">subscription.mrr.analysis</field>
+        <field name="arch" type="xml">
+            <graph string="MRR Analysis" type="line" sample="1">
+                <field name="date" interval="month"/>
+                <field name="mrr_change" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_subscription_mrr_analysis_pivot" model="ir.ui.view">
+        <field name="name">subscription.mrr.analysis.pivot</field>
+        <field name="model">subscription.mrr.analysis</field>
+        <field name="arch" type="xml">
+            <pivot string="MRR Analysis" sample="1">
+                <field name="date" interval="month" type="row"/>
+                <field name="mrr_change" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <!-- 3. Subscriptions Analysis Views -->
+    <record id="view_subscription_analysis_report_list" model="ir.ui.view">
+        <field name="name">subscription.analysis.report.list</field>
+        <field name="model">subscription.analysis.report</field>
+        <field name="arch" type="xml">
+            <list string="Subscriptions Analysis" create="false" edit="false" delete="false">
+                <field name="name" string="Order Reference"/>
+                <field name="partner_id"/>
+                <field name="categ_id"/>
+                <field name="plan_id"/>
+                <field name="user_id"/>
+                <field name="team_id"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+                <field name="currency_id" column_invisible="True"/>
+                <field name="monthly_recurring" sum="Total MRR" widget="monetary"/>
+                <field name="state" widget="badge" decoration-success="state == 'in_progress'" decoration-warning="state == 'paused'" decoration-danger="state == 'in_trial'"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_subscription_analysis_report_graph" model="ir.ui.view">
+        <field name="name">subscription.analysis.report.graph</field>
+        <field name="model">subscription.analysis.report</field>
+        <field name="arch" type="xml">
+            <graph string="Subscriptions Analysis" type="bar" sample="1">
+                <field name="plan_id"/>
+                <field name="monthly_recurring" type="measure"/>
+            </graph>
+        </field>
+    </record>
+
+    <record id="view_subscription_analysis_report_search" model="ir.ui.view">
+        <field name="name">subscription.analysis.report.search</field>
+        <field name="model">subscription.analysis.report</field>
+        <field name="arch" type="xml">
+            <search string="Search Subscriptions Analysis">
+                <field name="name" string="Order Reference"/>
+                <field name="partner_id"/>
+                <field name="plan_id"/>
+                <filter string="In Progress" name="in_progress" domain="[('state', '=', 'in_progress')]"/>
+                <filter string="Paused" name="paused" domain="[('state', '=', 'paused')]"/>
+                <filter string="In Progress or Paused" name="in_progress_or_paused" domain="[('state', 'in', ['in_progress', 'paused'])]"/>
+                <separator/>
+                <filter string="Recurring" name="recurring" domain="[('is_recurring', '=', True)]"/>
+                <separator/>
+                <filter string="Customer" name="group_partner" context="{'group_by': 'partner_id'}"/>
+                <filter string="Subscription Template" name="group_plan" context="{'group_by': 'plan_id'}"/>
+                <filter string="Salesperson" name="group_user" context="{'group_by': 'user_id'}"/>
+                <filter string="State" name="group_state" context="{'group_by': 'state'}"/>
+            </search>
+        </field>
+    </record>
+
+    <!-- 4. Retention Analysis Views -->
+    <record id="view_subscription_retention_analysis_pivot" model="ir.ui.view">
+        <field name="name">subscription.retention.analysis.pivot</field>
+        <field name="model">subscription.retention.analysis</field>
+        <field name="arch" type="xml">
+            <pivot string="Retention Analysis" sample="1">
+                <field name="first_contract_date" interval="month" type="row"/>
+                <field name="end_date_month" type="col"/>
+                <field name="count" type="measure"/>
+                <field name="active_count" type="measure"/>
+                <field name="retention_rate" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+
+    <record id="view_subscription_retention_analysis_list" model="ir.ui.view">
+        <field name="name">subscription.retention.analysis.list</field>
+        <field name="model">subscription.retention.analysis</field>
+        <field name="arch" type="xml">
+            <list string="Retention Analysis" create="false" edit="false" delete="false">
+                <field name="first_contract_date" string="Cohort Month"/>
+                <field name="count" string="Total Subscribers"/>
+                <field name="active_count" string="Still Active"/>
+                <field name="retention_rate" string="Retention Rate (%)" digits="[10,2]"/>
+            </list>
+        </field>
+    </record>
+</odoo>

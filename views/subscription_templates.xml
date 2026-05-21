@@ -78,17 +78,16 @@
                                             <span t-else="" class="text-muted">—</span>
                                         </td>
                                         <td class="font-weight-bold">
-                                            <t t-set="total_sub" t-value="sum(l.price_subtotal for l in sub.line_ids)"/>
+                                            <t t-set="total_sub" t-value="sum(l.price_subtotal for l in sub.order_line.filtered(lambda x: x.product_id.recurring_ok))"/>
                                             <span t-esc="total_sub" t-options="{'widget': 'monetary', 'display_currency': sub.currency_id}"/>
                                         </td>
                                         <td>
                                             <!-- High-fidelity state badge colors -->
-                                            <span t-if="sub.state == 'in_progress'" class="badge rounded-pill bg-success-light text-success px-3 py-2 font-weight-bold" style="background-color: #d1e7dd; color: #0f5132;">Active</span>
-                                            <span t-elif="sub.state == 'in_trial'" class="badge rounded-pill bg-info-light text-info px-3 py-2 font-weight-bold" style="background-color: #cff4fc; color: #055160;">In Trial</span>
-                                            <span t-elif="sub.state == 'paused'" class="badge rounded-pill bg-warning-light text-warning px-3 py-2 font-weight-bold" style="background-color: #fff3cd; color: #664d03;">Paused</span>
-                                            <span t-elif="sub.state == 'cancelled'" class="badge rounded-pill bg-danger-light text-danger px-3 py-2 font-weight-bold" style="background-color: #f8d7da; color: #842029;">Cancelled</span>
-                                            <span t-elif="sub.state == 'closed'" class="badge rounded-pill bg-secondary-light text-secondary px-3 py-2 font-weight-bold" style="background-color: #e2e3e5; color: #41464b;">Closed</span>
-                                            <span t-else="" class="badge rounded-pill bg-light text-dark px-3 py-2 font-weight-bold"><t t-esc="sub.state"/></span>
+                                            <span t-if="sub.subscription_state == '3_progress'" class="badge rounded-pill bg-success-light text-success px-3 py-2 font-weight-bold" style="background-color: #d1e7dd; color: #0f5132;">Active</span>
+                                            <span t-elif="sub.subscription_state == '1_draft'" class="badge rounded-pill bg-info-light text-info px-3 py-2 font-weight-bold" style="background-color: #cff4fc; color: #055160;">Draft</span>
+                                            <span t-elif="sub.subscription_state == '4_paused'" class="badge rounded-pill bg-warning-light text-warning px-3 py-2 font-weight-bold" style="background-color: #fff3cd; color: #664d03;">Paused</span>
+                                            <span t-elif="sub.subscription_state == '6_churn'" class="badge rounded-pill bg-danger-light text-danger px-3 py-2 font-weight-bold" style="background-color: #f8d7da; color: #842029;">Cancelled</span>
+                                            <span t-else="" class="badge rounded-pill bg-light text-dark px-3 py-2 font-weight-bold"><t t-esc="sub.subscription_state"/></span>
                                         </td>
                                         <td class="pe-4 text-end">
                                             <a t-attf-href="/my/subscription/#{sub.id}" class="btn btn-sm btn-outline-primary rounded-pill px-3">Manage</a>
@@ -122,12 +121,11 @@
                         <div class="mt-3 mt-sm-0">
                             <!-- High-fidelity state badge -->
                             <h4 class="mb-0">
-                                <span t-if="subscription.state == 'in_progress'" class="badge bg-success px-4 py-2 font-weight-bold" style="border-radius: 20px;">Active</span>
-                                <span t-elif="subscription.state == 'in_trial'" class="badge bg-info px-4 py-2 font-weight-bold text-white" style="border-radius: 20px;">In Trial</span>
-                                <span t-elif="subscription.state == 'paused'" class="badge bg-warning px-4 py-2 font-weight-bold text-dark" style="border-radius: 20px;">Paused</span>
-                                <span t-elif="subscription.state == 'cancelled'" class="badge bg-danger px-4 py-2 font-weight-bold" style="border-radius: 20px;">Cancelled</span>
-                                <span t-elif="subscription.state == 'closed'" class="badge bg-secondary px-4 py-2 font-weight-bold" style="border-radius: 20px;">Closed</span>
-                                <span t-else="" class="badge bg-dark px-4 py-2 font-weight-bold text-white" style="border-radius: 20px;"><t t-esc="subscription.state"/></span>
+                                <span t-if="subscription.subscription_state == '3_progress'" class="badge bg-success px-4 py-2 font-weight-bold" style="border-radius: 20px;">Active</span>
+                                <span t-elif="subscription.subscription_state == '1_draft'" class="badge bg-info px-4 py-2 font-weight-bold text-white" style="border-radius: 20px;">Draft</span>
+                                <span t-elif="subscription.subscription_state == '4_paused'" class="badge bg-warning px-4 py-2 font-weight-bold text-dark" style="border-radius: 20px;">Paused</span>
+                                <span t-elif="subscription.subscription_state == '6_churn'" class="badge bg-danger px-4 py-2 font-weight-bold" style="border-radius: 20px;">Cancelled</span>
+                                <span t-else="" class="badge bg-dark px-4 py-2 font-weight-bold text-white" style="border-radius: 20px;"><t t-esc="subscription.subscription_state"/></span>
                             </h4>
                         </div>
                     </div>
@@ -138,19 +136,16 @@
                                 <h5 class="font-weight-bold mb-3" style="color: #667eea;">Subscription Timeline</h5>
                                 <div class="row mb-2">
                                     <div class="col-sm-5 text-muted">Start Date:</div>
-                                    <div class="col-sm-7 font-weight-bold" t-field="subscription.start_date" t-options="{'widget': 'date'}"/>
+                                    <div class="col-sm-7 font-weight-bold" t-field="subscription.date_order" t-options="{'widget': 'date'}"/>
                                 </div>
-                                <div class="row mb-2" t-if="subscription.trial_end_date">
-                                    <div class="col-sm-5 text-muted">Trial End Date:</div>
-                                    <div class="col-sm-7 font-weight-bold text-info" t-field="subscription.trial_end_date" t-options="{'widget': 'date'}"/>
-                                </div>
+
                                 <div class="row mb-2">
                                     <div class="col-sm-5 text-muted">Next Invoice Date:</div>
                                     <div class="col-sm-7 font-weight-bold text-success" t-field="subscription.next_invoice_date" t-options="{'widget': 'date'}"/>
                                 </div>
-                                <div class="row mb-2" t-if="subscription.end_date">
+                                <div class="row mb-2" t-if="subscription.subscription_end_date">
                                     <div class="col-sm-5 text-muted">Ending Date:</div>
-                                    <div class="col-sm-7 font-weight-bold text-danger" t-field="subscription.end_date" t-options="{'widget': 'date'}"/>
+                                    <div class="col-sm-7 font-weight-bold text-danger" t-field="subscription.subscription_end_date" t-options="{'widget': 'date'}"/>
                                 </div>
                             </div>
                             <div class="col-md-6 ps-md-4 d-flex flex-column justify-content-between">
@@ -161,24 +156,24 @@
                                 
                                 <div class="d-flex flex-wrap gap-2 mt-3">
                                     <!-- Dynamic Action Buttons -->
-                                    <t t-if="subscription.state == 'in_progress' and subscription.plan_id.is_pausable">
+                                    <t t-if="subscription.subscription_state == '3_progress' and subscription.plan_id.is_pausable">
                                         <form t-attf-action="/my/subscription/#{subscription.id}/pause" method="POST" class="d-inline">
                                             <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                                             <button type="submit" class="btn btn-warning rounded-pill px-4 font-weight-bold shadow-sm">Pause Subscription</button>
                                         </form>
                                     </t>
-                                    <t t-if="subscription.state == 'paused' and subscription.plan_id.is_pausable">
+                                    <t t-if="subscription.subscription_state == '4_paused' and subscription.plan_id.is_pausable">
                                         <form t-attf-action="/my/subscription/#{subscription.id}/resume" method="POST" class="d-inline">
                                             <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                                             <button type="submit" class="btn btn-success rounded-pill px-4 font-weight-bold shadow-sm">Resume Subscription</button>
                                         </form>
                                     </t>
-                                    <t t-if="subscription.state not in ('cancelled', 'closed') and subscription.plan_id.is_closable">
+                                    <t t-if="subscription.subscription_state not in ('6_churn',) and subscription.plan_id.is_closable">
                                         <button type="button" class="btn btn-outline-danger rounded-pill px-4 font-weight-bold ms-sm-2" data-bs-toggle="modal" data-bs-target="#cancelModal">
                                             Cancel Plan
                                         </button>
                                     </t>
-                                    <t t-if="subscription.state in ('cancelled', 'closed')">
+                                    <t t-if="subscription.subscription_state in ('6_churn',)">
                                         <div class="text-muted small italic">
                                             This subscription has been terminated. Please contact support to initiate reactivation.
                                         </div>
@@ -201,20 +196,53 @@
                                     <th class="ps-4">Product</th>
                                     <th>Quantity</th>
                                     <th>Unit Price</th>
-                                    <th t-if="any(l.discount > 0 for l in subscription.line_ids)">Discount (%)</th>
+                                    <th t-if="any(l.discount > 0 for l in subscription.order_line.filtered(lambda x: x.product_id.recurring_ok))">Discount (%)</th>
                                     <th class="pe-4 text-end">Subtotal</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <t t-foreach="subscription.line_ids" t-as="line">
+                                <t t-foreach="subscription.order_line.filtered(lambda x: x.product_id.recurring_ok)" t-as="line">
                                     <tr>
                                         <td class="ps-4">
                                             <div class="font-weight-bold"><t t-esc="line.product_id.name"/></div>
                                             <small class="text-muted"><t t-esc="line.name"/></small>
                                         </td>
-                                        <td><t t-esc="line.quantity"/></td>
+                                        <td>
+                                            <t t-esc="line.product_uom_qty"/>
+                                            <t t-if="subscription.subscription_state == '3_progress'">
+                                                <button class="btn btn-sm btn-link py-0 ms-1 text-primary" data-bs-toggle="modal" t-attf-data-bs-target="#changeSeatsModal_#{line.id}" title="Change Seats/Quantity">
+                                                    <i class="fa fa-pencil"/>
+                                                </button>
+                                                <!-- Change Seats Modal -->
+                                                <div class="modal fade text-start" t-attf-id="changeSeatsModal_#{line.id}" tabindex="-1" aria-hidden="true">
+                                                    <div class="modal-dialog modal-dialog-centered">
+                                                        <div class="modal-content border-0 shadow" style="border-radius: 12px;">
+                                                            <form t-attf-action="/my/subscription/#{subscription.id}/change_seats" method="POST">
+                                                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                                                <input type="hidden" name="line_id" t-att-value="line.id"/>
+                                                                <div class="modal-header border-0 pb-0">
+                                                                    <h5 class="modal-title font-weight-bold text-dark">Update Quantity</h5>
+                                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                                </div>
+                                                                <div class="modal-body py-3">
+                                                                    <p class="text-muted small">Update the number of seats/quantity for <strong t-esc="line.product_id.name"/>. Mid-cycle additions will be prorated on your next invoice.</p>
+                                                                    <div class="mb-3">
+                                                                        <label class="form-label font-weight-bold text-dark">New Quantity</label>
+                                                                        <input type="number" class="form-control rounded-pill px-3" name="new_quantity" t-att-value="int(line.product_uom_qty)" step="1" min="1" required="1"/>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="modal-footer border-0 pt-0">
+                                                                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
+                                                                    <button type="submit" class="btn btn-primary rounded-pill px-4 font-weight-bold">Confirm Change</button>
+                                                                </div>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </t>
+                                        </td>
                                         <td><span t-field="line.price_unit" t-options="{'widget': 'monetary', 'display_currency': subscription.currency_id}"/></td>
-                                        <td t-if="any(l.discount > 0 for l in subscription.line_ids)"><t t-esc="line.discount"/>%</td>
+                                        <td t-if="any(l.discount > 0 for l in subscription.order_line.filtered(lambda x: x.product_id.recurring_ok))"><t t-esc="line.discount"/>%</td>
                                         <td class="pe-4 text-end font-weight-bold">
                                             <span t-field="line.price_subtotal" t-options="{'widget': 'monetary', 'display_currency': subscription.currency_id}"/>
                                         </td>
@@ -224,9 +252,9 @@
                             <tfoot>
                                 <tr class="bg-light">
                                     <td colspan="3" class="ps-4 font-weight-bold text-end">Total Recurring:</td>
-                                    <td t-if="any(l.discount > 0 for l in subscription.line_ids)"/>
+                                    <td t-if="any(l.discount > 0 for l in subscription.order_line.filtered(lambda x: x.product_id.recurring_ok))"/>
                                     <td class="pe-4 text-end font-weight-bold text-primary" style="font-size: 1.15rem;">
-                                        <t t-set="grand_total" t-value="sum(l.price_subtotal for l in subscription.line_ids)"/>
+                                        <t t-set="grand_total" t-value="sum(l.price_subtotal for l in subscription.order_line.filtered(lambda x: x.product_id.recurring_ok))"/>
                                         <span t-esc="grand_total" t-options="{'widget': 'monetary', 'display_currency': subscription.currency_id}"/>
                                     </td>
                                 </tr>
@@ -235,10 +263,6 @@
                     </div>
                 </div>
 
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                 <!-- Upcoming Invoice Preview Engine (Step 5) -->
                 <div t-if="preview" class="card border-0 shadow-sm mb-4" style="border-radius: 12px; overflow: hidden; border: 2px dashed #17a2b8 !important;">
                     <div class="card-body p-4 bg-light border-bottom d-flex justify-content-between align-items-center" style="background-color: rgba(23, 162, 184, 0.05) !important;">
@@ -290,11 +314,6 @@
                     </div>
                 </div>
 
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                 <!-- Tabs for Linked Records (Invoices & Deliveries) -->
                 <div class="row">
                     <div class="col-lg-6 mb-4">
@@ -668,15 +687,7 @@
                         <!-- Pricing Grid -->
                         <div class="row align-items-stretch justify-content-center">
                             <t t-foreach="plans" t-as="plan">
-<<<<<<< HEAD
                                 <t t-set="is_popular" t-value="plan.is_popular"/>
-=======
-<<<<<<< HEAD
-                                <t t-set="is_popular" t-value="plan.is_popular"/>
-=======
-                                <t t-set="is_popular" t-value="'pro' in plan.name.lower() or 'gold' in plan.name.lower() or 'premium' in plan.name.lower() or plan_index == 1"/>
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                                 
                                 <div class="col-lg-4 col-md-6 mb-4 d-flex animate-fade-in-up" t-attf-style="animation-delay: #{plan_index * 150}ms;">
                                     <div t-attf-class="card pricing-card-modern w-100 border-0 #{'pricing-card-featured' if is_popular else ''}">
@@ -728,15 +739,7 @@
                                         </div>
                                         
                                         <!-- Action CTA -->
-<<<<<<< HEAD
                                         <a t-attf-href="/subscriptions/checkout/#{plan.id}" t-attf-class="btn cta-btn-modern #{'cta-btn-featured' if is_popular else ''} mt-auto">Subscribe Now</a>
-=======
-<<<<<<< HEAD
-                                        <a t-attf-href="/subscriptions/checkout/#{plan.id}" t-attf-class="btn cta-btn-modern #{'cta-btn-featured' if is_popular else ''} mt-auto">Subscribe Now</a>
-=======
-                                        <a t-attf-href="/subscriptions/subscribe/#{plan.id}" t-attf-class="btn cta-btn-modern #{'cta-btn-featured' if is_popular else ''} mt-auto">Subscribe Now</a>
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                                     </div>
                                 </div>
                             </t>
@@ -754,10 +757,6 @@
         </t>
     </template>
 
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     <!-- Checkout Page Template -->
     <template id="subscription_checkout_page" name="Subscription Checkout">
         <t t-call="website.layout">
@@ -969,7 +968,6 @@
                                                 </div>
                                                 <div id="coupon_msg" class="mt-2 small" style="display: none;"/>
                                             </div>
-<<<<<<< HEAD
                                         </div>
 
                                         <!-- Complete Button -->
@@ -979,146 +977,6 @@
                                         
                                         <p class="text-center text-muted small mt-3 mb-0">
                                             By continuing, you agree to our Terms of Service. Future renewals occur automatically.
-=======
-
-                                            <div class="mb-4">
-                                                <label class="form-label checkout-form-label mb-3">Available Providers</label>
-                                                <div class="row g-3">
-                                                    <t t-if="providers">
-                                                        <t t-foreach="providers" t-as="provider">
-                                                            <div class="col-md-6 mb-3">
-                                                                <label class="payment-provider-card d-flex align-items-center p-3 border rounded-3 position-relative" t-att-for="'provider_' + str(provider.id)" style="cursor: pointer; transition: all 0.2s ease; border: 1px solid rgba(0,0,0,0.1) !important; border-radius: 8px;">
-                                                                    <input type="radio" name="payment_provider_id" t-att-id="'provider_' + str(provider.id)" t-att-value="provider.id" t-att-data-code="provider.code" t-att-checked="'checked' if provider_index == 0 else None" class="form-check-input me-3" required="1"/>
-                                                                    <div class="d-flex align-items-center">
-                                                                        <t t-if="provider.image_128">
-                                                                            <img t-attf-src="/web/image/payment.provider/#{provider.id}/image_128" style="height: 28px; width: auto; object-fit: contain;" class="me-2"/>
-                                                                        </t>
-                                                                        <span class="fw-bold text-dark small"><t t-esc="provider.name"/></span>
-                                                                    </div>
-                                                                </label>
-                                                            </div>
-                                                        </t>
-                                                    </t>
-                                                    <t t-else="">
-                                                        <div class="col-12 mb-2">
-                                                            <label class="payment-provider-card d-flex align-items-center p-3 border rounded-3 position-relative" style="cursor: pointer; border: 1px solid rgba(0,0,0,0.1) !important; border-radius: 8px;">
-                                                                <input type="radio" name="payment_provider_id" value="0" data-code="stripe" checked="checked" class="form-check-input me-3" required="1"/>
-                                                                <div class="d-flex align-items-center">
-                                                                    <i class="fa fa-credit-card text-muted me-2" style="font-size: 1.2rem;"/>
-                                                                    <span class="fw-bold text-dark small">Credit / Debit Card (Stripe Sandbox)</span>
-                                                                </div>
-                                                            </label>
-                                                        </div>
-                                                        <div class="col-12">
-                                                            <label class="payment-provider-card d-flex align-items-center p-3 border rounded-3 position-relative" style="cursor: pointer; border: 1px solid rgba(0,0,0,0.1) !important; border-radius: 8px;">
-                                                                <input type="radio" name="payment_provider_id" value="0" data-code="demo" class="form-check-input me-3" required="1"/>
-                                                                <div class="d-flex align-items-center">
-                                                                    <i class="fa fa-magic text-info me-2" style="font-size: 1.2rem;"/>
-                                                                    <span class="fw-bold text-dark small">Demo Payment Simulator (No Card Required)</span>
-                                                                </div>
-                                                            </label>
-                                                        </div>
-                                                    </t>
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Card Details input -->
-                                            <div id="card_details_section" style="display: block;">
-                                                <div class="mb-3">
-                                                    <label for="card_num" class="form-label checkout-form-label">Card Number</label>
-                                                    <div class="position-relative">
-                                                        <input type="text" class="form-control checkout-form-input ps-5" id="card_num" placeholder="4111 2222 3333 4444" required="1" pattern="\d{16}" maxlength="16"/>
-                                                        <i class="fa fa-credit-card position-absolute text-muted" style="left: 18px; top: 16px;"/>
-                                                    </div>
-                                                </div>
-                                                
-                                                <div class="row">
-                                                    <div class="col-md-6 mb-3 mb-md-0">
-                                                        <label for="card_expiry" class="form-label checkout-form-label">Expiration Date</label>
-                                                        <input type="text" class="form-control checkout-form-input" id="card_expiry" placeholder="MM / YY" required="1" maxlength="5"/>
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <label for="card_cvc" class="form-label checkout-form-label">Security Code (CVC)</label>
-                                                        <input type="password" class="form-control checkout-form-input" id="card_cvc" placeholder="•••" required="1" pattern="\d{3,4}" maxlength="4"/>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <!-- PayPal Section -->
-                                            <div id="paypal_details_section" style="display: none;" class="p-3 border rounded bg-light mb-3">
-                                                <div class="d-flex align-items-center mb-2">
-                                                    <i class="fa fa-paypal text-primary me-2" style="font-size: 1.5rem;"/>
-                                                    <span class="fw-bold text-dark">PayPal Checkout</span>
-                                                </div>
-                                                <p class="text-muted small mb-0">
-                                                    You will be redirected to PayPal to complete your subscription authorization securely.
-                                                </p>
-                                            </div>
-
-                                            <!-- Wire Transfer Section -->
-                                            <div id="wire_details_section" style="display: none;" class="p-3 border rounded bg-light mb-3">
-                                                <div class="d-flex align-items-center mb-2">
-                                                    <i class="fa fa-university text-muted me-2" style="font-size: 1.3rem;"/>
-                                                    <span class="fw-bold text-dark">Bank Wire Transfer</span>
-                                                </div>
-                                                <div class="small text-muted mb-2">
-                                                    Please transfer the total due amount to the following bank account:
-                                                </div>
-                                                <table class="table table-sm table-borderless mb-0 small text-dark">
-                                                    <tr>
-                                                        <td class="font-weight-semibold p-0 text-muted" style="width: 100px;">Bank Name:</td>
-                                                        <td class="p-0 font-weight-bold text-dark">Global Commerce Bank</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td class="font-weight-semibold p-0 text-muted">IBAN:</td>
-                                                        <td class="p-0 font-weight-bold text-dark">US89 3000 0000 1234 5678 90</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td class="font-weight-semibold p-0 text-muted">SWIFT/BIC:</td>
-                                                        <td class="p-0 font-weight-bold text-dark">GLOBUS33XXX</td>
-                                                    </tr>
-                                                </table>
-                                                <div class="mt-2 small text-warning font-weight-semibold">
-                                                    * Please include your subscription email as the transfer reference memo.
-                                                </div>
-                                            </div>
-
-                                            <!-- Demo Gateway Section -->
-                                            <div id="demo_details_section" style="display: none;" class="p-3 border rounded bg-light mb-3">
-                                                <div class="d-flex align-items-center mb-2">
-                                                    <i class="fa fa-magic text-info me-2" style="font-size: 1.3rem;"/>
-                                                    <span class="fw-bold text-dark">Demo Payment Simulator</span>
-                                                </div>
-                                                <p class="text-muted small mb-0">
-                                                    Your subscription will be processed instantly and activated in test mode.
-                                                </p>
-                                            </div>
-
-                                            <!-- Paytrail Gateway Section -->
-                                            <div id="paytrail_details_section" style="display: none;" class="p-3 border rounded bg-light mb-3">
-                                                <div class="d-flex align-items-center mb-2">
-                                                    <i class="fa fa-credit-card text-primary me-2" style="font-size: 1.3rem;"/>
-                                                    <span class="fw-bold text-dark">Paytrail Checkout</span>
-                                                </div>
-                                                <p class="text-muted small mb-0">
-                                                    Your payment will be processed securely via Paytrail. No card details required here.
-                                                </p>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Complete Button -->
-                                        <button type="submit" class="btn btn-pay-modern">
-                                            <t t-if="plan.trial_period_days > 0">
-                                                <span>Start Free Trial</span>
-                                            </t>
-                                            <t t-else="">
-                                                <span>Pay &amp; Subscribe</span>
-                                            </t>
-                                        </button>
-                                        
-                                        <p class="text-center text-muted small mt-3 mb-0">
-                                            By checking out, you agree to our Terms of Service. Future renewals occur automatically.
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                                         </p>
                                     </form>
                                 </div>
@@ -1199,65 +1057,13 @@
                             });
                         }
 
-<<<<<<< HEAD
                         // We removed custom provider toggles because we are using Odoo's native payment system
-=======
-                        // Toggle Card Details dynamically based on selected Payment Provider
-                        const providers = document.querySelectorAll('input[name="payment_provider_id"]');
-                        const cardSec = document.getElementById('card_details_section');
-                        const paypalSec = document.getElementById('paypal_details_section');
-                        const wireSec = document.getElementById('wire_details_section');
-                        const demoSec = document.getElementById('demo_details_section');
-                        const paytrailSec = document.getElementById('paytrail_details_section');
-
-                        if (cardSec) {
-                            const cardInputs = cardSec.querySelectorAll('input');
-                            
-                            function toggleCardSection() {
-                                const selected = document.querySelector('input[name="payment_provider_id"]:checked');
-                                if (!selected) return;
-                                
-                                const code = selected.getAttribute('data-code');
-                                
-                                // Reset displays
-                                if (cardSec) cardSec.style.display = 'none';
-                                if (paypalSec) paypalSec.style.display = 'none';
-                                if (wireSec) wireSec.style.display = 'none';
-                                if (demoSec) demoSec.style.display = 'none';
-                                if (paytrailSec) paytrailSec.style.display = 'none';
-                                
-                                cardInputs.forEach(input => {
-                                    input.removeAttribute('required');
-                                });
-                                
-                                if (code === 'demo') {
-                                    if (demoSec) demoSec.style.display = 'block';
-                                } else if (code === 'paytrail') {
-                                    if (paytrailSec) paytrailSec.style.display = 'block';
-                                } else if (code === 'paypal') {
-                                    if (paypalSec) paypalSec.style.display = 'block';
-                                } else if (code === 'transfer' || code === 'custom') {
-                                    if (wireSec) wireSec.style.display = 'block';
-                                } else {
-                                    // Default credit card / live payment gateways (stripe, authorize, etc. or sandbox fallback "0")
-                                    if (cardSec) {
-                                        cardSec.style.display = 'block';
-                                        cardInputs.forEach(input => input.setAttribute('required', '1'));
-                                    }
-                                }
-                            }
-                            
-                            providers.forEach(p => p.addEventListener('change', toggleCardSection));
-                            toggleCardSection();
-                        }
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                     });
                 </script>
             </div>
         </t>
     </template>
 
-<<<<<<< HEAD
     <!-- Payment Page using Native Payment Gateways -->
     <template id="subscription_payment_page" name="Subscription Payment">
         <t t-call="website.layout">
@@ -1303,10 +1109,6 @@
         </t>
     </template>
 
-=======
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     <!-- Success Screen -->
     <template id="subscription_success_page" name="Subscription Success">
         <t t-call="website.layout">

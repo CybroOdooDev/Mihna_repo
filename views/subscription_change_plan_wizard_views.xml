@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-<<<<<<< HEAD
 
     <!-- Close Subscription Wizard -->
     <record id="view_subscription_close_wizard_form" model="ir.ui.view">
@@ -10,7 +9,7 @@
             <form string="Close Subscription">
                 <sheet>
                     <group>
-                        <field name="subscription_id" readonly="1"/>
+                        <field name="sale_order_id" readonly="1"/>
                         <field name="close_reason_id"/>
                         <field name="notes" placeholder="Optional notes about the cancellation..."/>
                     </group>
@@ -33,7 +32,7 @@
             <form string="Change Subscription Plan">
                 <sheet>
                     <group>
-                        <field name="subscription_id" readonly="1"/>
+                        <field name="sale_order_id" readonly="1"/>
                         <field name="plan_id" options="{'no_create': True}"/>
                     </group>
                 </sheet>
@@ -47,25 +46,4 @@
         </field>
     </record>
 
-=======
-    <record id="subscription_change_plan_wizard_view_form" model="ir.ui.view">
-        <field name="name">subscription.change.plan.wizard.form</field>
-        <field name="model">subscription.change.plan.wizard</field>
-        <field name="arch" type="xml">
-            <form string="Upgrade / Change Plan">
-                <sheet>
-                    <group>
-                        <field name="subscription_id" readonly="1" invisible="1"/>
-                        <field name="new_plan_id" string="New Subscription Plan" required="1" options="{'no_create': True, 'no_open': True}"/>
-                        <field name="prorate" string="Prorate active billing cycle" help="If checked, delta price unit calculation is applied for the remaining days."/>
-                    </group>
-                    <footer>
-                        <button name="action_change_plan" string="Apply Plan Change" type="object" class="btn-primary" data-hotkey="q"/>
-                        <button string="Discard" class="btn-secondary" special="cancel" data-hotkey="x"/>
-                    </footer>
-                </sheet>
-            </form>
-        </field>
-    </record>
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
 </odoo>

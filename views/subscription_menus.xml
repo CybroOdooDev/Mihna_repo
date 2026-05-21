@@ -7,21 +7,12 @@
               sequence="45"/>
 
     <!-- Top Level Menus -->
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     <menuitem id="subscription_menu_dashboard" 
               name="Dashboard" 
               parent="subscription_menu_root" 
               action="action_subscription_dashboard"
               sequence="5"/>
 
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     <menuitem id="subscription_menu_subscriptions" 
               name="Subscriptions" 
               parent="subscription_menu_root" 
@@ -43,7 +34,6 @@
               sequence="100"/>
               
     <!-- Standard Actions -->
-<<<<<<< HEAD
     <record id="action_subscription_subscription_view_tree" model="ir.actions.act_window.view">
         <field name="sequence" eval="1"/>
         <field name="view_mode">list</field>
@@ -120,8 +110,6 @@
         <field name="act_window_id" ref="action_subscription_upsells"/>
     </record>
 
-=======
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     <record id="action_subscription_customers" model="ir.actions.act_window">
         <field name="name">Customers</field>
         <field name="res_model">res.partner</field>
@@ -141,32 +129,22 @@
     <record id="action_subscription_reporting_subscriptions" model="ir.actions.act_window">
         <field name="name">Subscriptions Analysis</field>
         <field name="res_model">subscription.analysis.report</field>
-<<<<<<< HEAD
         <field name="view_mode">graph,list,pivot</field>
-=======
-        <field name="view_mode">graph,pivot</field>
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
         <field name="context">{'search_default_in_progress_or_paused': 1, 'search_default_recurring': 1, 'graph_measure': 'monthly_recurring'}</field>
     </record>
 
     <record id="action_subscription_reporting_retention" model="ir.actions.act_window">
         <field name="name">Retention Analysis</field>
         <field name="res_model">subscription.retention.analysis</field>
-<<<<<<< HEAD
         <field name="view_mode">pivot,list</field>
         <field name="domain">[]</field>
         <field name="context">{'pivot_measures': ['count', 'active_count', 'retention_rate']}</field>
-=======
-        <field name="view_mode">pivot,graph</field>
-        <field name="domain">[]</field>
-        <field name="context">{'pivot_measures': ['count', 'retention_rate']}</field>
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     </record>
 
     <record id="action_subscription_reporting_mrr_breakdown" model="ir.actions.act_window">
         <field name="name">MRR Breakdown</field>
         <field name="res_model">subscription.mrr.breakdown</field>
-        <field name="view_mode">graph,pivot</field>
+        <field name="view_mode">list,graph,pivot</field>
         <field name="context">{'graph_measure': 'mrr_change', 'graph_group_by': 'event_date', 'graph_stacked': True, 'graph_mode': 'bar'}</field>
     </record>
 
@@ -178,7 +156,6 @@
     </record>
 
     <!-- Sub Menus under Subscriptions -->
-<<<<<<< HEAD
     <menuitem id="menu_subscription_quotations" 
               name="Quotations" 
               parent="subscription_menu_subscriptions" 
@@ -197,8 +174,6 @@
               action="action_subscription_upsells" 
               sequence="13"/>
 
-=======
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     <menuitem id="menu_subscription_customers" 
               name="Customers" 
               parent="subscription_menu_subscriptions" 
@@ -268,10 +243,6 @@
               action="mail.mail_activity_plan_action" 
               sequence="40"/>
 
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     <menuitem id="menu_subscription_coupons" 
               name="Coupons" 
               parent="subscription_menu_configuration" 
@@ -283,21 +254,4 @@
               parent="subscription_menu_configuration" 
               action="payment.action_payment_provider" 
               sequence="60"/>
-<<<<<<< HEAD
-=======
-=======
-    <!-- Direct Frontend Link Action -->
-    <record id="action_subscription_go_to_website" model="ir.actions.act_url">
-        <field name="name">Go to Website</field>
-        <field name="url">/subscriptions</field>
-        <field name="target">new</field>
-    </record>
-
-    <menuitem id="menu_subscription_go_to_website" 
-              name="Go to Website" 
-              parent="subscription_menu_root" 
-              action="action_subscription_go_to_website" 
-              sequence="90"/>
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
 </odoo>

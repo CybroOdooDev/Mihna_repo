@@ -1,52 +1,69 @@
-<<<<<<< HEAD
 # -*- coding: utf-8 -*-
-=======
-<<<<<<< HEAD
-# -*- coding: utf-8 -*-
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
+from dateutil.relativedelta import relativedelta
+
 
 class SaleOrder(models.Model):
-<<<<<<< HEAD
-    """Inherited Sale Order model representing customer quotation and order pipeline linked to active subscription contracts."""
-=======
-<<<<<<< HEAD
-    """Inherited Sale Order model representing customer quotation and order pipeline linked to active subscription contracts."""
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
+    """Inherited Sale Order model representing customer quotation and order
+    pipeline linked to active subscription contracts."""
+
     _inherit = 'sale.order'
 
-    subscription_ids = fields.One2many('subscription.subscription', 'sale_order_id', string='Subscriptions', readonly=True)
-    subscription_count = fields.Integer(string='Subscription Count', compute='_compute_subscription_count')
-    
     def _default_plan_id(self):
-<<<<<<< HEAD
-        """Retrieve the default recurring billing plan for new Sales Orders."""
-=======
-<<<<<<< HEAD
-        """Retrieve the default recurring billing plan for new Sales Orders."""
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
-        plan = self.env['subscription.plan'].search([('billing_period', '=', 'monthly')], limit=1)
+        """Return the default monthly billing plan for new Sales Orders,
+        falling back to any available plan if no monthly plan exists."""
+        plan = self.env['subscription.plan'].search(
+            [('billing_period', '=', 'monthly')], limit=1
+        )
         if not plan:
             plan = self.env['subscription.plan'].search([], limit=1)
         return plan.id if plan else False
 
-    plan_id = fields.Many2one('subscription.plan', string='Recurring Plan', default=_default_plan_id, help="Select the recurring billing plan for this quotation.")
-    subscription_end_date = fields.Date(string='Until', help="End date of the subscription.")
-    next_invoice_date = fields.Date(string='Next Invoice Date', help="Date for the next recurring billing cycle.")
-    mrr_total = fields.Monetary(string='MRR Total', compute='_compute_mrr_totals', currency_field='currency_id')
-    non_recurring_total = fields.Monetary(string='Non Recurring Total', compute='_compute_mrr_totals', currency_field='currency_id')
-    
-    referrer_id = fields.Many2one('res.partner', string='Referrer', help="Select referring partner for this order.")
-<<<<<<< HEAD
-    coupon_id = fields.Many2one('subscription.coupon', string='Applied Coupon', help="Applied coupon for discounts.")
- 
+    plan_id = fields.Many2one(
+        'subscription.plan', string='Recurring Plan',
+        default=_default_plan_id,
+        help="Select the recurring billing plan for this quotation."
+    )
+    subscription_end_date = fields.Date(
+        string='Until', help="End date of the subscription."
+    )
+    next_invoice_date = fields.Date(
+        string='Next Invoice Date',
+        help="Date for the next recurring billing cycle."
+    )
+    mrr_total = fields.Monetary(
+        string='MRR Total', compute='_compute_mrr_totals',
+        currency_field='currency_id'
+    )
+    non_recurring_total = fields.Monetary(
+        string='Non Recurring Total', compute='_compute_mrr_totals',
+        currency_field='currency_id'
+    )
+
+    referrer_id = fields.Many2one(
+        'res.partner', string='Referrer',
+        help="Select referring partner for this order."
+    )
+    coupon_id = fields.Many2one(
+        'subscription.coupon', string='Applied Coupon',
+        help="Applied coupon for discounts."
+    )
+
+    is_price_locked = fields.Boolean(
+        string='Price Locked', default=False,
+        help="If checked, the unit prices on recurring lines are grandfathered and locked."
+    )
+    close_reason_id = fields.Many2one(
+        'subscription.close.reason', string='Close Reason'
+    )
+    close_reason_notes = fields.Text(string='Close Notes')
+
+    subscription_cycle = fields.Integer(
+        string='Current Cycle', default=1, copy=False,
+        help="Tracks the number of billing cycles completed plus the current one."
+    )
+
     subscription_state = fields.Selection([
         ('1_draft', 'Draft'),
         ('2_renewal', 'Renewal'),
@@ -55,108 +72,40 @@ class SaleOrder(models.Model):
         ('5_renewed', 'Renewed'),
         ('6_churn', 'Churned'),
         ('7_upsell', 'Upsell'),
-    ], string='Subscription Status', compute='_compute_subscription_state', store=True)
- 
-    @api.depends('state', 'plan_id', 'subscription_ids.state', 'origin')
-    def _compute_subscription_state(self):
-        """Compute the current subscription status based on order status and contract states."""
-=======
-<<<<<<< HEAD
-    coupon_id = fields.Many2one('subscription.coupon', string='Applied Coupon', help="Applied coupon for discounts.")
- 
-    subscription_state = fields.Selection([
-        ('draft', 'Draft'),
-        ('paused', 'Paused'),
-        ('in_progress', 'In Progress'),
-        ('churned', 'Churned'),
-    ], string='Subscription Status', compute='_compute_subscription_state', store=True)
- 
-    @api.depends('state', 'plan_id', 'subscription_ids.state')
-    def _compute_subscription_state(self):
-        """Compute the current subscription status based on order status and contract states."""
-=======
+    ], string='Subscription Status', default='1_draft', copy=False, tracking=True)
 
-    subscription_state = fields.Selection([
-        ('draft', 'Draft'),
-        ('in_progress', 'In Progress'),
-        ('churned', 'Churned'),
-    ], string='Subscription Status', compute='_compute_subscription_state', store=True)
+    @api.onchange('coupon_id')
+    def _onchange_coupon_id(self):
+        """Apply or remove coupon discount on all order lines immediately."""
+        self._apply_coupon_discount()
 
-    @api.depends('state', 'plan_id', 'subscription_ids.state')
-    def _compute_subscription_state(self):
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
+    def _apply_coupon_discount(self):
+        """Apply the coupon discount to all order lines.
+
+        - Percentage coupon: sets the line's discount field (%).
+        - Fixed coupon: reduces the unit price directly.
+        - No coupon: resets discount to 0 on all lines.
+        """
         for order in self:
-            if not order.plan_id:
-                order.subscription_state = False
-            elif order.state in ('draft', 'sent'):
-<<<<<<< HEAD
-                if order.origin and "Renewal of" in order.origin:
-                    order.subscription_state = '2_renewal'
-                elif order.origin and "Upsell of" in order.origin:
-                    order.subscription_state = '7_upsell'
-                else:
-                    order.subscription_state = '1_draft'
-            elif order.state == 'cancel':
-                order.subscription_state = '6_churn'
-            elif order.subscription_ids:
-                # If all subscriptions are closed/cancelled, order is churned
-                if all(s.state in ('closed', 'cancelled') for s in order.subscription_ids):
-                    order.subscription_state = '6_churn'
-                # If all non-closed subscriptions are paused, order status is paused
-                elif all(s.state == 'paused' for s in order.subscription_ids.filtered(lambda x: x.state not in ('closed', 'cancelled'))):
-                    order.subscription_state = '4_paused'
-                else:
-                    order.subscription_state = '3_progress'
-            elif order.state == 'sale':
-                order.subscription_state = '3_progress'
-            else:
-                order.subscription_state = False
-=======
-                order.subscription_state = 'draft'
-            elif order.state == 'cancel':
-                order.subscription_state = 'churned'
-            elif order.subscription_ids:
-                # If all subscriptions are closed/cancelled, order is churned
-                if all(s.state in ('closed', 'cancelled') for s in order.subscription_ids):
-                    order.subscription_state = 'churned'
-<<<<<<< HEAD
-                # If all non-closed subscriptions are paused, order status is paused
-                elif all(s.state == 'paused' for s in order.subscription_ids.filtered(lambda x: x.state not in ('closed', 'cancelled'))):
-                    order.subscription_state = 'paused'
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
-                else:
-                    order.subscription_state = 'in_progress'
-            elif order.state == 'sale':
-                order.subscription_state = 'in_progress'
-            else:
-                order.subscription_state = False
-<<<<<<< HEAD
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
- 
-    @api.depends('subscription_ids')
-    def _compute_subscription_count(self):
-        """Compute the total count of active subscription contracts linked to this Sales Order."""
-        for order in self:
-            order.subscription_count = len(order.subscription_ids)
- 
-    @api.depends('order_line.price_subtotal', 'plan_id', 'order_line.product_id.recurring_ok', 'order_line.product_id.subscription_plan_id')
+            coupon = order.coupon_id
+            for line in order.order_line:
+                if not coupon:
+                    line.discount = 0.0
+                elif coupon.discount_type == 'percentage':
+                    line.discount = coupon.discount_value
+                elif coupon.discount_type == 'fixed':
+                    # Spread fixed discount evenly across lines by reducing price
+                    original_price = line.price_unit
+                    line.price_unit = max(0.0, original_price - coupon.discount_value)
+
+    @api.depends(
+        'order_line.price_subtotal', 'plan_id',
+        'order_line.product_id.recurring_ok',
+        'order_line.product_id.subscription_plan_id'
+    )
     def _compute_mrr_totals(self):
-        """Compute the Monthly Recurring Revenue (MRR) and non-recurring revenue totals from order lines."""
-<<<<<<< HEAD
-=======
-=======
-
-    @api.depends('subscription_ids')
-    def _compute_subscription_count(self):
-        for order in self:
-            order.subscription_count = len(order.subscription_ids)
-
-    @api.depends('order_line.price_subtotal', 'plan_id', 'order_line.product_id.recurring_ok', 'order_line.product_id.subscription_plan_id')
-    def _compute_mrr_totals(self):
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
+        """Compute the Monthly Recurring Revenue (MRR) and non-recurring revenue
+        totals from order lines, normalizing each recurring line to a monthly figure."""
         for order in self:
             mrr_total = 0.0
             non_recurring_total = 0.0
@@ -191,99 +140,28 @@ class SaleOrder(models.Model):
             order.non_recurring_total = non_recurring_total
 
     def action_confirm(self):
-<<<<<<< HEAD
-        """Override standard action_confirm to auto-generate corresponding subscription contract records."""
-=======
-<<<<<<< HEAD
-        """Override standard action_confirm to auto-generate corresponding subscription contract records."""
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
+        """Override standard action_confirm to auto-activate and set next invoice date."""
         res = super().action_confirm()
         for order in self:
-            order._create_subscriptions_from_order()
+            if order.plan_id:
+                vals = {
+                    'subscription_state': '3_progress',
+                }
+                if not order.next_invoice_date:
+                    vals['next_invoice_date'] = fields.Date.today()
+                order.write(vals)
         return res
 
-    def _create_subscriptions_from_order(self):
-<<<<<<< HEAD
-        """Find all recurring line items, group them by plan, and create the matching contracts."""
-=======
-<<<<<<< HEAD
-        """Find all recurring line items, group them by plan, and create the matching contracts."""
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
-        self.ensure_one()
-        # Find lines that contain a product set as recurring_ok
-        recurring_lines = self.order_line.filtered(lambda l: l.product_id.recurring_ok)
-        if not recurring_lines:
-            return
-
-        # Group lines by plan
-        lines_by_plan = {}
-        for line in recurring_lines:
-            plan = line.product_id.subscription_plan_id or self.plan_id
-            if plan:
-                lines_by_plan.setdefault(plan, []).append(line)
-
-        for plan, lines in lines_by_plan.items():
-            # Create subscription
-            sub = self.env['subscription.subscription'].create({
-                'partner_id': self.partner_id.id,
-                'plan_id': plan.id,
-                'sale_order_id': self.id,
-<<<<<<< HEAD
-                'coupon_id': self.coupon_id.id,
-=======
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
-                'next_invoice_date': self.next_invoice_date or fields.Date.today(),
-                'state': 'draft',
-            })
-            # Clear default lines that might have been added by _onchange_plan_id
-            sub.line_ids.unlink()
-            
-            # Copy lines from sales order
-            sub_lines = []
-            for line in lines:
-                sub_lines.append((0, 0, {
-                    'product_id': line.product_id.id,
-                    'name': line.name,
-                    'quantity': line.product_uom_qty,
-                    'price_unit': line.price_unit,
-<<<<<<< HEAD
-                    'discount': 0.0 if self.coupon_id else line.discount,
-=======
-                    'discount': line.discount,
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
-                }))
-            sub.write({'line_ids': sub_lines})
-            # If trial period exists, start trial, else activate
-            if plan.trial_period_days > 0:
-                sub.action_start_trial()
-            else:
-                sub.action_activate()
-
     def action_upsell(self):
-<<<<<<< HEAD
-        """Create a new draft Sales Order quotation specifically for upselling and adding items to this contract."""
-=======
-<<<<<<< HEAD
-        """Create a new draft Sales Order quotation specifically for upselling and adding items to this contract."""
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
+        """Create a new draft Sales Order quotation pre-filled with existing
+        subscription lines for upselling additional items."""
         self.ensure_one()
-        # Create a new draft quotation for upsell
-        upsell_order = self.env['sale.order'].create({
-            'partner_id': self.partner_id.id,
-            'plan_id': self.plan_id.id,
-            'partner_invoice_id': self.partner_invoice_id.id,
-            'partner_shipping_id': self.partner_shipping_id.id,
-            'payment_term_id': self.payment_term_id.id,
+        upsell_order = self.copy({
             'origin': _("Upsell of %s") % self.name,
             'state': 'draft',
+            'client_order_ref': False,
+            'subscription_state': '7_upsell',
         })
-        # Redirect to the new quotation form view using the subscription form layout
         return {
             'name': _('Upsell Quotation'),
             'type': 'ir.actions.act_window',
@@ -295,46 +173,16 @@ class SaleOrder(models.Model):
         }
 
     def action_renew(self):
-<<<<<<< HEAD
-        """Create a new draft Sales Order quotation copying lines to renew the subscription contract."""
-=======
-<<<<<<< HEAD
-        """Create a new draft Sales Order quotation copying lines to renew the subscription contract."""
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
+        """Create a new draft Sales Order copying all lines from this order
+        to initiate a subscription renewal."""
         self.ensure_one()
-        # Create a new draft quotation for renewal
-        renew_order = self.env['sale.order'].create({
-            'partner_id': self.partner_id.id,
-            'plan_id': self.plan_id.id,
-            'partner_invoice_id': self.partner_invoice_id.id,
-            'partner_shipping_id': self.partner_shipping_id.id,
-            'payment_term_id': self.payment_term_id.id,
+        renew_order = self.copy({
             'origin': _("Renewal of %s") % self.name,
             'state': 'draft',
+            'client_order_ref': False,
+            'subscription_state': '2_renewal',
         })
-        
-        # Copy all subscription order lines from the original order
-        for line in self.order_line:
-            self.env['sale.order.line'].create({
-                'order_id': renew_order.id,
-                'product_id': line.product_id.id,
-                'name': line.name,
-                'product_uom_qty': line.product_uom_qty,
-                'price_unit': line.price_unit,
-                'discount': line.discount,
-<<<<<<< HEAD
-                'resource_id': line.resource_id.id if hasattr(line, 'resource_id') and line.resource_id else False,
-=======
-<<<<<<< HEAD
-=======
-                'resource_id': line.resource_id.id if line.resource_id else False,
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
-            })
-            
-        # Redirect to the new quotation form view using the subscription form layout
+
         return {
             'name': _('Renewal Quotation'),
             'type': 'ir.actions.act_window',
@@ -346,20 +194,9 @@ class SaleOrder(models.Model):
         }
 
     def action_close(self):
-<<<<<<< HEAD
-        """Trigger the close wizard to select a close reason and gracefully terminate active contracts."""
-=======
-<<<<<<< HEAD
-        """Trigger the close wizard to select a close reason and gracefully terminate active contracts."""
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
+        """Open the Close Subscription wizard to select a churn reason and
+        gracefully terminate the active subscription order."""
         self.ensure_one()
-        active_subs = self.subscription_ids.filtered(lambda s: s.state not in ('closed', 'cancelled', 'expired'))
-        if not active_subs:
-            raise UserError(_("There are no active subscriptions associated with this sales order to close."))
-        
-        # Return the window action to open our beautiful close reason wizard!
         return {
             'name': _('Close Subscription Reason'),
             'type': 'ir.actions.act_window',
@@ -367,24 +204,397 @@ class SaleOrder(models.Model):
             'view_mode': 'form',
             'target': 'new',
             'context': {
-                'default_subscription_id': active_subs[0].id,
+                'default_sale_order_id': self.id,
             }
         }
 
-<<<<<<< HEAD
+    def _action_close_confirm(self, close_reason_id=None, notes=None):
+        """Apply the selected close reason and permanently close/churn the subscription."""
+        for order in self:
+            vals = {
+                'subscription_state': '6_churn',
+                'state': 'cancel',
+            }
+            if close_reason_id:
+                vals['close_reason_id'] = close_reason_id
+            if notes:
+                vals['close_reason_notes'] = notes
+            order.write(vals)
+            order.message_post(body=_("Subscription closed/churned."))
+
+    def action_mrr_smart_button(self):
+        self.ensure_one()
+        return {
+            'name': _('MRR Analysis'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'subscription.mrr.breakdown',
+            'view_mode': 'list,pivot,graph',
+            'domain': [('sale_order_id', '=', self.id)],
+        }
+
+    def action_lock_prices(self):
+        self.write({'is_price_locked': True})
+        self.message_post(body=_("Subscription prices have been locked (grandfathered)."))
+
+    def action_unlock_prices(self):
+        self.write({'is_price_locked': False})
+        self.message_post(body=_("Subscription prices have been unlocked."))
+
+    def action_apply_latest_prices(self):
+        updated = 0
+        for line in self.order_line.filtered(lambda l: l.product_id.recurring_ok):
+            new_price = line.product_id.list_price
+            if new_price != line.price_unit:
+                self.env['subscription.price.change.log'].create({
+                    'sale_order_id': self.id,
+                    'product_id': line.product_id.id,
+                    'old_price': line.price_unit,
+                    'new_price': new_price,
+                    'changed_by': self.env.user.id,
+                    'is_protected': False,
+                    'notes': _('Manually applied via Apply Latest Prices'),
+                })
+                line.with_context(_price_lock_bypass=True).write({'price_unit': new_price})
+                updated += 1
+        if updated:
+            self.message_post(body=_('<b>%d line(s)</b> updated to latest product prices.') % updated)
+        else:
+            self.message_post(body=_('All line prices are already up to date.'))
+        return True
+
+    def action_view_price_history(self):
+        self.ensure_one()
+        return {
+            'name': _('Price History'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'subscription.price.change.log',
+            'view_mode': 'list,form',
+            'domain': [('sale_order_id', '=', self.id)],
+        }
+
+    def action_pause(self):
+        self.write({'subscription_state': '4_paused'})
+        self.message_post(body=_("Subscription has been paused."))
+
+    def action_resume(self):
+        self.write({'subscription_state': '3_progress'})
+        self.message_post(body=_("Subscription has been resumed."))
+
+    def action_change_seats(self, line_id, new_quantity):
+        self.ensure_one()
+        line = self.env['sale.order.line'].browse(line_id)
+        if not line or line.order_id.id != self.id:
+            return False
+        
+        old_qty = line.product_uom_qty
+        qty_diff = new_quantity - old_qty
+        if qty_diff <= 0:
+            line.with_context(_price_lock_bypass=True).write({'product_uom_qty': new_quantity})
+            return True
+            
+        # Proration logic
+        today = fields.Date.today()
+        next_date = self.next_invoice_date
+        
+        if next_date and next_date > today:
+            days_remaining = (next_date - today).days
+            # Calculate total cycle days based on billing period
+            delta = self._get_billing_delta()
+            cycle_start = next_date - delta
+            total_days = (next_date - cycle_start).days
+            if total_days <= 0:
+                total_days = 30
+            
+            proration_ratio = max(0, min(1, days_remaining / total_days))
+            prorated_amount = (qty_diff * line.price_unit) * proration_ratio
+            
+            if prorated_amount > 0:
+                self.env['subscription.proration'].create({
+                    'subscription_order_id': self.id,
+                    'product_id': line.product_id.id,
+                    'description': _('Prorated charge for %s added seats (%s days remaining)') % (qty_diff, days_remaining),
+                    'quantity': qty_diff,
+                    'amount': prorated_amount,
+                })
+        
+        line.with_context(_price_lock_bypass=True).write({'product_uom_qty': new_quantity})
+        self.message_post(body=_('Quantity of <b>%s</b> updated from %s to %s. Prorated charges applied if applicable.') % (line.product_id.display_name, old_qty, new_quantity))
+        return True
+
+    def _preview_next_invoice(self):
+        self.ensure_one()
+        preview = {
+            'next_invoice_date': self.next_invoice_date or fields.Date.today(),
+            'lines': [],
+            'discount_amount': 0.0,
+            'coupon_code': self.coupon_id.code if self.coupon_id else False,
+            'tax_amount': 0.0,
+            'grand_total': 0.0,
+        }
+        
+        subtotal_before_discount = 0.0
+        tax_total = 0.0
+        
+        # 1. Base Recurring Lines
+        recurring_lines = self.order_line.filtered(lambda l: l.product_id.recurring_ok)
+        for line in recurring_lines:
+            price_unit = line.price_unit
+            if self.plan_id and self.plan_id.ramp_ids:
+                for ramp in self.plan_id.ramp_ids.sorted('sequence'):
+                    if ramp.start_cycle <= self.subscription_cycle <= ramp.end_cycle:
+                        price_unit = ramp.price_unit
+                        break
+
+            subtotal = price_unit * line.product_uom_qty
+            discount_amount = subtotal * (line.discount / 100.0) if line.discount else 0.0
+            
+            tax_amt = 0.0
+            if line.tax_ids:
+                taxes = line.tax_ids.compute_all(price_unit, self.currency_id, line.product_uom_qty, line.product_id, self.partner_id)
+                tax_amt = sum(t.get('amount', 0.0) for t in taxes.get('taxes', []))
+            
+            preview['lines'].append({
+                'product_name': line.product_id.display_name,
+                'quantity': line.product_uom_qty,
+                'price_unit': price_unit,
+                'subtotal': subtotal,
+            })
+            
+            subtotal_before_discount += subtotal
+            tax_total += tax_amt
+            preview['discount_amount'] += discount_amount
+
+        # 2. Unbilled Usage
+        usages = self.env['subscription.usage'].search([
+            ('subscription_order_id', '=', self.id),
+            ('billed', '=', False)
+        ])
+        for usage in usages:
+            price_unit = usage.product_id.list_price
+            subtotal = price_unit * usage.quantity
+            preview['lines'].append({
+                'product_name': f"Usage: {usage.description or usage.product_id.display_name}",
+                'quantity': usage.quantity,
+                'price_unit': price_unit,
+                'subtotal': subtotal,
+            })
+            subtotal_before_discount += subtotal
+            if usage.product_id.taxes_id:
+                taxes = usage.product_id.taxes_id.compute_all(price_unit, self.currency_id, usage.quantity, usage.product_id, self.partner_id)
+                tax_total += sum(t.get('amount', 0.0) for t in taxes.get('taxes', []))
+
+        # 3. Unbilled Prorations
+        prorations = self.env['subscription.proration'].search([
+            ('subscription_order_id', '=', self.id),
+            ('invoiced', '=', False)
+        ])
+        for proro in prorations:
+            subtotal = proro.amount
+            price_unit = subtotal / proro.quantity if proro.quantity else subtotal
+            preview['lines'].append({
+                'product_name': proro.description,
+                'quantity': proro.quantity,
+                'price_unit': price_unit,
+                'subtotal': subtotal,
+            })
+            subtotal_before_discount += subtotal
+            if proro.product_id.taxes_id:
+                taxes = proro.product_id.taxes_id.compute_all(price_unit, self.currency_id, proro.quantity, proro.product_id, self.partner_id)
+                tax_total += sum(t.get('amount', 0.0) for t in taxes.get('taxes', []))
+
+        preview['tax_amount'] = tax_total
+        preview['grand_total'] = subtotal_before_discount - preview['discount_amount'] + tax_total
+        return preview
+
+    # ── Invoicing ─────────────────────────────────────────────────────────────
+
+    def _get_billing_delta(self):
+        self.ensure_one()
+        plan = self.plan_id
+        if not plan:
+            return relativedelta(months=1)
+        period_map = {
+            'daily': relativedelta(days=1),
+            'weekly': relativedelta(weeks=1),
+            'monthly': relativedelta(months=1),
+            'quarterly': relativedelta(months=3),
+            'semi_annually': relativedelta(months=6),
+            'yearly': relativedelta(years=1),
+        }
+        if plan.billing_period == 'custom' and plan.custom_days:
+            return relativedelta(days=plan.custom_days)
+        return period_map.get(plan.billing_period, relativedelta(months=1))
+
+    def _generate_recurring_invoice(self):
+        self.ensure_one()
+        if self.subscription_state not in ('3_progress',):
+            return False
+        recurring_lines = self.order_line.filtered(lambda l: l.product_id.recurring_ok)
+        if not recurring_lines:
+            return False
+
+        invoice_lines = []
+        for line in recurring_lines:
+            # Check for Ramp Pricing overrides based on the current subscription cycle
+            price_unit = line.price_unit
+            if self.plan_id and self.plan_id.ramp_ids:
+                for ramp in self.plan_id.ramp_ids.sorted('sequence'):
+                    if ramp.start_cycle <= self.subscription_cycle <= ramp.end_cycle:
+                        price_unit = ramp.price_unit
+                        # Update the sale order line so the UI reflects the current cycle's price.
+                        # Bypassing the lock so the contract explicitly ramps up/down as planned.
+                        if line.price_unit != price_unit:
+                            line.with_context(_price_lock_bypass=True).write({'price_unit': price_unit})
+                            self.message_post(body=_(
+                                '<b>Ramp Pricing Applied:</b> Cycle %s reached.<br/>'
+                                'Unit price for <b>%s</b> updated to <b>%.2f</b>.'
+                            ) % (self.subscription_cycle, line.product_id.display_name, price_unit))
+                        break # First matching ramp applies
+
+            invoice_lines.append((0, 0, {
+                'product_id': line.product_id.id,
+                'name': line.name or line.product_id.name,
+                'quantity': line.product_uom_qty,
+                'price_unit': price_unit,
+                'discount': line.discount,
+                'tax_ids': [(6, 0, line.tax_ids.ids)] if line.tax_ids else False,
+                'sale_line_ids': [(4, line.id)],
+            }))
+
+        # Add unbilled usage
+        usages = self.env['subscription.usage'].search([
+            ('subscription_order_id', '=', self.id),
+            ('billed', '=', False)
+        ])
+        for usage in usages:
+            invoice_lines.append((0, 0, {
+                'product_id': usage.product_id.id,
+                'name': usage.description or usage.product_id.display_name,
+                'quantity': usage.quantity,
+                'price_unit': usage.product_id.list_price,
+                'tax_ids': [(6, 0, usage.product_id.taxes_id.ids)] if usage.product_id.taxes_id else False,
+            }))
+            usage.write({'billed': True})
+
+        # Add unbilled proration
+        prorations = self.env['subscription.proration'].search([
+            ('subscription_order_id', '=', self.id),
+            ('invoiced', '=', False)
+        ])
+        for proro in prorations:
+            invoice_lines.append((0, 0, {
+                'product_id': proro.product_id.id,
+                'name': proro.description,
+                'quantity': proro.quantity,
+                'price_unit': proro.amount / proro.quantity if proro.quantity else proro.amount,
+                'tax_ids': [(6, 0, proro.product_id.taxes_id.ids)] if proro.product_id.taxes_id else False,
+            }))
+            proro.write({'invoiced': True})
+
+        invoice = self.env['account.move'].create({
+            'move_type': 'out_invoice',
+            'partner_id': self.partner_id.id,
+            'invoice_origin': self.name,
+            'invoice_line_ids': invoice_lines,
+        })
+
+        for line in recurring_lines:
+            line.invoice_lines = [(4, il.id) for il in invoice.invoice_line_ids if il.product_id == line.product_id]
+
+        delta = self._get_billing_delta()
+        next_date = (self.next_invoice_date or fields.Date.today()) + delta
+        self.write({
+            'next_invoice_date': next_date,
+            'subscription_cycle': self.subscription_cycle + 1,
+        })
+        return invoice
+
+    @api.model
+    def _cron_generate_invoices(self):
+        today = fields.Date.today()
+        due_subs = self.search([
+            ('subscription_state', 'in', ['3_progress']),
+            ('next_invoice_date', '<=', today),
+        ])
+        for sub in due_subs:
+            try:
+                with self.env.cr.savepoint():
+                    sub._generate_recurring_invoice()
+            except Exception as e:
+                sub.message_post(body=_('Invoice generation failed: %s. Retrying tomorrow.') % str(e))
+                sub.next_invoice_date = sub.next_invoice_date + relativedelta(days=1)
+
 
 class SaleOrderLine(models.Model):
-    """Inherited Sale Order Line to track specific physical or human resources associated with service items."""
+    """Inherited Sale Order Line to track specific physical or human resources
+    associated with service subscription line items."""
+
     _inherit = 'sale.order.line'
 
-    resource_id = fields.Many2one('res.partner', string='Resource', help="Select resource associated with this line.")
-=======
-<<<<<<< HEAD
+    resource_id = fields.Many2one(
+        'res.partner', string='Resource',
+        help="Select resource associated with this line."
+    )
 
-=======
-class SaleOrderLine(models.Model):
-    _inherit = 'sale.order.line'
+    def write(self, vals):
+        # Block price_unit changes on lines belonging to a price-locked subscription.
+        if 'price_unit' in vals and not self.env.context.get('_price_lock_bypass'):
+            locked_lines = self.filtered(lambda l: l.order_id.is_price_locked and l.product_id.recurring_ok)
+            if locked_lines:
+                product_names = ', '.join(locked_lines.mapped('product_id.name'))
+                raise UserError(_(
+                    "Cannot modify unit price for the following products because "
+                    "this subscription has grandfathered (price-locked) pricing:\n%s\n\n"
+                    "To update prices, first unlock the subscription via "
+                    "'Unlock Prices' or use 'Apply Latest Prices'."
+                ) % product_names)
+        return super().write(vals)
 
-    resource_id = fields.Many2one('res.partner', string='Resource', help="Select resource associated with this line.")
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
+
+# ── Wizards ───────────────────────────────────────────────────────────────────
+
+class SubscriptionCloseWizard(models.TransientModel):
+    """Wizard allowing users to select a close reason before terminating a subscription."""
+
+    _name = 'subscription.close.wizard'
+    _description = 'Close Subscription Wizard'
+
+    sale_order_id = fields.Many2one(
+        'sale.order', string='Subscription (Sale Order)', required=True
+    )
+    close_reason_id = fields.Many2one(
+        'subscription.close.reason', string='Close Reason'
+    )
+    notes = fields.Text(string='Notes')
+
+    def action_close(self):
+        """Apply the selected close reason and permanently close the subscription."""
+        self.ensure_one()
+        self.sale_order_id._action_close_confirm(
+            close_reason_id=self.close_reason_id.id if self.close_reason_id else None,
+            notes=self.notes,
+        )
+        return {'type': 'ir.actions.act_window_close'}
+
+
+class SubscriptionChangePlanWizard(models.TransientModel):
+    """Wizard for changing the subscription plan on an active contract."""
+
+    _name = 'subscription.change.plan.wizard'
+    _description = 'Change Subscription Plan Wizard'
+
+    sale_order_id = fields.Many2one(
+        'sale.order', string='Subscription (Sale Order)', required=True
+    )
+    plan_id = fields.Many2one(
+        'subscription.plan', string='New Plan', required=True
+    )
+
+    def action_change_plan(self):
+        """Update the subscription's plan and post a chatter message with the change."""
+        self.ensure_one()
+        self.sale_order_id.write({'plan_id': self.plan_id.id})
+        self.sale_order_id.message_post(
+            body=_('Subscription plan changed to <b>%s</b>.') % self.plan_id.name
+        )
+        return {'type': 'ir.actions.act_window_close'}

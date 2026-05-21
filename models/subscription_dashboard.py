@@ -3,69 +3,56 @@ from odoo import models, api, fields
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 
+
 class SubscriptionDashboard(models.AbstractModel):
-    """Subscription Dashboard abstract model computing high-level MRR, ARR, and active KPI stats for visual charts."""
+    """Subscription Dashboard abstract model computing high-level MRR, ARR,
+    active subscription counts, churn rate, and chart data for the KPI widget."""
+
     _name = 'subscription.dashboard'
     _description = 'Subscription Dashboard Analytics'
 
     @api.model
     def get_dashboard_data(self):
-        """Fetch and compute all key KPI metrics and chart distributions for the main dashboard widget."""
-        # Active Subscriptions
-        active_subs = self.env['subscription.subscription'].search([('state', 'in', ['in_progress', 'in_trial'])])
-        
-<<<<<<< HEAD
-        # Calculate MRR using Odoo's native computed mrr field
-        mrr = sum(active_subs.mapped('mrr'))
-=======
-        # Calculate MRR using Odoo's native computed mrr_total field
-        mrr = sum(active_subs.mapped('mrr_total'))
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
-        
+        """Fetch and compute all KPI metrics and chart data for the main dashboard widget."""
+        # Active subscriptions are sale.orders in progress or paused state
+        active_orders = self.env['sale.order'].search(
+            [('subscription_state', 'in', ['3_progress', '4_paused'])]
+        )
+
+        mrr = sum(active_orders.mapped('mrr_total'))
         arr = mrr * 12
-        active_count = len(active_subs)
+        active_count = len(active_orders)
         arpu = mrr / active_count if active_count else 0.0
 
-        # Calculate Churn Rate (closed/cancelled subs in last 30 days)
         thirty_days_ago = date.today() - timedelta(days=30)
-        churned_subs = self.env['subscription.subscription'].search_count([
-            ('state', 'in', ['closed', 'cancelled']),
-            ('write_date', '>=', thirty_days_ago)
+        churned_count = self.env['sale.order'].search_count([
+            ('subscription_state', '=', '6_churn'),
+            ('write_date', '>=', thirty_days_ago),
         ])
-        
-        total_subs_30d = active_count + churned_subs
-        churn_rate = (churned_subs / total_subs_30d * 100) if total_subs_30d > 0 else 0.0
-        
-        # Chart data: Active subs by plan
+
+        total_subs_30d = active_count + churned_count
+        churn_rate = (churned_count / total_subs_30d * 100) if total_subs_30d > 0 else 0.0
+
         plans = self.env['subscription.plan'].search([])
         plan_distribution = []
         for plan in plans:
-            count = self.env['subscription.subscription'].search_count([
-                ('state', 'in', ['in_progress', 'in_trial']),
-                ('plan_id', '=', plan.id)
+            count = self.env['sale.order'].search_count([
+                ('subscription_state', 'in', ['3_progress', '4_paused']),
+                ('plan_id', '=', plan.id),
             ])
             if count > 0:
-                plan_distribution.append({
-                    'label': plan.name,
-                    'value': count
-                })
-                
-        # Chart data: Recent MRR growth (last 6 months approximation)
+                plan_distribution.append({'label': plan.name, 'value': count})
+
         mrr_growth = []
         for i in range(5, -1, -1):
             month_date = date.today() - relativedelta(months=i)
             month_label = month_date.strftime("%b %Y")
-            
-            mrr_record = self.env['subscription.mrr.analysis'].search([
-                ('date', '<=', month_date)
-            ], order='date desc', limit=1)
-            
-            val = mrr_record.mrr_change if mrr_record else (mrr * (1 - (i*0.05)))
-            
-            mrr_growth.append({
-                'label': month_label,
-                'value': round(val, 2)
-            })
+
+            mrr_record = self.env['subscription.mrr.analysis'].search(
+                [('date', '<=', month_date)], order='date desc', limit=1
+            )
+            val = mrr_record.mrr_change if mrr_record else (mrr * (1 - (i * 0.05)))
+            mrr_growth.append({'label': month_label, 'value': round(val, 2)})
 
         return {
             'kpi': {
@@ -80,3 +67,4 @@ class SubscriptionDashboard(models.AbstractModel):
                 'mrr_growth': mrr_growth,
             }
         }
+

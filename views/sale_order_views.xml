@@ -32,14 +32,15 @@
                         <span class="o_stat_text">Recorded</span>
                     </div>
                 </button>
-                <button name="%(subscription_management.action_subscription_subscription)d" 
-                        type="action" 
-                        class="oe_stat_button" 
-                        icon="fa-line-chart" 
-                        context="{'search_default_sale_order_id': id, 'default_sale_order_id': id}">
+                <button name="action_mrr_smart_button" type="object" class="oe_stat_button" icon="fa-line-chart" title="Monthly Recurring Revenue">
                     <div class="o_stat_info">
                         <span class="o_stat_text">MRR</span>
                         <span class="o_stat_value"><field name="mrr_total" widget="monetary" options="{'currency_field': 'currency_id'}"/></span>
+                    </div>
+                </button>
+                <button name="action_view_price_history" type="object" class="oe_stat_button" icon="fa-history" title="Price History" invisible="not plan_id">
+                    <div class="o_stat_info">
+                        <span class="o_stat_text">Price History</span>
                     </div>
                 </button>
             </xpath>
@@ -54,6 +55,8 @@
 
             <!-- Inject custom Subscription lifecycle buttons -->
             <xpath expr="//header" position="inside">
+                <button name="action_lock_prices" string="Lock Prices" type="object" class="btn-secondary" invisible="not plan_id or is_price_locked or state not in ('sale', 'done')"/>
+                <button name="action_unlock_prices" string="Unlock Prices" type="object" class="btn-secondary" invisible="not plan_id or not is_price_locked or state not in ('sale', 'done')"/>
                 <button name="action_upsell" string="Upsell" type="object" class="btn-secondary" invisible="not plan_id or state not in ('sale', 'done')"/>
                 <button name="action_renew" string="Renew" type="object" class="btn-secondary" invisible="not plan_id or state not in ('sale', 'done')"/>
                 <button name="action_close" string="Close" type="object" class="btn-secondary" invisible="not plan_id or state not in ('sale', 'done')"/>
@@ -67,7 +70,6 @@
                             <field name="name" readonly="1"/>
                         </h1>
                         <div class="d-flex gap-2 ms-auto" style="overflow: visible !important; min-width: max-content !important; flex-shrink: 0 !important; margin-right: 10px;">
-<<<<<<< HEAD
                             <span class="badge rounded-pill text-bg-warning px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #ff9800 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '1_draft'">Waiting customer payment</span>
                             <span class="badge rounded-pill text-bg-secondary px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #6c757d !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '2_renewal'">Renewal</span>
                             <span class="badge rounded-pill text-bg-success px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #4caf50 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '3_progress'">In Progress</span>
@@ -75,15 +77,6 @@
                             <span class="badge rounded-pill text-bg-success px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #28a745 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '5_renewed'">Renewed</span>
                             <span class="badge rounded-pill text-bg-danger px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #dc3545 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '6_churn'">Churned</span>
                             <span class="badge rounded-pill text-bg-primary px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #007bff !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '7_upsell'">Upsell</span>
-=======
-                            <span class="badge rounded-pill text-bg-warning px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #ff9800 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != 'draft'">Waiting customer payment</span>
-                            <span class="badge rounded-pill text-bg-success px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #4caf50 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != 'in_progress'">In Progress</span>
-<<<<<<< HEAD
-                            <span class="badge rounded-pill text-bg-info px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #17a2b8 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != 'paused'">Paused</span>
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
-                            <span class="badge rounded-pill text-bg-danger px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #dc3545 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != 'churned'">Churned</span>
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                         </div>
                     </div>
                 </div>
@@ -94,14 +87,7 @@
                 <field name="referrer_id" placeholder="Select referrer..."/>
                 <field name="partner_invoice_id" string="Invoice Address" options="{'no_open': True, 'no_create': True}" groups=""/>
                 <field name="partner_shipping_id" string="Delivery Address" options="{'no_open': True, 'no_create': True}" groups=""/>
-<<<<<<< HEAD
                 <field name="coupon_id" placeholder="Select coupon..."/>
-=======
-<<<<<<< HEAD
-                <field name="coupon_id" placeholder="Select coupon..."/>
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
             </xpath>
 
             <!-- 5. Right Column: Add Recurring Plan, Until, Next Invoice, and Promised Delivery -->
@@ -113,11 +99,10 @@
                     <field name="subscription_end_date" placeholder="May 16, 2032"/>
                 </div>
                 <field name="next_invoice_date" string="Next Invoice"/>
+<!--                <field name="subscription_cycle" string="Current Cycle" readonly="1" invisible="not plan_id"/>-->
+<!--                <field name="is_price_locked" string="Price Locked" readonly="1" invisible="not plan_id"/>-->
                 <field name="commitment_date" string="Promised Delivery"/>
             </xpath>
-
-<<<<<<< HEAD
-
 
             <!-- 7. Subtotals block: Inject MRR and Non Recurring totals -->
             <xpath expr="//group[@name='sale_total']" position="inside">
@@ -126,31 +111,12 @@
                     <field name="mrr_total" widget="monetary" options="{'currency_field': 'currency_id'}" style="font-weight: bold; color: #333;"/>
                 </div>
                 <div class="d-flex justify-content-between">
-=======
-<<<<<<< HEAD
-
-=======
-            <!-- 6. Order Lines Table: Inject Resource column -->
-            <xpath expr="//field[@name='order_line']/list/field[@name='product_id']" position="after">
-                <field name="resource_id" optional="show" placeholder="Select resource..."/>
-            </xpath>
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
-
-            <!-- 7. Subtotals block: Inject MRR and Non Recurring totals -->
-            <xpath expr="//group[@name='sale_total']" position="inside">
-                <div class="d-flex justify-content-between border-top pt-2 mt-2" invisible="not mrr_total">
-                    <strong style="color: #666;">MRR:</strong>
-                    <field name="mrr_total" widget="monetary" options="{'currency_field': 'currency_id'}" style="font-weight: bold; color: #333;"/>
-                </div>
-                <div class="d-flex justify-content-between" invisible="not mrr_total">
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                     <strong style="color: #666;">Non Recurring:</strong>
                     <field name="non_recurring_total" widget="monetary" options="{'currency_field': 'currency_id'}" style="font-weight: bold; color: #333;"/>
                 </div>
             </xpath>
         </field>
     </record>
-<<<<<<< HEAD
 
     <!-- Custom Tree/List view for Subscription Sales Orders -->
     <record id="view_subscription_order_tree" model="ir.ui.view">
@@ -160,10 +126,12 @@
             <list string="Subscriptions" sample="1">
                 <field name="name" string="Number"/>
                 <field name="partner_id" string="Customer"/>
+                <field name="subscription_end_date" string="End Date" optional="show"/>
                 <field name="next_invoice_date" string="Next Invoice" optional="show"/>
-                <field name="user_id" string="Salesperson" widget="many2one_avatar_user"/>
+                <field name="user_id" string="Salesperson" widget="many2one_avatar_user" optional="show"/>
                 <field name="activity_ids" string="Activities" widget="list_activity" optional="show"/>
                 <field name="company_id" groups="base.group_multi_company" optional="show"/>
+                <field name="coupon_id" string="Coupon" optional="show"/>
                 <field name="mrr_total" string="Recurring" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                 <field name="plan_id" string="Recurring Plan"/>
                 <field name="amount_total" string="Total" widget="monetary" options="{'currency_field': 'currency_id'}" decoration-bf="1" decoration-info="1"/>
@@ -177,13 +145,14 @@
             </list>
         </field>
     </record>
+
     <record id="view_sales_order_filter_subscription" model="ir.ui.view">
         <field name="name">sale.order.select.subscription</field>
         <field name="model">sale.order</field>
         <field name="arch" type="xml">
             <search string="Search Subscriptions">
-                <field name="name" string="Order" filter_domain="['|', ('name', 'ilike', self), ('partner_id', 'child_of', self)]"/>
-                <field name="partner_id" operator="child_of"/>
+                <field name="name" string="Order"/>
+                <field name="partner_id"/>
                 <field name="user_id"/>
                 <field name="plan_id"/>
                 <filter string="My Subscriptions" name="my_subscriptions" domain="[('user_id', '=', uid)]"/>
@@ -195,14 +164,12 @@
                 <filter string="To Renew" name="to_renew" domain="[('subscription_state', '=', '2_renewal')]"/>
                 <filter string="Upsell" name="upsell" domain="[('subscription_state', '=', '7_upsell')]"/>
                 <separator/>
-                <group expand="0" string="Group By">
-                    <filter string="Customer" name="customer" expand="0" context="{'group_by': 'partner_id'}"/>
-                    <filter string="Status" name="status" expand="0" context="{'group_by': 'subscription_state'}"/>
-                    <filter string="Recurring Plan" name="plan" expand="0" context="{'group_by': 'plan_id'}"/>
+                <group>
+                    <filter string="Customer" name="customer" context="{'group_by': 'partner_id'}"/>
+                    <filter string="Status" name="status" context="{'group_by': 'subscription_state'}"/>
+                    <filter string="Recurring Plan" name="plan" context="{'group_by': 'plan_id'}"/>
                 </group>
             </search>
         </field>
     </record>
-=======
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
 </odoo>

@@ -1,18 +1,3 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data noupdate="1">
-<<<<<<< HEAD
-        <!-- Sequence for subscriptions -->
-        <record id="seq_subscription_subscription" model="ir.sequence">
-            <field name="name">Subscription</field>
-=======
-        <record id="seq_subscription_subscription" model="ir.sequence">
-            <field name="name">Subscription Sequence</field>
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
-            <field name="code">subscription.subscription</field>
-            <field name="prefix">SUB/</field>
-            <field name="padding">5</field>
-            <field name="company_id" eval="False"/>
-        </record>
-    </data>
 </odoo>

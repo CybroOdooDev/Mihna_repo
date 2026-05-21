@@ -26,7 +26,6 @@
                             <field name="name" placeholder="e.g. Summer Promo 20%"/>
                         </h1>
                     </div>
-<<<<<<< HEAD
                     <notebook>
                         <page string="General configuration" name="general">
                             <group>
@@ -39,6 +38,8 @@
                                     <field name="active" widget="boolean_toggle"/>
                                     <field name="start_date"/>
                                     <field name="end_date"/>
+                                    <field name="recurring_type"/>
+                                    <field name="recurring_invoices" invisible="recurring_type != 'limited'" required="recurring_type == 'limited'"/>
                                 </group>
                             </group>
                         </page>
@@ -56,30 +57,8 @@
                                 </group>
                             </group>
                         </page>
-                        <page string="Recurring Logic" name="recurring">
-                            <div class="text-muted mt-2 mb-3 ms-2">
-                                <em><i class="fa fa-info-circle me-1"></i> Define how many automatic invoices this coupon will be applied to once a customer subscribes.</em>
-                            </div>
-                            <group>
-                                <group>
-                                    <field name="recurring_type"/>
-                                    <field name="recurring_invoices" invisible="recurring_type != 'limited'" required="recurring_type == 'limited'"/>
-                                </group>
-                            </group>
-                        </page>
+
                     </notebook>
-=======
-                    <group>
-                        <group>
-                            <field name="code" placeholder="e.g. SAVE20"/>
-                            <field name="discount_type"/>
-                        </group>
-                        <group>
-                            <field name="discount_value"/>
-                            <field name="active"/>
-                        </group>
-                    </group>
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
                 </sheet>
             </form>
         </field>

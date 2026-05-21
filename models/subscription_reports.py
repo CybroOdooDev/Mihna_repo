@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # -*- coding: utf-8 -*-
 from odoo import models, fields
 
@@ -6,15 +5,15 @@ from odoo import models, fields
 # Shared MRR formula snippet (used as a Python f-string fragment in SQL)
 MRR_EXPR = """
     CASE
-        WHEN p.billing_period = 'daily'        THEN (l.price_unit * l.quantity * (1.0 - COALESCE(l.discount, 0.0) / 100.0)) * 30.0
-        WHEN p.billing_period = 'weekly'       THEN (l.price_unit * l.quantity * (1.0 - COALESCE(l.discount, 0.0) / 100.0)) * 4.33
-        WHEN p.billing_period = 'monthly'      THEN (l.price_unit * l.quantity * (1.0 - COALESCE(l.discount, 0.0) / 100.0))
-        WHEN p.billing_period = 'quarterly'    THEN (l.price_unit * l.quantity * (1.0 - COALESCE(l.discount, 0.0) / 100.0)) / 3.0
-        WHEN p.billing_period = 'semi_annually'THEN (l.price_unit * l.quantity * (1.0 - COALESCE(l.discount, 0.0) / 100.0)) / 6.0
-        WHEN p.billing_period = 'yearly'       THEN (l.price_unit * l.quantity * (1.0 - COALESCE(l.discount, 0.0) / 100.0)) / 12.0
+        WHEN p.billing_period = 'daily'        THEN (l.price_unit * l.product_uom_qty * (1.0 - COALESCE(l.discount, 0.0) / 100.0)) * 30.0
+        WHEN p.billing_period = 'weekly'       THEN (l.price_unit * l.product_uom_qty * (1.0 - COALESCE(l.discount, 0.0) / 100.0)) * 4.33
+        WHEN p.billing_period = 'monthly'      THEN (l.price_unit * l.product_uom_qty * (1.0 - COALESCE(l.discount, 0.0) / 100.0))
+        WHEN p.billing_period = 'quarterly'    THEN (l.price_unit * l.product_uom_qty * (1.0 - COALESCE(l.discount, 0.0) / 100.0)) / 3.0
+        WHEN p.billing_period = 'semi_annually'THEN (l.price_unit * l.product_uom_qty * (1.0 - COALESCE(l.discount, 0.0) / 100.0)) / 6.0
+        WHEN p.billing_period = 'yearly'       THEN (l.price_unit * l.product_uom_qty * (1.0 - COALESCE(l.discount, 0.0) / 100.0)) / 12.0
         WHEN p.billing_period = 'custom' AND p.custom_days > 0
-                                               THEN (l.price_unit * l.quantity * (1.0 - COALESCE(l.discount, 0.0) / 100.0)) * (30.0 / p.custom_days)
-        ELSE (l.price_unit * l.quantity * (1.0 - COALESCE(l.discount, 0.0) / 100.0))
+                                               THEN (l.price_unit * l.product_uom_qty * (1.0 - COALESCE(l.discount, 0.0) / 100.0)) * (30.0 / p.custom_days)
+        ELSE (l.price_unit * l.product_uom_qty * (1.0 - COALESCE(l.discount, 0.0) / 100.0))
     END
 """
 
@@ -32,6 +31,12 @@ class SubscriptionMrrBreakdown(models.Model):
         ('churn', 'Churn'),
     ], string='Event Type', readonly=True)
     mrr_change = fields.Float(string='MRR Change', readonly=True)
+    new_mrr = fields.Float(string='New MRR', readonly=True)
+    sale_order_id = fields.Many2one('sale.order', string='Sale Order', readonly=True)
+    user_id = fields.Many2one('res.users', string='Salesperson', readonly=True)
+    team_id = fields.Many2one('crm.team', string='Sales Team', readonly=True)
+    company_id = fields.Many2one('res.company', string='Company', readonly=True)
+    currency_id = fields.Many2one('res.currency', string='Currency', readonly=True)
 
     def init(self):
         """Create live SQL view for MRR Breakdown from real subscription data."""
@@ -44,28 +49,45 @@ class SubscriptionMrrBreakdown(models.Model):
                 -- NEW MRR: from subscriptions that became active
                 SELECT
                     l.id AS id,
-                    DATE_TRUNC('month', s.start_date)::date AS event_date,
+                    DATE_TRUNC('month', so.date_order)::date AS event_date,
                     'new' AS event_type,
-                    ({MRR_EXPR}) AS mrr_change
-                FROM subscription_line l
-                JOIN subscription_subscription s ON s.id = l.subscription_id
-                JOIN subscription_plan p ON p.id = s.plan_id
-                WHERE s.start_date IS NOT NULL
-                  AND s.state NOT IN ('draft')
+                    ({MRR_EXPR}) AS mrr_change,
+                    ({MRR_EXPR}) AS new_mrr,
+                    so.id AS sale_order_id,
+                    so.user_id AS user_id,
+                    so.team_id AS team_id,
+                    so.company_id AS company_id,
+                    so.currency_id AS currency_id
+                FROM sale_order_line l
+                JOIN sale_order so ON so.id = l.order_id
+                JOIN product_product pp ON pp.id = l.product_id
+                JOIN product_template t ON t.id = pp.product_tmpl_id
+                JOIN subscription_plan p ON p.id = COALESCE(t.subscription_plan_id, so.plan_id)
+                WHERE so.date_order IS NOT NULL
+                  AND t.recurring_ok = true
+                  AND so.subscription_state NOT IN ('1_draft')
 
                 UNION ALL
 
                 -- CHURN MRR: from subscriptions that were cancelled (negative value)
                 SELECT
                     l.id + 10000000 AS id,
-                    DATE_TRUNC('month', COALESCE(s.cancel_date, s.end_date))::date AS event_date,
+                    DATE_TRUNC('month', COALESCE(so.write_date, so.date_order))::date AS event_date,
                     'churn' AS event_type,
-                    -({MRR_EXPR}) AS mrr_change
-                FROM subscription_line l
-                JOIN subscription_subscription s ON s.id = l.subscription_id
-                JOIN subscription_plan p ON p.id = s.plan_id
-                WHERE s.state IN ('cancelled', 'closed')
-                  AND COALESCE(s.cancel_date, s.end_date) IS NOT NULL
+                    -({MRR_EXPR}) AS mrr_change,
+                    0.0 AS new_mrr,
+                    so.id AS sale_order_id,
+                    so.user_id AS user_id,
+                    so.team_id AS team_id,
+                    so.company_id AS company_id,
+                    so.currency_id AS currency_id
+                FROM sale_order_line l
+                JOIN sale_order so ON so.id = l.order_id
+                JOIN product_product pp ON pp.id = l.product_id
+                JOIN product_template t ON t.id = pp.product_tmpl_id
+                JOIN subscription_plan p ON p.id = COALESCE(t.subscription_plan_id, so.plan_id)
+                WHERE so.subscription_state = '6_churn'
+                  AND t.recurring_ok = true
             )
         """)
 
@@ -94,14 +116,17 @@ class SubscriptionMrrAnalysis(models.Model):
                     SUM(monthly_mrr) OVER (ORDER BY month_date) AS mrr_change
                 FROM (
                     SELECT
-                        DATE_TRUNC('month', s.start_date)::date AS month_date,
+                        DATE_TRUNC('month', so.date_order)::date AS month_date,
                         SUM({MRR_EXPR}) AS monthly_mrr
-                    FROM subscription_line l
-                    JOIN subscription_subscription s ON s.id = l.subscription_id
-                    JOIN subscription_plan p ON p.id = s.plan_id
-                    WHERE s.start_date IS NOT NULL
-                      AND s.state NOT IN ('draft')
-                    GROUP BY DATE_TRUNC('month', s.start_date)
+                    FROM sale_order_line l
+                    JOIN sale_order so ON so.id = l.order_id
+                    JOIN product_product pp ON pp.id = l.product_id
+                    JOIN product_template t ON t.id = pp.product_tmpl_id
+                    JOIN subscription_plan p ON p.id = COALESCE(t.subscription_plan_id, so.plan_id)
+                    WHERE so.date_order IS NOT NULL
+                      AND t.recurring_ok = true
+                      AND so.subscription_state NOT IN ('1_draft')
+                    GROUP BY DATE_TRUNC('month', so.date_order)
                 ) monthly_totals
             )
         """)
@@ -123,16 +148,13 @@ class SubscriptionAnalysisReport(models.Model):
     currency_id = fields.Many2one('res.currency', string='Currency', readonly=True)
     monthly_recurring = fields.Float(string='Monthly Recurring', readonly=True)
     state = fields.Selection([
-        ('draft', 'Draft'),
-        ('in_trial', 'In Trial'),
-        ('in_progress', 'In Progress'),
-        ('paused', 'Paused'),
-        ('in_dunning', 'In Dunning'),
-        ('suspended', 'Suspended'),
-        ('expired', 'Expired'),
-        ('renewed', 'Renewed'),
-        ('cancelled', 'Cancelled'),
-        ('closed', 'Closed / Churned')
+        ('1_draft', 'Draft'),
+        ('2_renewal', 'Renewal'),
+        ('3_progress', 'In Progress'),
+        ('4_paused', 'Paused'),
+        ('5_renewed', 'Renewed'),
+        ('6_churn', 'Churned'),
+        ('7_upsell', 'Upsell'),
     ], string='Subscription State', readonly=True)
     is_recurring = fields.Boolean(string='Recurring', default=True, readonly=True)
 
@@ -146,24 +168,24 @@ class SubscriptionAnalysisReport(models.Model):
             CREATE OR REPLACE VIEW {self._table} AS (
                 SELECT
                     l.id                AS id,
-                    s.name              AS name,
-                    s.partner_id        AS partner_id,
+                    so.name             AS name,
+                    so.partner_id       AS partner_id,
                     t.categ_id          AS categ_id,
-                    s.plan_id           AS plan_id,
+                    COALESCE(t.subscription_plan_id, so.plan_id) AS plan_id,
                     so.user_id          AS user_id,
                     so.team_id          AS team_id,
-                    s.company_id        AS company_id,
-                    s.currency_id       AS currency_id,
-                    s.state             AS state,
+                    so.company_id       AS company_id,
+                    so.currency_id      AS currency_id,
+                    so.subscription_state AS state,
                     true                AS is_recurring,
                     ({MRR_EXPR})        AS monthly_recurring
-                FROM subscription_line l
-                JOIN subscription_subscription s  ON s.id  = l.subscription_id
-                JOIN subscription_plan p           ON p.id  = s.plan_id
-                LEFT JOIN sale_order so            ON so.id = s.sale_order_id
-                JOIN product_product pp            ON pp.id = l.product_id
-                JOIN product_template t            ON t.id  = pp.product_tmpl_id
-                WHERE s.state NOT IN ('draft', 'cancelled', 'closed')
+                FROM sale_order_line l
+                JOIN sale_order so ON so.id = l.order_id
+                JOIN product_product pp ON pp.id = l.product_id
+                JOIN product_template t ON t.id = pp.product_tmpl_id
+                JOIN subscription_plan p ON p.id = COALESCE(t.subscription_plan_id, so.plan_id)
+                WHERE t.recurring_ok = true
+                  AND so.subscription_state NOT IN ('1_draft', '6_churn')
             )
         """)
 
@@ -203,152 +225,13 @@ class SubscriptionRetentionAnalysis(models.Model):
                     '+0'                AS end_date_month
                 FROM (
                     SELECT
-                        DATE_TRUNC('month', s.start_date)::date AS cohort_month,
+                        DATE_TRUNC('month', so.date_order)::date AS cohort_month,
                         COUNT(*)                                 AS total_count,
-                        COUNT(CASE WHEN s.state NOT IN ('cancelled', 'closed') THEN 1 END) AS active_count
-                    FROM subscription_subscription s
-                    WHERE s.start_date IS NOT NULL
-                    GROUP BY DATE_TRUNC('month', s.start_date)
+                        COUNT(CASE WHEN so.subscription_state NOT IN ('6_churn') THEN 1 END) AS active_count
+                    FROM sale_order so
+                    WHERE so.date_order IS NOT NULL
+                      AND so.subscription_state IS NOT NULL
+                    GROUP BY DATE_TRUNC('month', so.date_order)
                 ) cohorts
             )
         """)
-=======
-<<<<<<< HEAD
-# -*- coding: utf-8 -*-
-from odoo import models, fields, api
-
-class SubscriptionMrrBreakdown(models.Model):
-    """MRR Breakdown Report model calculating and classifying recurring revenue fluctuations."""
-=======
-from odoo import models, fields, api
-
-class SubscriptionMrrBreakdown(models.Model):
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
-    _name = 'subscription.mrr.breakdown'
-    _description = 'MRR Breakdown Report'
-    _order = 'event_date asc'
-
-    event_date = fields.Date(string='Event Date')
-    event_type = fields.Selection([
-        ('new', 'New'),
-        ('expansion', 'Expansion'),
-        ('churn', 'Churn'),
-        ('sum', 'Sum')
-    ], string='Event Type')
-    mrr_change = fields.Float(string='MRR Change')
-
-    def init(self):
-<<<<<<< HEAD
-        """Initialize the MRR Breakdown table with enterprise mock dataset."""
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
-        super().init()
-        # Insert mock data if table is empty
-        self.env.cr.execute("SELECT COUNT(*) FROM subscription_mrr_breakdown")
-        if self.env.cr.fetchone()[0] == 0:
-            query = """
-                INSERT INTO subscription_mrr_breakdown (event_date, event_type, mrr_change) VALUES
-                ('2026-01-01', 'new', 30.00),
-                ('2026-02-01', 'new', 15.00),
-                ('2026-02-01', 'expansion', 30.00),
-                ('2026-03-01', 'new', 50.00),
-                ('2026-04-01', 'churn', -15.00),
-                ('2026-04-01', 'expansion', 40.00),
-                ('2026-05-01', 'new', 40.00),
-                ('2026-05-01', 'expansion', 40.00);
-            """
-            self.env.cr.execute(query)
-
-
-class SubscriptionMrrAnalysis(models.Model):
-<<<<<<< HEAD
-    """MRR Analysis Report model tracking monthly recurring revenue progression."""
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
-    _name = 'subscription.mrr.analysis'
-    _description = 'MRR Analysis Report'
-    _order = 'date asc'
-
-    date = fields.Date(string='Date')
-    mrr_change = fields.Float(string='MRR Change')
-
-    def init(self):
-<<<<<<< HEAD
-        """Initialize the MRR Analysis table with enterprise mock dataset."""
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
-        super().init()
-        # Insert mock data if table is empty
-        self.env.cr.execute("SELECT COUNT(*) FROM subscription_mrr_analysis")
-        if self.env.cr.fetchone()[0] == 0:
-            query = """
-                INSERT INTO subscription_mrr_analysis (date, mrr_change) VALUES
-                ('2026-01-01', 30.00),
-                ('2026-02-01', 75.00),
-                ('2026-03-01', 125.00),
-                ('2026-04-01', 150.00),
-                ('2026-05-01', 235.00);
-            """
-            self.env.cr.execute(query)
-
-
-class SubscriptionAnalysisReport(models.Model):
-<<<<<<< HEAD
-    """Subscription Analysis Report model compiling total recurring contract valuations."""
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
-    _name = 'subscription.analysis.report'
-    _description = 'Subscriptions Analysis Report'
-
-    monthly_recurring = fields.Float(string='Monthly Recurring')
-    state = fields.Selection([
-        ('in_progress', 'In Progress'),
-        ('paused', 'Paused'),
-    ], string='Status')
-    is_recurring = fields.Boolean(string='Recurring', default=True)
-
-    def init(self):
-<<<<<<< HEAD
-        """Initialize the Subscription Analysis table with enterprise mock dataset."""
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
-        super().init()
-        # Insert mock data if table is empty
-        self.env.cr.execute("SELECT COUNT(*) FROM subscription_analysis_report")
-        if self.env.cr.fetchone()[0] == 0:
-            query = """
-                INSERT INTO subscription_analysis_report (monthly_recurring, state, is_recurring) VALUES
-                (1025.00, 'in_progress', true);
-            """
-            self.env.cr.execute(query)
-
-
-class SubscriptionRetentionAnalysis(models.Model):
-<<<<<<< HEAD
-    """Subscription Retention Analysis model computing cohorts and customer churn rates."""
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
-    _name = 'subscription.retention.analysis'
-    _description = 'Retention Analysis'
-    _order = 'first_contract_date asc'
-
-    first_contract_date = fields.Date(string='First Contract Date')
-    count = fields.Integer(string='Count')
-    retention_rate = fields.Float(string='Retention Rate (%)')
-    end_date_month = fields.Char(string='End Date - By Month')
-
-    def init(self):
-<<<<<<< HEAD
-        """Initialize the Retention Analysis table with enterprise mock dataset."""
-=======
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
-        super().init()
-        # Insert mock data if table is empty
-        self.env.cr.execute("SELECT COUNT(*) FROM subscription_retention_analysis")
-        if self.env.cr.fetchone()[0] == 0:
-            query = """
-                INSERT INTO subscription_retention_analysis (first_contract_date, count, retention_rate, end_date_month) VALUES
-                ('2026-05-01', 4, 75.0, '+0');
-            """
-            self.env.cr.execute(query)
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986

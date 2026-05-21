@@ -104,9 +104,9 @@ export class SubscriptionDashboard extends Component {
         this.actionService.doAction({
             type: "ir.actions.act_window",
             name: "Active Subscriptions",
-            res_model: "subscription.subscription",
+            res_model: "sale.order",
             views: [[false, "list"], [false, "form"]],
-            domain: [['state', 'in', ['in_progress', 'in_trial']]],
+            domain: [['subscription_state', 'in', ['3_progress', '1_draft']]],
         });
     }
 }

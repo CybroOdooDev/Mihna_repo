@@ -38,46 +38,5 @@
             <field name="model_id" ref="model_subscription_plan"/>
             <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
         </record>
-
-        <record id="subscription_subscription_company_rule" model="ir.rule">
-            <field name="name">Subscription multi-company</field>
-            <field name="model_id" ref="model_subscription_subscription"/>
-            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
-        </record>
-        
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
-        <!-- Record Rules for Users / Managers -->
-        
-        <!-- Portal User Record Rule -->
-        <record id="subscription_subscription_portal_rule" model="ir.rule">
-            <field name="name">Subscription Portal rule</field>
-            <field name="model_id" ref="model_subscription_subscription"/>
-            <field name="domain_force">[('partner_id', '=', user.partner_id.id)]</field>
-            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
-            <field name="perm_read" eval="True"/>
-            <field name="perm_write" eval="False"/>
-            <field name="perm_create" eval="False"/>
-            <field name="perm_unlink" eval="False"/>
-        </record>
-
-        <record id="subscription_line_portal_rule" model="ir.rule">
-            <field name="name">Subscription Line Portal rule</field>
-            <field name="model_id" ref="model_subscription_line"/>
-            <field name="domain_force">[('subscription_id.partner_id', '=', user.partner_id.id)]</field>
-            <field name="groups" eval="[(4, ref('base.group_portal'))]"/>
-            <field name="perm_read" eval="True"/>
-            <field name="perm_write" eval="False"/>
-            <field name="perm_create" eval="False"/>
-            <field name="perm_unlink" eval="False"/>
-        </record>
-<<<<<<< HEAD
-=======
-=======
-        <!-- Record Rules for Users / Managers could be added here (e.g. users only see their assigned subscriptions) -->
->>>>>>> 3dc072b0baf4fdf36cb95d0de9a7ca7e99d431a0
->>>>>>> 6e137d94e21b733a141af3856f203ebc023ea986
     </data>
 </odoo>

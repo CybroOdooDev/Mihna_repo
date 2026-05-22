@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from dateutil.relativedelta import relativedelta
 from odoo import models, fields, api, _
+from markupsafe import Markup
 from odoo.exceptions import UserError
 
 
@@ -313,10 +314,10 @@ class SubscriptionSubscription(models.Model):
                 'price_locked_by': self.env.user.id,
             })
             sub.message_post(
-                body=_(
+                body=Markup(_(
                     '<b>Prices Grandfathered</b> by %s on %s. '
                     'This subscription is now protected from automatic price updates.'
-                ) % (
+                )) % (
                     self.env.user.name,
                     fields.Datetime.now().strftime('%Y-%m-%d %H:%M'),
                 )
@@ -332,10 +333,10 @@ class SubscriptionSubscription(models.Model):
                 'price_locked_by': False,
             })
             sub.message_post(
-                body=_(
+                body=Markup(_(
                     '<b>Price Lock Removed</b> by %s. '
                     'This subscription will now receive automatic price updates.'
-                ) % self.env.user.name
+                )) % self.env.user.name
             )
 
     def action_apply_latest_prices(self):
@@ -364,7 +365,7 @@ class SubscriptionSubscription(models.Model):
                 updated += 1
         if updated:
             self.message_post(
-                body=_('<b>%d line(s)</b> updated to latest product prices by %s.') % (
+                body=Markup(_('<b>%d line(s)</b> updated to latest product prices by %s.')) % (
                     updated, self.env.user.name
                 )
             )
@@ -512,6 +513,6 @@ class SubscriptionChangePlanWizard(models.TransientModel):
         self.ensure_one()
         self.subscription_id.write({'plan_id': self.plan_id.id})
         self.subscription_id.message_post(
-            body=_('Subscription plan changed to <b>%s</b>.') % self.plan_id.name
+            body=Markup(_('Subscription plan changed to <b>%s</b>.')) % self.plan_id.name
         )
         return {'type': 'ir.actions.act_window_close'}

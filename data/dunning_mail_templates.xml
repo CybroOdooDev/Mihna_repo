@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Mail Template: Dunning Notification -->
+        <record id="email_template_subscription_dunning" model="mail.template">
+            <field name="name">Subscription: Dunning Notification</field>
+            <field name="model_id" ref="sale.model_sale_order"/>
+            <field name="subject">Action Required: Issue with your Subscription {{ object.name }}</field>
+            <field name="email_from">{{ (object.company_id.email_formatted or user.email_formatted) }}</field>
+            <field name="email_to">{{ object.partner_id.email_formatted }}</field>
+            <field name="description">Sent to customers when a payment retry fails in dunning.</field>
+            <field name="body_html" type="html">
+<div style="margin: 0px; padding: 0px;">
+    <p style="margin: 0px; padding: 0px; font-size: 13px;">
+        Dear <t t-out="object.partner_id.name or 'Customer'">Customer</t>,<br/><br/>
+        We were unable to process the payment for your recent subscription invoice on <strong><t t-out="object.name or ''"/></strong>.<br/>
+        Please update your payment method to ensure your subscription remains active.<br/>
+        <br/>
+        If you have already updated your payment details, please ignore this email. We will automatically retry the payment.<br/>
+        <br/>
+        Thank you,
+        <br/>
+        <t t-out="object.company_id.name or 'Us'"/>
+    </p>
+</div>
+            </field>
+            <field name="lang">{{ object.partner_id.lang }}</field>
+            <field name="auto_delete" eval="True"/>
+        </record>
+    </data>
+</odoo>

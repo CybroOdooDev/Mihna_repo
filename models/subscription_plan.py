@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
+from markupsafe import Markup
 
 
 class SubscriptionPlan(models.Model):
@@ -218,20 +219,20 @@ class SubscriptionPlanPricing(models.Model):
                 })
 
                 if is_protected:
-                    order.message_post(body=_(
+                    order.message_post(body=Markup(_(
                         '<b>⚑ Price Change Blocked (Grandfathered)</b><br/>'
                         'Plan pricing for <b>%s</b> was modified from <b>%.2f</b> → <b>%.2f</b>.<br/>'
                         'This subscription is price-locked. The old price has been retained.'
-                    ) % (product.display_name, current_price, new_price))
+                    )) % (product.display_name, current_price, new_price))
                 else:
                     line.with_context(_price_lock_bypass=True).write({
                         'price_unit': new_price
                     })
-                    order.message_post(body=_(
+                    order.message_post(body=Markup(_(
                         '<b>Price Updated</b><br/>'
                         'Plan pricing for <b>%s</b> changed from <b>%.2f</b> → <b>%.2f</b>.<br/>'
                         'Subscription line has been updated automatically.'
-                    ) % (product.display_name, current_price, new_price))
+                    )) % (product.display_name, current_price, new_price))
 
 
 class SubscriptionPlanRamp(models.Model):
@@ -240,13 +241,13 @@ class SubscriptionPlanRamp(models.Model):
 
     _name = 'subscription.plan.ramp'
     _description = 'Subscription Plan Pricing Ramp'
-    _order = 'sequence, id'
+    _order = 'start_cycle, id'
 
     plan_id = fields.Many2one(
         'subscription.plan', string='Subscription Plan',
         ondelete='cascade', required=True
     )
-    sequence = fields.Integer(string='Sequence', default=10)
+    name = fields.Char(string='Description', compute='_compute_name', store=True)
     start_cycle = fields.Integer(
         string='Start Cycle', default=1, required=True,
         help="Billing cycle sequence number where this price begins (1-indexed)."
@@ -259,3 +260,11 @@ class SubscriptionPlanRamp(models.Model):
         string='Ramp Price', required=True,
         help="The unit price charged during this ramp interval."
     )
+
+    @api.depends('start_cycle', 'end_cycle')
+    def _compute_name(self):
+        for rec in self:
+            if rec.start_cycle and rec.end_cycle:
+                rec.name = f"Cycle {rec.start_cycle} to {rec.end_cycle}"
+            else:
+                rec.name = "New Ramp Rule"

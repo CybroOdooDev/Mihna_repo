@@ -11,5 +11,6 @@ from . import sale_order_template
 from . import subscription_reports
 from . import subscription_dashboard
 from . import subscription_usage
-from . import subscription_coupon
+from . import loyalty_program
 from . import subscription_proration
+from . import subscription_dunning

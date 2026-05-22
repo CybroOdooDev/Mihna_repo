@@ -244,9 +244,9 @@
               sequence="40"/>
 
     <menuitem id="menu_subscription_coupons" 
-              name="Coupons" 
+              name="Coupons &amp; Loyalty" 
               parent="subscription_menu_configuration" 
-              action="action_subscription_coupon" 
+              action="loyalty.loyalty_program_discount_loyalty_action" 
               sequence="50"/>
 
     <menuitem id="menu_subscription_payment_providers" 
@@ -254,4 +254,10 @@
               parent="subscription_menu_configuration" 
               action="payment.action_payment_provider" 
               sequence="60"/>
+
+    <menuitem id="menu_subscription_dunning_plans" 
+              name="Dunning Plans" 
+              parent="subscription_menu_configuration" 
+              action="action_subscription_dunning_plan" 
+              sequence="70"/>
 </odoo>

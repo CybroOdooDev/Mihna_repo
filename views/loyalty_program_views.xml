@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_loyalty_program_form_subscription" model="ir.ui.view">
+        <field name="name">loyalty.program.form.subscription</field>
+        <field name="model">loyalty.program</field>
+        <field name="inherit_id" ref="loyalty.loyalty_program_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook/page[@name='rules_rewards']" position="after">
+                <page string="Subscription Rules" name="subscription_rules" invisible="program_type in ('gift_card', 'ewallet')">
+                    <group>
+                        <group string="Recurring Logic">
+                            <field name="recurring_type"/>
+                            <field name="recurring_invoices" invisible="recurring_type != 'limited'"/>
+                        </group>
+                        <group string="Subscription Constraints">
+                            <field name="plan_ids" widget="many2many_tags"/>
+                            <field name="first_time_only"/>
+                            <field name="max_uses_per_customer"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

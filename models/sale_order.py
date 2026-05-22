@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
+from markupsafe import Markup
 from odoo.exceptions import UserError
 from dateutil.relativedelta import relativedelta
 
@@ -45,10 +46,6 @@ class SaleOrder(models.Model):
         'res.partner', string='Referrer',
         help="Select referring partner for this order."
     )
-    coupon_id = fields.Many2one(
-        'subscription.coupon', string='Applied Coupon',
-        help="Applied coupon for discounts."
-    )
 
     is_price_locked = fields.Boolean(
         string='Price Locked', default=False,
@@ -74,29 +71,20 @@ class SaleOrder(models.Model):
         ('7_upsell', 'Upsell'),
     ], string='Subscription Status', default='1_draft', copy=False, tracking=True)
 
-    @api.onchange('coupon_id')
-    def _onchange_coupon_id(self):
-        """Apply or remove coupon discount on all order lines immediately."""
-        self._apply_coupon_discount()
-
-    def _apply_coupon_discount(self):
-        """Apply the coupon discount to all order lines.
-
-        - Percentage coupon: sets the line's discount field (%).
-        - Fixed coupon: reduces the unit price directly.
-        - No coupon: resets discount to 0 on all lines.
-        """
-        for order in self:
-            coupon = order.coupon_id
-            for line in order.order_line:
-                if not coupon:
-                    line.discount = 0.0
-                elif coupon.discount_type == 'percentage':
-                    line.discount = coupon.discount_value
-                elif coupon.discount_type == 'fixed':
-                    # Spread fixed discount evenly across lines by reducing price
-                    original_price = line.price_unit
-                    line.price_unit = max(0.0, original_price - coupon.discount_value)
+    dunning_plan_id = fields.Many2one(
+        'subscription.dunning.plan', string='Dunning Plan',
+        help="Dunning plan to apply if a payment fails."
+    )
+    payment_token_id = fields.Many2one(
+        'payment.token', string='Payment Token',
+        domain="[('partner_id', '=', partner_id)]",
+        help="Saved payment method used for automatic billing."
+    )
+    is_in_dunning = fields.Boolean(string='In Dunning', default=False)
+    next_dunning_date = fields.Date(string='Next Dunning Date')
+    dunning_stage_id = fields.Many2one(
+        'subscription.dunning.plan.line', string='Current Dunning Stage'
+    )
 
     @api.depends(
         'order_line.price_subtotal', 'plan_id',
@@ -257,7 +245,7 @@ class SaleOrder(models.Model):
                 line.with_context(_price_lock_bypass=True).write({'price_unit': new_price})
                 updated += 1
         if updated:
-            self.message_post(body=_('<b>%d line(s)</b> updated to latest product prices.') % updated)
+            self.message_post(body=Markup(_('<b>%d line(s)</b> updated to latest product prices.')) % updated)
         else:
             self.message_post(body=_('All line prices are already up to date.'))
         return True
@@ -318,7 +306,7 @@ class SaleOrder(models.Model):
                 })
         
         line.with_context(_price_lock_bypass=True).write({'product_uom_qty': new_quantity})
-        self.message_post(body=_('Quantity of <b>%s</b> updated from %s to %s. Prorated charges applied if applicable.') % (line.product_id.display_name, old_qty, new_quantity))
+        self.message_post(body=Markup(_('Quantity of <b>%s</b> updated from %s to %s. Prorated charges applied if applicable.')) % (line.product_id.display_name, old_qty, new_quantity))
         return True
 
     def _preview_next_invoice(self):
@@ -327,7 +315,7 @@ class SaleOrder(models.Model):
             'next_invoice_date': self.next_invoice_date or fields.Date.today(),
             'lines': [],
             'discount_amount': 0.0,
-            'coupon_code': self.coupon_id.code if self.coupon_id else False,
+            'coupon_code': False,
             'tax_amount': 0.0,
             'grand_total': 0.0,
         }
@@ -336,11 +324,11 @@ class SaleOrder(models.Model):
         tax_total = 0.0
         
         # 1. Base Recurring Lines
-        recurring_lines = self.order_line.filtered(lambda l: l.product_id.recurring_ok)
+        recurring_lines = self.order_line.filtered(lambda l: l.product_id.recurring_ok and not l.is_reward_line)
         for line in recurring_lines:
             price_unit = line.price_unit
             if self.plan_id and self.plan_id.ramp_ids:
-                for ramp in self.plan_id.ramp_ids.sorted('sequence'):
+                for ramp in self.plan_id.ramp_ids.sorted('start_cycle'):
                     if ramp.start_cycle <= self.subscription_cycle <= ramp.end_cycle:
                         price_unit = ramp.price_unit
                         break
@@ -363,6 +351,24 @@ class SaleOrder(models.Model):
             subtotal_before_discount += subtotal
             tax_total += tax_amt
             preview['discount_amount'] += discount_amount
+
+        # 1.5 Native Loyalty Reward Lines
+        reward_lines = self.order_line.filtered(lambda l: l.is_reward_line)
+        for line in reward_lines:
+            # Reward lines typically have negative price_unit
+            subtotal = line.price_unit * line.product_uom_qty
+            preview['lines'].append({
+                'product_name': line.name or line.product_id.display_name,
+                'quantity': line.product_uom_qty,
+                'price_unit': line.price_unit,
+                'subtotal': subtotal,
+            })
+            preview['discount_amount'] += abs(subtotal)
+            
+            if line.tax_ids:
+                taxes = line.tax_ids.compute_all(line.price_unit, self.currency_id, line.product_uom_qty, line.product_id, self.partner_id)
+                tax_amt = sum(t.get('amount', 0.0) for t in taxes.get('taxes', []))
+                tax_total += tax_amt
 
         # 2. Unbilled Usage
         usages = self.env['subscription.usage'].search([
@@ -429,7 +435,9 @@ class SaleOrder(models.Model):
         self.ensure_one()
         if self.subscription_state not in ('3_progress',):
             return False
-        recurring_lines = self.order_line.filtered(lambda l: l.product_id.recurring_ok)
+        recurring_lines = self.order_line.filtered(lambda l: l.product_id.recurring_ok and not l.is_reward_line)
+        reward_lines = self.order_line.filtered(lambda l: l.is_reward_line)
+        
         if not recurring_lines:
             return False
 
@@ -438,17 +446,17 @@ class SaleOrder(models.Model):
             # Check for Ramp Pricing overrides based on the current subscription cycle
             price_unit = line.price_unit
             if self.plan_id and self.plan_id.ramp_ids:
-                for ramp in self.plan_id.ramp_ids.sorted('sequence'):
+                for ramp in self.plan_id.ramp_ids.sorted('start_cycle'):
                     if ramp.start_cycle <= self.subscription_cycle <= ramp.end_cycle:
                         price_unit = ramp.price_unit
                         # Update the sale order line so the UI reflects the current cycle's price.
                         # Bypassing the lock so the contract explicitly ramps up/down as planned.
                         if line.price_unit != price_unit:
                             line.with_context(_price_lock_bypass=True).write({'price_unit': price_unit})
-                            self.message_post(body=_(
+                            self.message_post(body=Markup(_(
                                 '<b>Ramp Pricing Applied:</b> Cycle %s reached.<br/>'
                                 'Unit price for <b>%s</b> updated to <b>%.2f</b>.'
-                            ) % (self.subscription_cycle, line.product_id.display_name, price_unit))
+                            )) % (self.subscription_cycle, line.product_id.display_name, price_unit))
                         break # First matching ramp applies
 
             invoice_lines.append((0, 0, {
@@ -459,6 +467,25 @@ class SaleOrder(models.Model):
                 'discount': line.discount,
                 'tax_ids': [(6, 0, line.tax_ids.ids)] if line.tax_ids else False,
                 'sale_line_ids': [(4, line.id)],
+            }))
+
+        for r_line in reward_lines:
+            # Check if reward is still applicable based on custom recurring logic
+            program = r_line.reward_id.program_id if hasattr(r_line, 'reward_id') and r_line.reward_id else False
+            if program:
+                if program.recurring_type == 'first' and self.subscription_cycle > 1:
+                    continue
+                if program.recurring_type == 'limited' and self.subscription_cycle > program.recurring_invoices:
+                    continue
+
+            invoice_lines.append((0, 0, {
+                'product_id': r_line.product_id.id,
+                'name': r_line.name or r_line.product_id.name,
+                'quantity': r_line.product_uom_qty,
+                'price_unit': r_line.price_unit,
+                'discount': r_line.discount,
+                'tax_ids': [(6, 0, r_line.tax_ids.ids)] if r_line.tax_ids else False,
+                'sale_line_ids': [(4, r_line.id)],
             }))
 
         # Add unbilled usage
@@ -501,12 +528,40 @@ class SaleOrder(models.Model):
         for line in recurring_lines:
             line.invoice_lines = [(4, il.id) for il in invoice.invoice_line_ids if il.product_id == line.product_id]
 
+        invoice.action_post()
+        payment_success = False
+        if self.payment_token_id:
+            try:
+                tx = self.env['payment.transaction'].create({
+                    'amount': invoice.amount_total,
+                    'currency_id': invoice.currency_id.id,
+                    'partner_id': invoice.partner_id.id,
+                    'token_id': self.payment_token_id.id,
+                    'provider_id': self.payment_token_id.provider_id.id,
+                    'operation': 'offline',
+                })
+                tx._send_payment_request()
+                if tx.state in ('done', 'authorized'):
+                    payment_success = True
+                    tx.invoice_ids = [(6, 0, invoice.ids)]
+                    invoice._recompute_payment_terms_lines()
+            except Exception as e:
+                self.message_post(body=Markup(_("Payment attempt failed: %s")) % str(e))
+
         delta = self._get_billing_delta()
         next_date = (self.next_invoice_date or fields.Date.today()) + delta
-        self.write({
+        
+        vals = {
             'next_invoice_date': next_date,
             'subscription_cycle': self.subscription_cycle + 1,
-        })
+        }
+        if not payment_success and self.dunning_plan_id:
+            vals['is_in_dunning'] = True
+            vals['next_dunning_date'] = fields.Date.today()
+            if not self.payment_token_id:
+                self.message_post(body=Markup(_("Invoice %s generated, but no payment token is on file. Subscription placed in Dunning." % invoice.name)))
+            
+        self.write(vals)
         return invoice
 
     @api.model
@@ -521,8 +576,79 @@ class SaleOrder(models.Model):
                 with self.env.cr.savepoint():
                     sub._generate_recurring_invoice()
             except Exception as e:
-                sub.message_post(body=_('Invoice generation failed: %s. Retrying tomorrow.') % str(e))
+                sub.message_post(body=Markup(_('Invoice generation failed: %s. Retrying tomorrow.')) % str(e))
                 sub.next_invoice_date = sub.next_invoice_date + relativedelta(days=1)
+
+    @api.model
+    def _cron_dunning_and_retry(self):
+        today = fields.Date.today()
+        dunning_subs = self.search([
+            ('is_in_dunning', '=', True),
+            ('subscription_state', 'in', ['3_progress']),
+            ('next_dunning_date', '<=', today)
+        ])
+        for sub in dunning_subs:
+            # Find unpaid invoice
+            unpaid_invoices = sub.invoice_ids.filtered(lambda inv: inv.state == 'posted' and inv.payment_state in ('not_paid', 'partial'))
+            if not unpaid_invoices:
+                sub.write({'is_in_dunning': False, 'dunning_stage_id': False})
+                continue
+            
+            invoice = unpaid_invoices[0]
+            
+            # Determine stage
+            days_overdue = (today - (invoice.invoice_date_due or invoice.date or today)).days
+            stages = sub.dunning_plan_id.line_ids.filtered(lambda s: s.delay_days <= days_overdue).sorted('delay_days')
+            current_stage = stages[-1] if stages else False
+            
+            if current_stage and sub.dunning_stage_id != current_stage:
+                sub.dunning_stage_id = current_stage.id
+                
+                # Retry Payment
+                payment_success = False
+                if sub.payment_token_id:
+                    try:
+                        tx = self.env['payment.transaction'].create({
+                            'amount': invoice.amount_residual,
+                            'currency_id': invoice.currency_id.id,
+                            'partner_id': invoice.partner_id.id,
+                            'token_id': sub.payment_token_id.id,
+                            'provider_id': sub.payment_token_id.provider_id.id,
+                            'operation': 'offline',
+                        })
+                        tx._send_payment_request()
+                        if tx.state in ('done', 'authorized'):
+                            payment_success = True
+                            tx.invoice_ids = [(6, 0, invoice.ids)]
+                    except Exception as e:
+                        sub.message_post(body=Markup(_("Smart Retry failed: %s")) % str(e))
+                        
+                if payment_success:
+                    sub.write({'is_in_dunning': False, 'dunning_stage_id': False})
+                    sub.message_post(body=_("Smart Retry successful. Subscription active."))
+                    continue
+                else:
+                    if current_stage.mail_template_id:
+                        current_stage.mail_template_id.send_mail(sub.id, force_send=True)
+                    if current_stage.action_type == 'pause':
+                        sub.action_pause()
+                        sub.message_post(body=_("Subscription paused due to failed payment."))
+                    elif current_stage.action_type == 'close':
+                        sub.write({'subscription_state': '6_churn'})
+                        sub.message_post(body=_("Subscription cancelled due to failed payment."))
+            
+            # Calculate next dunning date
+            next_stages = sub.dunning_plan_id.line_ids.filtered(lambda s: s.delay_days > days_overdue).sorted('delay_days')
+            if next_stages:
+                next_delay = next_stages[0].delay_days - days_overdue
+                sub.next_dunning_date = today + relativedelta(days=next_delay)
+            else:
+                sub.next_dunning_date = today + relativedelta(days=1) # Fallback
+
+    @api.model
+    def _cron_recurring_billing(self):
+        """Fallback for older databases where the cron job was registered with the previous method name."""
+        return self._cron_generate_invoices()
 
 
 class SaleOrderLine(models.Model):
@@ -595,6 +721,6 @@ class SubscriptionChangePlanWizard(models.TransientModel):
         self.ensure_one()
         self.sale_order_id.write({'plan_id': self.plan_id.id})
         self.sale_order_id.message_post(
-            body=_('Subscription plan changed to <b>%s</b>.') % self.plan_id.name
+            body=Markup(_('Subscription plan changed to <b>%s</b>.')) % self.plan_id.name
         )
         return {'type': 'ir.actions.act_window_close'}

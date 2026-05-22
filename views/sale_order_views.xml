@@ -87,7 +87,6 @@
                 <field name="referrer_id" placeholder="Select referrer..."/>
                 <field name="partner_invoice_id" string="Invoice Address" options="{'no_open': True, 'no_create': True}" groups=""/>
                 <field name="partner_shipping_id" string="Delivery Address" options="{'no_open': True, 'no_create': True}" groups=""/>
-                <field name="coupon_id" placeholder="Select coupon..."/>
             </xpath>
 
             <!-- 5. Right Column: Add Recurring Plan, Until, Next Invoice, and Promised Delivery -->
@@ -99,6 +98,11 @@
                     <field name="subscription_end_date" placeholder="May 16, 2032"/>
                 </div>
                 <field name="next_invoice_date" string="Next Invoice"/>
+                <field name="payment_token_id" options="{'no_create': True}" invisible="not plan_id"/>
+                <field name="dunning_plan_id" invisible="not plan_id"/>
+                <field name="is_in_dunning" invisible="not is_in_dunning"/>
+                <field name="next_dunning_date" invisible="not is_in_dunning"/>
+                <field name="dunning_stage_id" invisible="not is_in_dunning" readonly="1"/>
 <!--                <field name="subscription_cycle" string="Current Cycle" readonly="1" invisible="not plan_id"/>-->
 <!--                <field name="is_price_locked" string="Price Locked" readonly="1" invisible="not plan_id"/>-->
                 <field name="commitment_date" string="Promised Delivery"/>
@@ -131,7 +135,6 @@
                 <field name="user_id" string="Salesperson" widget="many2one_avatar_user" optional="show"/>
                 <field name="activity_ids" string="Activities" widget="list_activity" optional="show"/>
                 <field name="company_id" groups="base.group_multi_company" optional="show"/>
-                <field name="coupon_id" string="Coupon" optional="show"/>
                 <field name="mrr_total" string="Recurring" widget="monetary" options="{'currency_field': 'currency_id'}"/>
                 <field name="plan_id" string="Recurring Plan"/>
                 <field name="amount_total" string="Total" widget="monetary" options="{'currency_field': 'currency_id'}" decoration-bf="1" decoration-info="1"/>
@@ -163,6 +166,7 @@
                 <filter string="Churned" name="churned" domain="[('subscription_state', '=', '6_churn')]"/>
                 <filter string="To Renew" name="to_renew" domain="[('subscription_state', '=', '2_renewal')]"/>
                 <filter string="Upsell" name="upsell" domain="[('subscription_state', '=', '7_upsell')]"/>
+                <filter string="In Dunning" name="in_dunning" domain="[('is_in_dunning', '=', True)]"/>
                 <separator/>
                 <group>
                     <filter string="Customer" name="customer" context="{'group_by': 'partner_id'}"/>

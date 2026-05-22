@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_subscription_dunning_plan_form" model="ir.ui.view">
+        <field name="name">subscription.dunning.plan.form</field>
+        <field name="model">subscription.dunning.plan</field>
+        <field name="arch" type="xml">
+            <form string="Dunning Plan">
+                <sheet>
+                    <widget name="web_ribbon" title="Archived" bg_color="bg-danger" invisible="active"/>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1>
+                            <field name="name" placeholder="e.g., Standard 15-Day Retry"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <field name="active" invisible="1"/>
+                        <field name="company_id" groups="base.group_multi_company"/>
+                    </group>
+                    <notebook>
+                        <page string="Dunning Stages">
+                            <field name="line_ids">
+                                <list editable="bottom" default_order="delay_days asc">
+                                    <field name="delay_days"/>
+                                    <field name="action_type"/>
+                                    <field name="mail_template_id"/>
+                                </list>
+                                <form>
+                                    <group>
+                                        <field name="delay_days"/>
+                                        <field name="action_type"/>
+                                        <field name="mail_template_id"/>
+                                    </group>
+                                </form>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_subscription_dunning_plan_tree" model="ir.ui.view">
+        <field name="name">subscription.dunning.plan.tree</field>
+        <field name="model">subscription.dunning.plan</field>
+        <field name="arch" type="xml">
+            <list string="Dunning Plans">
+                <field name="name"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="action_subscription_dunning_plan" model="ir.actions.act_window">
+        <field name="name">Dunning Plans</field>
+        <field name="res_model">subscription.dunning.plan</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

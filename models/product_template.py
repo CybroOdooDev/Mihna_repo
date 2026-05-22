@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, _
+from markupsafe import Markup
 
 
 class ProductTemplate(models.Model):
@@ -64,19 +65,19 @@ class ProductTemplate(models.Model):
                     })
 
                     if is_protected:
-                        order.message_post(body=_(
+                        order.message_post(body=Markup(_(
                             '<b>⚑ Price Change Blocked (Grandfathered)</b><br/>'
                             'Product <b>%s</b> price changed from <b>%.2f</b> → <b>%.2f</b>.<br/>'
                             'This subscription is price-locked. The old price has been retained.'
-                        ) % (tmpl.name, old_price, new_price))
+                        )) % (tmpl.name, old_price, new_price))
                     else:
                         line.with_context(_price_lock_bypass=True).write(
                             {'price_unit': new_price}
                         )
-                        order.message_post(body=_(
+                        order.message_post(body=Markup(_(
                             '<b>Price Updated</b><br/>'
                             'Product <b>%s</b> price changed from <b>%.2f</b> → <b>%.2f</b>.<br/>'
                             'Subscription line has been updated automatically.'
-                        ) % (tmpl.name, old_price, new_price))
+                        )) % (tmpl.name, old_price, new_price))
 
         return result

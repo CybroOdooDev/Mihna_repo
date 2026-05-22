@@ -89,7 +89,7 @@
                         <page string="Ramp Pricing Rules" name="ramp_rules">
                             <field name="ramp_ids">
                                 <list editable="bottom">
-                                    <field name="sequence" widget="handle"/>
+                                    <field name="name" width="300px"/>
                                     <field name="start_cycle"/>
                                     <field name="end_cycle"/>
                                     <field name="price_unit" string="Ramp Unit Price"/>

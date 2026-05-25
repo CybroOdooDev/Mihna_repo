@@ -134,6 +134,7 @@
                                                 <span t-elif="sub.subscription_state == '1_draft'" class="badge rounded-pill saas-badge-info px-3 py-2 font-weight-bold">Draft</span>
                                                 <span t-elif="sub.subscription_state == '4_paused'" class="badge rounded-pill saas-badge-warning px-3 py-2 font-weight-bold">Paused</span>
                                                 <span t-elif="sub.subscription_state == '6_churn'" class="badge rounded-pill saas-badge-danger px-3 py-2 font-weight-bold">Cancelled</span>
+                                                <span t-elif="sub.subscription_state == '8_blocked'" class="badge rounded-pill bg-danger text-white px-3 py-2 font-weight-bold">Blocked</span>
                                                 <span t-else="" class="badge rounded-pill bg-light text-dark px-3 py-2 font-weight-bold"><t t-esc="sub.subscription_state"/></span>
                                             </td>
                                             <td class="pe-4 text-end">
@@ -222,6 +223,7 @@
                                 <span t-elif="subscription.subscription_state == '1_draft'" class="badge saas-badge-info px-4 py-2 font-weight-bold" style="border-radius: 20px;">Draft</span>
                                 <span t-elif="subscription.subscription_state == '4_paused'" class="badge saas-badge-warning px-4 py-2 font-weight-bold" style="border-radius: 20px;">Paused</span>
                                 <span t-elif="subscription.subscription_state == '6_churn'" class="badge saas-badge-danger px-4 py-2 font-weight-bold" style="border-radius: 20px;">Cancelled</span>
+                                <span t-elif="subscription.subscription_state == '8_blocked'" class="badge bg-danger text-white px-4 py-2 font-weight-bold" style="border-radius: 20px;">Blocked</span>
                                 <span t-else="" class="badge bg-light text-dark px-4 py-2 font-weight-bold" style="border-radius: 20px;"><t t-esc="subscription.subscription_state"/></span>
                             </h4>
                         </div>

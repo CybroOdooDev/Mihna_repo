@@ -14,3 +14,5 @@ from . import subscription_usage
 from . import loyalty_program
 from . import subscription_proration
 from . import subscription_dunning
+from . import res_config_settings
+

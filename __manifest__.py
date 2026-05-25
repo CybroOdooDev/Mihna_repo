@@ -41,6 +41,7 @@ Features include:
         'views/subscription_close_reason_views.xml',
         'views/subscription_change_plan_wizard_views.xml',
         'views/product_template_views.xml',
+        'views/res_config_settings_views.xml',
     ],
     'demo': [],
     'assets': {

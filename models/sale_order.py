@@ -3,6 +3,8 @@ from odoo import models, fields, api, _
 from markupsafe import Markup
 from odoo.exceptions import UserError
 from dateutil.relativedelta import relativedelta
+import requests
+
 
 
 class SaleOrder(models.Model):
@@ -69,6 +71,7 @@ class SaleOrder(models.Model):
         ('5_renewed', 'Renewed'),
         ('6_churn', 'Churned'),
         ('7_upsell', 'Upsell'),
+        ('8_blocked', 'Blocked'),
     ], string='Subscription Status', default='1_draft', copy=False, tracking=True)
 
     dunning_plan_id = fields.Many2one(
@@ -211,6 +214,7 @@ class SaleOrder(models.Model):
             order.message_post(body=_("Subscription closed/churned."))
 
     def action_mrr_smart_button(self):
+        """Returns the window action details to navigate to and display MRR breakdown analysis records linked to this subscription."""
         self.ensure_one()
         return {
             'name': _('MRR Analysis'),
@@ -221,14 +225,17 @@ class SaleOrder(models.Model):
         }
 
     def action_lock_prices(self):
+        """Locks the unit prices of recurring items (grandfathering) on this subscription to protect them from future automatic pricelist updates."""
         self.write({'is_price_locked': True})
         self.message_post(body=_("Subscription prices have been locked (grandfathered)."))
 
     def action_unlock_prices(self):
+        """Unlocks unit prices on this subscription to allow automated pricelist updates or manual reapplications to modify them."""
         self.write({'is_price_locked': False})
         self.message_post(body=_("Subscription prices have been unlocked."))
 
     def action_apply_latest_prices(self):
+        """Compares and overrides unit prices on all recurring lines of this subscription with the latest product template list prices, logging price change actions."""
         updated = 0
         for line in self.order_line.filtered(lambda l: l.product_id.recurring_ok):
             new_price = line.product_id.list_price
@@ -251,6 +258,7 @@ class SaleOrder(models.Model):
         return True
 
     def action_view_price_history(self):
+        """Returns the window action to display price changes and logs linked to this subscription."""
         self.ensure_one()
         return {
             'name': _('Price History'),
@@ -261,14 +269,17 @@ class SaleOrder(models.Model):
         }
 
     def action_pause(self):
+        """Pauses billing cycle processing and places the subscription in paused state."""
         self.write({'subscription_state': '4_paused'})
         self.message_post(body=_("Subscription has been paused."))
 
     def action_resume(self):
+        """Resumes active recurring billing cycle processing on this paused subscription."""
         self.write({'subscription_state': '3_progress'})
         self.message_post(body=_("Subscription has been resumed."))
 
     def action_change_seats(self, line_id, new_quantity):
+        """Modifies recurring line quantities (seats) dynamically, applying proration rules for remaining days in cycle."""
         self.ensure_one()
         line = self.env['sale.order.line'].browse(line_id)
         if not line or line.order_id.id != self.id:
@@ -310,6 +321,7 @@ class SaleOrder(models.Model):
         return True
 
     def _preview_next_invoice(self):
+        """Generates a complete, structured dictionary preview of lines, taxes, and totals for the next scheduled invoice cycle."""
         self.ensure_one()
         preview = {
             'next_invoice_date': self.next_invoice_date or fields.Date.today(),
@@ -415,6 +427,7 @@ class SaleOrder(models.Model):
     # ── Invoicing ─────────────────────────────────────────────────────────────
 
     def _get_billing_delta(self):
+        """Calculates and returns the python dateutil relativedelta duration representing the active subscription plan's billing period."""
         self.ensure_one()
         plan = self.plan_id
         if not plan:
@@ -432,6 +445,7 @@ class SaleOrder(models.Model):
         return period_map.get(plan.billing_period, relativedelta(months=1))
 
     def _generate_recurring_invoice(self):
+        """Generates, posts, and attempts automatic payment collection for the next recurring cycle invoice, initiating dunning if the payment fails."""
         self.ensure_one()
         if self.subscription_state not in ('3_progress',):
             return False
@@ -566,6 +580,7 @@ class SaleOrder(models.Model):
 
     @api.model
     def _cron_generate_invoices(self):
+        """Automated scheduled action running daily to identify active subscriptions due for recurring billing and generate their next cycle invoices."""
         today = fields.Date.today()
         due_subs = self.search([
             ('subscription_state', 'in', ['3_progress']),
@@ -581,6 +596,7 @@ class SaleOrder(models.Model):
 
     @api.model
     def _cron_dunning_and_retry(self):
+        """Automated scheduled action running daily to process payment-failed active subscriptions in dunning, executing stage level actions and dispatching WhatsApp alerts."""
         today = fields.Date.today()
         dunning_subs = self.search([
             ('is_in_dunning', '=', True),
@@ -626,16 +642,52 @@ class SaleOrder(models.Model):
                 if payment_success:
                     sub.write({'is_in_dunning': False, 'dunning_stage_id': False})
                     sub.message_post(body=_("Smart Retry successful. Subscription active."))
+                    
+                    # Send successful payment WhatsApp notification
+                    msg = _("Dear Customer, your subscription payment of %s %s was successful. Your subscription %s is now active. Thank you!") % (invoice.amount_residual, invoice.currency_id.name, sub.name)
+                    sub._send_whatsapp_notification(msg)
                     continue
                 else:
                     if current_stage.mail_template_id:
                         current_stage.mail_template_id.send_mail(sub.id, force_send=True)
+                        
+                    # Send failed payment/retry WhatsApp notification
+                    if current_stage.send_whatsapp:
+                        status_lbl = _("Pending")
+                        if current_stage.action_type == 'pause':
+                            status_lbl = _("Paused")
+                        elif current_stage.action_type == 'close':
+                            status_lbl = _("Cancelled")
+                        elif current_stage.action_type == 'block':
+                            status_lbl = _("Blocked")
+                            
+                        template_text = current_stage.whatsapp_template
+                        if template_text:
+                            try:
+                                msg = template_text.format(
+                                    customer_name=sub.partner_id.name or '',
+                                    subscription_name=sub.name or '',
+                                    invoice_amount=invoice.amount_residual or 0.0,
+                                    invoice_currency=invoice.currency_id.name or '',
+                                    status_label=status_lbl
+                                )
+                            except Exception:
+                                # Fallback if customer entered invalid brackets/placeholder syntax
+                                msg = template_text
+                        else:
+                            msg = _("Dear %s, we tried to process the payment of %s %s for your subscription %s, but it failed. Please update your payment method. Current Status: %s") % (sub.partner_id.name, invoice.amount_residual, invoice.currency_id.name, sub.name, status_lbl)
+                            
+                        sub._send_whatsapp_notification(msg)
+
                     if current_stage.action_type == 'pause':
                         sub.action_pause()
                         sub.message_post(body=_("Subscription paused due to failed payment."))
                     elif current_stage.action_type == 'close':
                         sub.write({'subscription_state': '6_churn'})
                         sub.message_post(body=_("Subscription cancelled due to failed payment."))
+                    elif current_stage.action_type == 'block':
+                        sub.write({'subscription_state': '8_blocked'})
+                        sub.message_post(body=_("Subscription blocked due to failed payment."))
             
             # Calculate next dunning date
             next_stages = sub.dunning_plan_id.line_ids.filtered(lambda s: s.delay_days > days_overdue).sorted('delay_days')
@@ -644,6 +696,61 @@ class SaleOrder(models.Model):
                 sub.next_dunning_date = today + relativedelta(days=next_delay)
             else:
                 sub.next_dunning_date = today + relativedelta(days=1) # Fallback
+
+    def _send_whatsapp_notification(self, message):
+        """Dispatches an automated WhatsApp notification text message via the UltraMsg Gateway api
+        to the customer phone or mobile contact, and logs the API response state back to chatter logs."""
+        self.ensure_one()
+        partner = self.partner_id
+        if not partner:
+            return
+
+        phone_number = False
+        if 'mobile' in partner._fields and partner.mobile:
+            phone_number = partner.mobile
+        elif partner.phone:
+            phone_number = partner.phone
+
+        if not phone_number:
+            return
+
+        # Strip all non-numeric characters except digits
+        clean_phone = "".join(c for c in phone_number if c.isdigit())
+
+        # Retrieve UltraMsg Settings from subscription.whatsapp.config
+        config = self.env['subscription.whatsapp.config'].get_config()
+
+        if not config or not config.instance_id or not config.token:
+            # Fallback / Log if not configured yet
+            self.message_post(body=_("[WhatsApp Simulation - UltraMsg Not Configured] To: %s | Message: %s") % (clean_phone, message))
+            return
+
+        instance_id = config.instance_id
+        token = config.token
+
+        url = f"https://api.ultramsg.com/{instance_id}/messages/chat"
+        payload = {
+            "token": token,
+            "to": clean_phone,
+            "body": message
+        }
+        headers = {
+            "content-type": "application/x-www-form-urlencoded"
+        }
+        
+        try:
+            # Make the UltraMsg POST request synchronously but safely caught
+            response = requests.post(url, data=payload, headers=headers, timeout=10)
+            if response.status_code == 200:
+                res_data = response.json()
+                if res_data.get('sent') == 'true' or res_data.get('id'):
+                    self.message_post(body=_("WhatsApp message successfully sent via UltraMsg to %s.") % clean_phone)
+                else:
+                    self.message_post(body=_("UltraMsg responded with error: %s") % response.text)
+            else:
+                self.message_post(body=_("Failed to send WhatsApp message via UltraMsg. HTTP Status: %s. Response: %s") % (response.status_code, response.text))
+        except Exception as e:
+            self.message_post(body=_("Error sending WhatsApp message via UltraMsg: %s") % str(e))
 
     @api.model
     def _cron_recurring_billing(self):

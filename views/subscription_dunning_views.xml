@@ -24,13 +24,28 @@
                                     <field name="delay_days"/>
                                     <field name="action_type"/>
                                     <field name="mail_template_id"/>
+                                    <field name="send_whatsapp" widget="boolean_toggle"/>
+                                    <field name="whatsapp_template" placeholder="Message template..." readonly="not send_whatsapp"/>
                                 </list>
                                 <form>
-                                    <group>
-                                        <field name="delay_days"/>
-                                        <field name="action_type"/>
-                                        <field name="mail_template_id"/>
-                                    </group>
+                                    <sheet>
+                                        <group>
+                                            <group>
+                                                <field name="delay_days"/>
+                                                <field name="action_type"/>
+                                            </group>
+                                            <group>
+                                                <field name="mail_template_id"/>
+                                                <field name="send_whatsapp" widget="boolean_toggle"/>
+                                            </group>
+                                        </group>
+                                        <group invisible="not send_whatsapp" string="WhatsApp Settings">
+                                            <field name="whatsapp_template" placeholder="Dear {customer_name}, we tried to process the payment for {subscription_name}, but it failed. Please update your payment method. Current Status: {status_label}" colspan="2"/>
+                                            <div class="text-muted" colspan="2">
+                                                Available placeholders: <strong>{customer_name}</strong>, <strong>{subscription_name}</strong>, <strong>{invoice_amount}</strong>, <strong>{invoice_currency}</strong>, <strong>{status_label}</strong>
+                                            </div>
+                                        </group>
+                                    </sheet>
                                 </form>
                             </field>
                         </page>

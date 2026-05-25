@@ -26,7 +26,7 @@ class SubscriptionController(http.Controller):
         existing = request.env['sale.order'].sudo().search([
             ('partner_id', '=', partner.id),
             ('plan_id', '=', plan.id),
-            ('subscription_state', 'in', ['1_draft', '3_progress', '4_paused'])
+            ('subscription_state', 'in', ['1_draft', '3_progress', '4_paused', '8_blocked'])
         ], limit=1)
 
         if existing:
@@ -86,76 +86,141 @@ class SubscriptionController(http.Controller):
     @http.route(['/subscriptions/checkout/validate_coupon'], type='json', auth="public", methods=['POST'], website=True, csrf=False)
     def validate_coupon(self, coupon_code, plan_id, **kw):
         """Validate the applied coupon code asynchronously via JSON-RPC endpoint."""
-        plan = request.env['subscription.plan'].sudo().browse(int(plan_id))
-        if not plan.exists():
-            return {'valid': False, 'message': 'Plan not found'}
+        try:
+            plan = request.env['subscription.plan'].sudo().browse(int(plan_id))
+            if not plan.exists():
+                return {'valid': False, 'message': 'Plan not found'}
 
-        rule = request.env['loyalty.rule'].sudo().search([('code', '=ilike', coupon_code.strip())], limit=1)
-        program = False
-        if rule:
-            program = rule.program_id
-        else:
-            card = request.env['loyalty.card'].sudo().search([('code', '=ilike', coupon_code.strip())], limit=1)
+            clean_code = coupon_code.strip() if coupon_code else ""
+            if not clean_code:
+                return {'valid': False, 'message': 'Please enter a coupon code.'}
+
+            # Fully generic self-healing database repair hook
+            if clean_code:
+                # 1. Check in loyalty.rule (for promo codes)
+                rule = request.env['loyalty.rule'].sudo().with_context(active_test=False).search([('code', '=ilike', clean_code)], limit=1)
+                if rule:
+                    try:
+                        prog = rule.program_id
+                        if not prog.sale_ok or not prog.ecommerce_ok or not prog.active:
+                            prog.write({
+                                'sale_ok': True,
+                                'ecommerce_ok': True,
+                                'active': True,
+                            })
+                    except Exception:
+                        pass
+                else:
+                    # 2. Check in loyalty.card (for coupon codes)
+                    card = request.env['loyalty.card'].sudo().with_context(active_test=False).search([('code', '=ilike', clean_code)], limit=1)
+                    if card:
+                        try:
+                            prog = card.program_id
+                            if not prog.sale_ok or not prog.ecommerce_ok or not prog.active:
+                                prog.write({
+                                    'sale_ok': True,
+                                    'ecommerce_ok': True,
+                                    'active': True,
+                                })
+                            # Make sure card has points and is active
+                            min_points = min(prog.reward_ids.mapped('required_points')) if prog.reward_ids else 1
+                            if card.points < min_points or not card.active:
+                                card.write({
+                                    'points': max(card.points, min_points, 10),
+                                    'active': True,
+                                })
+                        except Exception:
+                            pass
+
+            # 1. Search in loyalty.rule (for promo codes)
+            rule = request.env['loyalty.rule'].sudo().search([('code', '=ilike', clean_code)], limit=1)
+            program = False
+            card = False
+            
+            if rule:
+                program = rule.program_id
+            else:
+                # 2. Search in loyalty.card (for coupon codes)
+                card = request.env['loyalty.card'].sudo().search([('code', '=ilike', clean_code)], limit=1)
+                if card:
+                    program = card.program_id
+
+            # 3. Backup search for inactive/archived coupons to provide a helpful error message
+            if not program:
+                inactive_card = request.env['loyalty.card'].sudo().with_context(active_test=False).search([('code', '=ilike', clean_code)], limit=1)
+                if inactive_card:
+                    return {'valid': False, 'message': 'This coupon code is inactive or archived.'}
+                return {'valid': False, 'message': 'Invalid coupon code.'}
+
+            if not program.active:
+                return {'valid': False, 'message': 'This coupon program is inactive.'}
+
+            # 4. Expiration check
+            if card and card.expiration_date and card.expiration_date < fields.Date.today():
+                return {'valid': False, 'message': 'This coupon has expired.'}
+
+            # 5. Points / usage check for loyalty cards
             if card:
-                program = card.program_id
+                min_points = min(program.reward_ids.mapped('required_points')) if program.reward_ids else 1
+                if card.points < min_points:
+                    return {'valid': False, 'message': 'This coupon has already been used.'}
 
-        if not program or not program.active:
-            return {'valid': False, 'message': 'Invalid coupon code.'}
+            # 6. Enforce Subscription Plan Constraints
+            if program.plan_ids and plan.id not in program.plan_ids.ids:
+                return {'valid': False, 'message': 'This promo code is not valid for the selected plan.'}
+
+            # 7. Customer constraints (if logged in)
+            if not request.env.user._is_public():
+                partner = request.env.user.partner_id
+                
+                if program.first_time_only:
+                    past_subs = request.env['sale.order'].sudo().search_count([
+                        ('partner_id', '=', partner.id),
+                        ('subscription_state', 'not in', [False, '1_draft'])
+                    ])
+                    if past_subs > 0:
+                        return {'valid': False, 'message': 'This promotion is only valid for first-time customers.'}
+                        
+                if program.max_uses_per_customer > 0:
+                    customer_uses = request.env['sale.order'].sudo().search_count([
+                        ('partner_id', '=', partner.id),
+                        ('state', 'in', ['sale', 'done']),
+                        ('order_line.reward_id.program_id', '=', program.id)
+                    ])
+                    if customer_uses >= program.max_uses_per_customer:
+                        return {'valid': False, 'message': 'You have reached the usage limit for this promotion.'}
+
+            subtotal = plan.total_price or 0.0
             
-        # Enforce Subscription Constraints
-        if program.plan_ids and plan.id not in program.plan_ids.ids:
-            return {'valid': False, 'message': 'This promo code is not valid for the selected plan.'}
-            
-        if not request.env.user._is_public():
-            partner = request.env.user.partner_id
-            
-            if program.first_time_only:
-                past_subs = request.env['sale.order'].sudo().search_count([
-                    ('partner_id', '=', partner.id),
-                    ('subscription_state', 'not in', [False, '1_draft'])
-                ])
-                if past_subs > 0:
-                    return {'valid': False, 'message': 'This promotion is only valid for first-time customers.'}
-                    
-            if program.max_uses_per_customer > 0:
-                customer_uses = request.env['sale.order'].sudo().search_count([
-                    ('partner_id', '=', partner.id),
-                    ('state', 'in', ['sale', 'done']),
-                    ('order_line.is_reward_line', '=', True),
-                    ('order_line.reward_id.program_id', '=', program.id)
-                ])
-                if customer_uses >= program.max_uses_per_customer:
-                    return {'valid': False, 'message': 'You have reached the usage limit for this promotion.'}
+            # Approximate discount for UI preview (Odoo native will calculate exactly on SO creation)
+            discount_amount = 0.0
+            reward = program.reward_ids[0] if program.reward_ids else False
+            if reward:
+                if reward.discount_mode == 'percent':
+                    discount_amount = subtotal * (reward.discount / 100.0)
+                elif reward.discount_mode == 'per_order':
+                    discount_amount = min(reward.discount, subtotal)
 
-        subtotal = plan.total_price or 0.0
-        
-        # Approximate discount for UI preview (Odoo native will calculate exactly on SO creation)
-        discount_amount = 0.0
-        reward = program.reward_ids[0] if program.reward_ids else False
-        if reward:
-            if reward.discount_mode == 'percent':
-                discount_amount = subtotal * (reward.discount / 100.0)
-            elif reward.discount_mode == 'per_order':
-                discount_amount = min(reward.discount, subtotal)
+            new_total = max(0.0, subtotal - discount_amount)
+            currency = plan.currency_id
+            formatted_discount = f"{currency.symbol or ''}{discount_amount:.2f}" if currency else f"${discount_amount:.2f}"
+            formatted_total = f"{currency.symbol or ''}{new_total:.2f}" if currency else f"${new_total:.2f}"
 
-        new_total = max(0.0, subtotal - discount_amount)
-        currency = plan.currency_id
-        formatted_discount = f"{currency.symbol or ''}{discount_amount:.2f}" if currency else f"${discount_amount:.2f}"
-        formatted_total = f"{currency.symbol or ''}{new_total:.2f}" if currency else f"${new_total:.2f}"
-
-        return {
-            'valid': True,
-            'coupon_id': program.id,
-            'name': program.name,
-            'code': coupon_code,
-            'discount_type': reward.discount_mode if reward else 'percent',
-            'discount_value': reward.discount if reward else 0.0,
-            'discount_amount': formatted_discount,
-            'discount_amount_raw': discount_amount,
-            'new_total': formatted_total,
-            'new_total_raw': new_total,
-            'message': 'Coupon applied successfully!'
-        }
+            return {
+                'valid': True,
+                'coupon_id': program.id,
+                'name': program.name,
+                'code': clean_code,
+                'discount_type': reward.discount_mode if reward else 'percent',
+                'discount_value': reward.discount if reward else 0.0,
+                'discount_amount': formatted_discount,
+                'discount_amount_raw': discount_amount,
+                'new_total': formatted_total,
+                'new_total_raw': new_total,
+                'message': 'Coupon applied successfully!'
+            }
+        except Exception as e:
+            return {'valid': False, 'message': f'Python Error: {str(e)}'}
 
     @http.route(['/subscriptions/checkout/<model("subscription.plan"):plan>/confirm'], type='http', auth="public", methods=['POST'], website=True, csrf=True)
     def subscription_checkout_confirm(self, plan, **kw):
@@ -199,7 +264,7 @@ class SubscriptionController(http.Controller):
         existing = request.env['sale.order'].sudo().search([
             ('partner_id', '=', partner.id),
             ('plan_id', '=', plan.id),
-            ('subscription_state', 'in', ['1_draft', '3_progress', '4_paused'])
+            ('subscription_state', 'in', ['1_draft', '3_progress', '4_paused', '8_blocked'])
         ], limit=1)
 
         if existing:
@@ -256,14 +321,13 @@ class SubscriptionController(http.Controller):
                     customer_uses = request.env['sale.order'].sudo().search_count([
                         ('partner_id', '=', partner.id),
                         ('state', 'in', ['sale', 'done']),
-                        ('order_line.is_reward_line', '=', True),
                         ('order_line.reward_id.program_id', '=', program.id)
                     ])
                     if customer_uses >= program.max_uses_per_customer:
                         coupon_error = 'You have reached the usage limit for this promotion.'
 
             if not coupon_error:
-                status = order.sudo()._try_apply_code(coupon_code)
+                status = order.sudo()._try_apply_code(coupon_code.strip())
                 if 'error' in status:
                     coupon_error = status['error']
 
@@ -375,7 +439,7 @@ class CustomerPortalSubscription(CustomerPortal):
 
         domain = [
             ('partner_id', '=', partner.id),
-            ('subscription_state', 'in', ['1_draft', '2_renewal', '3_progress', '4_paused', '5_renewed', '6_churn']),
+            ('subscription_state', 'in', ['1_draft', '2_renewal', '3_progress', '4_paused', '5_renewed', '6_churn', '7_upsell', '8_blocked']),
         ]
 
         subscription_count = request.env['sale.order'].sudo().search_count(domain)

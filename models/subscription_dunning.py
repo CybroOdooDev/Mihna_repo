@@ -46,7 +46,8 @@ class SubscriptionDunningPlanLine(models.Model):
         string='Send WhatsApp', default=False,
         help="Enable/Disable automated WhatsApp message sending at this stage."
     )
-    whatsapp_template = fields.Text(
+    whatsapp_template_id = fields.Many2one(
+        'subscription.whatsapp.template',
         string='WhatsApp Template',
         help="Custom text template for WhatsApp. Available placeholders: {customer_name}, {subscription_name}, {invoice_amount}, {invoice_currency}, {status_label}"
     )

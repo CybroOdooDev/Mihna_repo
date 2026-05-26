@@ -88,14 +88,17 @@ class SubscriptionPlan(models.Model):
     item_count = fields.Integer(string='Subscription Items', compute='_compute_counts')
     total_price = fields.Float(string='Total Price', compute='_compute_total_price')
 
-    @api.depends('product_id', 'product_id.list_price', 'pricing_ids.price')
+    @api.depends('product_id', 'product_id.list_price', 'pricing_ids.price', 'ramp_ids.price_unit', 'ramp_ids.start_cycle')
     def _compute_total_price(self):
-        """Compute the total price of the subscription plan based on product list price or pricing lines."""
+        """Compute the total price of the subscription plan based on pricing lines, ramp rules, or product list price."""
         for plan in self:
-            if plan.product_id:
-                plan.total_price = plan.product_id.list_price
-            elif plan.pricing_ids:
+            if plan.pricing_ids:
                 plan.total_price = sum(line.price for line in plan.pricing_ids)
+            elif plan.ramp_ids:
+                first_ramp = min(plan.ramp_ids, key=lambda r: r.start_cycle)
+                plan.total_price = first_ramp.price_unit
+            elif plan.product_id:
+                plan.total_price = plan.product_id.with_context(pricelist=False).list_price
             else:
                 plan.total_price = 0.0
 

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="0">
+    <!-- Default Paused Template -->
+    <record id="whatsapp_template_paused_default" model="subscription.whatsapp.template">
+        <field name="name">Payment Retry Failed</field>
+        <field name="body"><![CDATA[
+<p>Hi {customer_name},</p>
+<p>Our automated payment retry for your subscription <b>{subscription_name}</b> has failed.</p>
+<p>As a result, your subscription has been temporarily paused due to the outstanding balance of {invoice_currency} {invoice_amount}.</p>
+<p>Please update your payment method or pay the outstanding invoice as soon as possible to resume your services.</p>
+<p>Thank you,<br/>The Billing Team</p>
+        ]]></field>
+    </record>
+
+    <!-- Default Blocked Template -->
+    <record id="whatsapp_template_blocked_default" model="subscription.whatsapp.template">
+        <field name="name">Subscription Blocked Template</field>
+        <field name="body"><![CDATA[
+<p><b>Important Notice:</b> {customer_name},</p>
+<p>Your subscription <b>{subscription_name}</b> has been BLOCKED due to non-payment of {invoice_currency} {invoice_amount}.</p>
+<p>All services are now restricted. Please settle the invoice immediately to restore access.</p>
+<p>Thank you,<br/>The Billing Team</p>
+        ]]></field>
+    </record>
+</odoo>

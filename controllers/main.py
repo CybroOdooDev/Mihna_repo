@@ -9,6 +9,29 @@ class SubscriptionController(http.Controller):
     """Subscription Controller managing the public frontend website plans,
     subscribe routes, checkouts, coupon validation, and payment endpoints."""
 
+    @http.route(['/debug/plans'], type='http', auth="public", website=True)
+    def debug_plans(self, **kw):
+        plans = request.env['subscription.plan'].sudo().search([])
+        data = []
+        for p in plans:
+            ramp_data = [{'start': r.start_cycle, 'price': r.price_unit} for r in p.ramp_ids]
+            pricing_data = [r.price for r in p.pricing_ids]
+            data.append(f"Plan: {p.name} | Total Computed Price: {p.total_price} | Product Base List Price: {p.product_id.with_context(pricelist=False).list_price if p.product_id else 'None'} | Ramps: {ramp_data} | Pricing Lines: {pricing_data}")
+        
+        data.append("<br/><b>Recent Sales Orders:</b>")
+        orders = request.env['sale.order'].sudo().search([('plan_id', '!=', False)], order='id desc', limit=5)
+        for o in orders:
+            lines = [f"[Product ID: {l.product_id.id}, Product: {l.product_id.name}, recurring_ok: {l.product_id.recurring_ok}, Qty: {l.product_uom_qty}, Price Unit: {l.price_unit}, Subtotal: {l.price_subtotal}]" for l in o.order_line]
+            data.append(f"Order: {o.name} | Amount Total: {o.amount_total} | Locked: {o.is_price_locked} | Lines: {lines}")
+            
+        data.append("<br/><b>Products Check:</b>")
+        recurring_products = request.env['product.product'].sudo().search([('recurring_ok', '=', True)])
+        data.append(f"Total Products with recurring_ok=True: {len(recurring_products)}")
+        for p in recurring_products:
+            data.append(f"Product: {p.name} | recurring_ok: {p.recurring_ok} | subscription_plan_id: {p.subscription_plan_id.name if p.subscription_plan_id else 'None'}")
+            
+        return request.make_response("<br/>".join(data))
+
     @http.route(['/subscriptions'], type='http', auth="public", website=True)
     def subscription_plans(self, **kw):
         """Render the public subscription plans landing page listing all active plans."""
@@ -40,6 +63,7 @@ class SubscriptionController(http.Controller):
             'partner_id': partner.id,
             'plan_id': plan.id,
             'state': 'draft',
+            'is_price_locked': True,
         })
 
         product = plan.product_id or request.env['product.product'].sudo().search(
@@ -49,13 +73,23 @@ class SubscriptionController(http.Controller):
             product = request.env['product.product'].sudo().search(
                 [('recurring_ok', '=', True)], limit=1
             )
+        if not product:
+            product = request.env['product.product'].sudo().create({
+                'name': f"{plan.name} Subscription",
+                'type': 'service',
+                'recurring_ok': True,
+                'list_price': 0.0,
+            })
 
         if product:
-            request.env['sale.order.line'].sudo().create({
+            sudo_plan = request.env['subscription.plan'].sudo().browse(plan.id)
+            price = sudo_plan.total_price
+            line = request.env['sale.order.line'].sudo().create({
                 'order_id': order.id,
                 'product_id': product.id,
+                'name': f"Subscription: {plan.name}",
                 'product_uom_qty': 1.0,
-                'price_unit': plan.total_price,
+                'price_unit': price,
             })
 
         order.action_confirm()
@@ -190,7 +224,8 @@ class SubscriptionController(http.Controller):
                     if customer_uses >= program.max_uses_per_customer:
                         return {'valid': False, 'message': 'You have reached the usage limit for this promotion.'}
 
-            subtotal = plan.total_price or 0.0
+            sudo_plan = request.env['subscription.plan'].sudo().browse(plan.id)
+            subtotal = sudo_plan.total_price or 0.0
             
             # Approximate discount for UI preview (Odoo native will calculate exactly on SO creation)
             discount_amount = 0.0
@@ -278,6 +313,7 @@ class SubscriptionController(http.Controller):
             'partner_id': partner.id,
             'plan_id': plan.id,
             'state': 'draft',
+            'is_price_locked': True,
         })
 
         product = plan.product_id or request.env['product.product'].sudo().search(
@@ -287,12 +323,21 @@ class SubscriptionController(http.Controller):
             product = request.env['product.product'].sudo().search(
                 [('recurring_ok', '=', True)], limit=1
             )
+        if not product:
+            product = request.env['product.product'].sudo().create({
+                'name': f"{plan.name} Subscription",
+                'type': 'service',
+                'recurring_ok': True,
+                'list_price': 0.0,
+            })
 
         if product:
-            price = plan.total_price
+            sudo_plan = request.env['subscription.plan'].sudo().browse(plan.id)
+            price = sudo_plan.total_price
             line = request.env['sale.order.line'].sudo().create({
                 'order_id': order.id,
                 'product_id': product.id,
+                'name': f"Subscription: {plan.name}",
                 'product_uom_qty': 1.0,
                 'price_unit': price,
             })

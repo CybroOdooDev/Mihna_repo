@@ -397,7 +397,7 @@
                                     <td class="pe-4 text-end font-weight-bold">-<span t-esc="preview['discount_amount']" t-options="{'widget': 'monetary', 'display_currency': subscription.currency_id}"/></td>
                                 </tr>
                                 <tr>
-                                    <td colspan="3" class="ps-4 font-weight-bold text-end saas-text-muted">Estimated Taxes (18% GST/VAT):</td>
+                                    <td colspan="3" class="ps-4 font-weight-bold text-end saas-text-muted">Estimated Taxes:</td>
                                     <td class="pe-4 text-end font-weight-bold saas-text-muted"><span t-esc="preview['tax_amount']" t-options="{'widget': 'monetary', 'display_currency': subscription.currency_id}"/></td>
                                 </tr>
                             </tbody>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Root Menu -->
+    <menuitem id="subscription_menu_root" 
+              name="Subscriptions" 
+              web_icon="subscription_management,static/description/icon.png"
+              sequence="45"/>
+
+    <!-- Top Level Menus (Folders without actions) -->
+    <menuitem id="subscription_menu_subscriptions" 
+              name="Subscriptions" 
+              parent="subscription_menu_root" 
+              sequence="10"/>
+
+    <menuitem id="subscription_menu_products" 
+              name="Products" 
+              parent="subscription_menu_root" 
+              sequence="20"/>
+
+    <menuitem id="subscription_menu_reporting" 
+              name="Reporting" 
+              parent="subscription_menu_root" 
+              sequence="30"/>
+
+    <menuitem id="subscription_menu_configuration" 
+              name="Configuration" 
+              parent="subscription_menu_root" 
+              sequence="100"/>
+</odoo>

@@ -10,9 +10,10 @@ from . import account_move
 from . import sale_order_template
 from . import subscription_reports
 from . import subscription_dashboard
+from . import subscription_whatsapp_template
 from . import subscription_usage
 from . import loyalty_program
 from . import subscription_proration
 from . import subscription_dunning
 from . import res_config_settings
-
+from . import payment_transaction

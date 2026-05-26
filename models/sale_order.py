@@ -130,6 +130,14 @@ class SaleOrder(models.Model):
             order.mrr_total = mrr_total
             order.non_recurring_total = non_recurring_total
 
+    def _action_cancel(self):
+        """Override standard cancel to mark active subscriptions as churned."""
+        res = super()._action_cancel()
+        for order in self:
+            if order.plan_id and order.subscription_state not in ('1_draft', '6_churn'):
+                order.subscription_state = '6_churn'
+        return res
+
     def action_confirm(self):
         """Override standard action_confirm to auto-activate and set next invoice date."""
         res = super().action_confirm()
@@ -546,19 +554,20 @@ class SaleOrder(models.Model):
         payment_success = False
         if self.payment_token_id:
             try:
-                tx = self.env['payment.transaction'].create({
-                    'amount': invoice.amount_total,
-                    'currency_id': invoice.currency_id.id,
-                    'partner_id': invoice.partner_id.id,
-                    'token_id': self.payment_token_id.id,
-                    'provider_id': self.payment_token_id.provider_id.id,
-                    'operation': 'offline',
-                })
-                tx._send_payment_request()
-                if tx.state in ('done', 'authorized'):
-                    payment_success = True
-                    tx.invoice_ids = [(6, 0, invoice.ids)]
-                    invoice._recompute_payment_terms_lines()
+                with self.env.cr.savepoint():
+                    tx = self.env['payment.transaction'].create({
+                        'amount': invoice.amount_total,
+                        'currency_id': invoice.currency_id.id,
+                        'partner_id': invoice.partner_id.id,
+                        'token_id': self.payment_token_id.id,
+                        'provider_id': self.payment_token_id.provider_id.id,
+                        'payment_method_id': self.payment_token_id.payment_method_id.id,
+                        'operation': 'offline',
+                    })
+                    tx._send_payment_request()
+                    if tx.state in ('done', 'authorized'):
+                        payment_success = True
+                        tx.invoice_ids = [(6, 0, invoice.ids)]
             except Exception as e:
                 self.message_post(body=Markup(_("Payment attempt failed: %s")) % str(e))
 
@@ -600,7 +609,7 @@ class SaleOrder(models.Model):
         today = fields.Date.today()
         dunning_subs = self.search([
             ('is_in_dunning', '=', True),
-            ('subscription_state', 'in', ['3_progress']),
+            ('subscription_state', 'in', ['3_progress', '4_paused', '8_blocked']),
             ('next_dunning_date', '<=', today)
         ])
         for sub in dunning_subs:
@@ -630,6 +639,7 @@ class SaleOrder(models.Model):
                             'partner_id': invoice.partner_id.id,
                             'token_id': sub.payment_token_id.id,
                             'provider_id': sub.payment_token_id.provider_id.id,
+                            'payment_method_id': sub.payment_token_id.payment_method_id.id,
                             'operation': 'offline',
                         })
                         tx._send_payment_request()
@@ -661,8 +671,10 @@ class SaleOrder(models.Model):
                         elif current_stage.action_type == 'block':
                             status_lbl = _("Blocked")
                             
-                        template_text = current_stage.whatsapp_template
+                        from odoo.tools import html2plaintext
+                        template_text = current_stage.whatsapp_template_id.body if current_stage.whatsapp_template_id else False
                         if template_text:
+                            template_text = html2plaintext(template_text)
                             try:
                                 msg = template_text.format(
                                     customer_name=sub.partner_id.name or '',

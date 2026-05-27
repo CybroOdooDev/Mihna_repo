@@ -92,7 +92,11 @@ class SubscriptionController(http.Controller):
                 'price_unit': price,
             })
 
-        order.action_confirm()
+        if order.state == 'draft':
+            try:
+                order.action_confirm()
+            except Exception:
+                pass  # Order may already be confirmed via payment flow
 
         return request.render('subscription_management.subscription_success_page', {
             'plan': plan,
@@ -104,18 +108,177 @@ class SubscriptionController(http.Controller):
     def subscription_checkout(self, plan, **kw):
         """Render the custom subscription checkout page with billing, coupon, and payment provider options."""
         partner = request.env.user.partner_id if not request.env.user._is_public() else request.env['res.partner']
+        if not partner:
+            partner_id = request.session.get('subscription_guest_partner_id')
+            if partner_id:
+                partner = request.env['res.partner'].sudo().browse(partner_id)
+            else:
+                partner = request.env['res.partner'].sudo().create({'name': 'Guest Customer'})
+                request.session['subscription_guest_partner_id'] = partner.id
+
+        # --- Guard: check for an existing active subscription for this plan ---
+        if partner and not request.env.user._is_public():
+            active_sub = request.env['sale.order'].sudo().search([
+                ('partner_id', '=', partner.id),
+                ('plan_id', '=', plan.id),
+                ('subscription_state', 'in', ['3_progress', '4_paused']),
+                ('state', 'in', ['sale', 'done']),
+            ], limit=1)
+            if active_sub:
+                return request.render('subscription_management.subscription_already_subscribed', {
+                    'plan': plan,
+                    'subscription': active_sub,
+                })
+
+        # --- Reuse or create a single draft order per partner+plan ---
+        session_key = f'subscription_order_{plan.id}'
+        order_id = request.session.get(session_key)
+        order = request.env['sale.order'].sudo().browse(order_id) if order_id else request.env['sale.order']
+
+        # Validate the session order is still usable
+        if order.exists() and (order.state != 'draft' or order.partner_id.id != partner.id):
+            # Session order is stale – clear it and look in DB
+            order = request.env['sale.order']
+            request.session.pop(session_key, None)
+
+        if not order.exists():
+            # Try to find an existing unused draft in the database before creating a new one
+            existing_draft = request.env['sale.order'].sudo().search([
+                ('partner_id', '=', partner.id),
+                ('plan_id', '=', plan.id),
+                ('state', '=', 'draft'),
+                ('subscription_state', '=', '1_draft'),
+            ], order='id desc', limit=1)
+
+            if existing_draft:
+                order = existing_draft
+                request.session[session_key] = order.id
+            else:
+                # Create a fresh draft order
+                order = request.env['sale.order'].sudo().create({
+                    'partner_id': partner.id,
+                    'plan_id': plan.id,
+                    'state': 'draft',
+                })
+                product = plan.product_id or request.env['product.product'].sudo().search(
+                    [('recurring_ok', '=', True), ('subscription_plan_id', '=', plan.id)], limit=1
+                )
+                if not product:
+                    product = request.env['product.product'].sudo().create({
+                        'name': f"{plan.name} Subscription",
+                        'type': 'service',
+                        'recurring_ok': True,
+                        'list_price': 0.0,
+                    })
+                request.env['sale.order.line'].sudo().create({
+                    'order_id': order.id,
+                    'product_id': product.id,
+                    'name': f"Subscription: {plan.name}",
+                    'product_uom_qty': 1.0,
+                    'price_unit': plan.total_price,
+                })
+                request.session[session_key] = order.id
+
         countries = request.env['res.country'].sudo().search([])
         states = request.env['res.country.state'].sudo().search([])
-        providers = request.env['payment.provider'].sudo().search([('state', 'in', ['test', 'enabled'])])
+        
+        availability_report = {}
+        providers_sudo = request.env['payment.provider'].sudo()._get_compatible_providers(
+            order.company_id.id, partner.id, order.amount_total, currency_id=order.currency_id.id,
+            sale_order_id=order.id, report=availability_report
+        )
+        payment_methods_sudo = request.env['payment.method'].sudo()._get_compatible_payment_methods(
+            providers_sudo.ids, partner.id, currency_id=order.currency_id.id,
+            sale_order_id=order.id, report=availability_report
+        )
+        tokens_sudo = request.env['payment.token'].sudo()._get_available_tokens(
+            providers_sudo.ids, partner.id
+        )
 
-        return request.render('subscription_management.subscription_checkout_page', {
+        payment_context = {
+            'amount': order.amount_total,
+            'currency': order.currency_id,
+            'partner_id': partner.id,
+            'providers_sudo': providers_sudo,
+            'payment_methods_sudo': payment_methods_sudo,
+            'tokens_sudo': tokens_sudo,
+            'availability_report': availability_report,
+            'transaction_route': f'/my/orders/{order.id}/transaction',
+            'landing_route': f'/subscriptions/success/{order.id}',
+            'access_token': order._portal_ensure_token(),
+            'show_tokenize_input_mapping': PaymentPortal._compute_show_tokenize_input_mapping(
+                providers_sudo, sale_order_id=order.id
+            ),
+            'company_mismatch': False,
+            'expected_company': order.company_id,
+        }
+
+        render_values = {
             'plan': plan,
-            'partner': partner,
+            'order': order,
+            'partner': partner if partner.name != 'Guest Customer' else request.env['res.partner'],
             'countries': countries,
             'states': states,
-            'providers': providers,
             'kw': kw
-        })
+        }
+        render_values.update(payment_context)
+
+        return request.render('subscription_management.subscription_checkout_page', render_values)
+
+    @http.route(['/subscriptions/checkout/save_address'], type='json', auth="public", methods=['POST'], website=True, csrf=False)
+    def save_address(self, name, email, street, city, zip_code, country_id, state_id, **kw):
+        partner = request.env.user.partner_id if not request.env.user._is_public() else False
+        if not partner:
+            partner_id = request.session.get('subscription_guest_partner_id')
+            if partner_id:
+                partner = request.env['res.partner'].sudo().browse(partner_id)
+                
+        if partner:
+            partner.sudo().write({
+                'name': name or partner.name,
+                'email': email or partner.email,
+                'street': street or partner.street,
+                'city': city or partner.city,
+                'zip': zip_code or partner.zip,
+                'country_id': int(country_id) if country_id else partner.country_id.id,
+                'state_id': int(state_id) if state_id else partner.state_id.id,
+            })
+        return {'success': True}
+
+    @http.route(['/subscriptions/checkout/update_config'], type='json', auth="public", methods=['POST'], website=True, csrf=False)
+    def update_config(self, plan_id, seats=None, cycle=None, **kw):
+        session_key = f'subscription_order_{plan_id}'
+        order_id = request.session.get(session_key)
+        
+        if not order_id:
+            return {'success': False, 'error': 'Session expired. Please refresh the page.'}
+            
+        order = request.env['sale.order'].sudo().browse(order_id)
+        if not order.exists() or order.state != 'draft':
+            return {'success': False, 'error': 'Invalid order state.'}
+
+        # Update seats
+        if seats is not None:
+            for line in order.order_line:
+                line.product_uom_qty = max(1.0, float(seats))
+                
+        # Handle billing cycle switch
+        if cycle:
+            current_plan = request.env['subscription.plan'].sudo().browse(int(plan_id))
+            if current_plan.billing_period != cycle:
+                # Find matching plan with the requested cycle
+                new_plan = request.env['subscription.plan'].sudo().search([
+                    ('name', '=', current_plan.name),
+                    ('billing_period', '=', cycle),
+                    ('active', '=', True)
+                ], limit=1)
+                
+                if new_plan:
+                    return {'success': True, 'redirect': f'/subscriptions/checkout/{new_plan.id}'}
+                else:
+                    return {'success': False, 'error': f'The {cycle} variant for this plan is not currently available.'}
+                
+        return {'success': True}
 
     @http.route(['/subscriptions/checkout/validate_coupon'], type='json', auth="public", methods=['POST'], website=True, csrf=False)
     def validate_coupon(self, coupon_code, plan_id, **kw):
@@ -452,13 +615,39 @@ class SubscriptionController(http.Controller):
         if not order_sudo.exists():
             return request.redirect('/subscriptions')
 
-        if order_sudo.state not in ['sale', 'done']:
-            order_sudo.action_confirm()
+        if order_sudo.state == 'draft':
+            try:
+                order_sudo.action_confirm()
+            except Exception:
+                pass  # Already confirmed or payment gateway handled it
+
+        # Get last invoice for this order
+        invoice = request.env['account.move'].sudo().search([
+            ('invoice_origin', '=', order_sudo.name),
+            ('move_type', '=', 'out_invoice'),
+        ], order='id desc', limit=1)
+
+        # Calculate next billing date
+        from datetime import date
+        from dateutil.relativedelta import relativedelta
+        today = date.today()
+        period = order_sudo.plan_id.billing_period if order_sudo.plan_id else 'month'
+        if period == 'month':
+            next_billing = today + relativedelta(months=1)
+        elif period == 'year':
+            next_billing = today + relativedelta(years=1)
+        elif period == 'week':
+            next_billing = today + relativedelta(weeks=1)
+        else:
+            next_billing = today + relativedelta(months=1)
 
         return request.render('subscription_management.subscription_success_page', {
             'plan': order_sudo.plan_id,
             'subscription': order_sudo,
-            'message': 'Your transaction was successful, and your subscription is now active!'
+            'invoice': invoice,
+            'next_billing': next_billing,
+            'partner': order_sudo.partner_id,
+            'message': 'Your transaction was successful, and your subscription is now active!',
         })
 
 
@@ -477,30 +666,50 @@ class CustomerPortalSubscription(CustomerPortal):
         return values
 
     @http.route(['/my/subscriptions', '/my/subscriptions/page/<int:page>'], type='http', auth="user", website=True)
-    def portal_my_subscriptions(self, page=1, date_begin=None, date_end=None, sortby=None, **kw):
+    def portal_my_subscriptions(self, page=1, filterby=None, **kw):
         """Render the listing page for all the customer's active subscription orders."""
         values = self._prepare_portal_layout_values()
         partner = request.env.user.partner_id
 
-        domain = [
-            ('partner_id', '=', partner.id),
-            ('subscription_state', 'in', ['1_draft', '2_renewal', '3_progress', '4_paused', '5_renewed', '6_churn', '7_upsell', '8_blocked']),
-        ]
+        if not filterby:
+            filterby = 'all'
 
-        subscription_count = request.env['sale.order'].sudo().search_count(domain)
+        searchbar_filters = {
+            'all': {'domain': [('subscription_state', 'in', ['1_draft', '2_renewal', '3_progress', '4_paused', '5_renewed', '6_churn', '7_upsell', '8_blocked'])]},
+            'in_progress': {'domain': [('subscription_state', 'in', ['3_progress', '5_renewed'])]},
+            'to_renew': {'domain': [('subscription_state', 'in', ['2_renewal', '7_upsell', '4_paused'])]},
+            'closed': {'domain': [('subscription_state', 'in', ['6_churn', '8_blocked', '1_draft'])]},
+        }
+
+        base_domain = [('partner_id', '=', partner.id)]
+        
+        SaleOrder = request.env['sale.order'].sudo()
+        subscription_counts = {
+            'all': SaleOrder.search_count(base_domain + searchbar_filters['all']['domain']),
+            'in_progress': SaleOrder.search_count(base_domain + searchbar_filters['in_progress']['domain']),
+            'to_renew': SaleOrder.search_count(base_domain + searchbar_filters['to_renew']['domain']),
+            'closed': SaleOrder.search_count(base_domain + searchbar_filters['closed']['domain']),
+        }
+
+        domain = base_domain + searchbar_filters.get(filterby, searchbar_filters['all'])['domain']
+
+        subscription_count = SaleOrder.search_count(domain)
         pager = portal_pager(
             url="/my/subscriptions",
+            url_args={'filterby': filterby},
             total=subscription_count,
             page=page,
             step=10
         )
-        subscriptions = request.env['sale.order'].sudo().search(domain, limit=10, offset=pager['offset'])
+        subscriptions = SaleOrder.search(domain, limit=10, offset=pager['offset'])
 
         values.update({
             'subscriptions': subscriptions,
             'page_name': 'subscription',
             'pager': pager,
             'default_url': '/my/subscriptions',
+            'filterby': filterby,
+            'subscription_counts': subscription_counts,
         })
         return request.render("subscription_management.portal_my_subscriptions", values)
 
@@ -570,6 +779,11 @@ class CustomerPortalSubscription(CustomerPortal):
             and subscription.plan_id.is_closable
         ):
             close_reason_id = kw.get('close_reason_id')
+            customer_signature = kw.get('customer_signature')
+            
+            if customer_signature:
+                subscription.message_post(body=f"Subscription cancelled by customer. Electronic Signature: <b>{customer_signature}</b>")
+                
             subscription._action_close_confirm(
                 close_reason_id=int(close_reason_id) if close_reason_id else None,
             )

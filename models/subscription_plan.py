@@ -37,11 +37,12 @@ class SubscriptionPlan(models.Model):
         ('semi_annually', 'Semi-Annually'),
         ('yearly', 'Yearly'),
         ('custom', 'Custom Days')
-    ], string='Billing Period', required=True, default='monthly')
+    ], string='Billing Period', required=True, default='monthly', compute='_compute_billing_period', store=True, readonly=False)
 
     custom_days = fields.Integer(
         string='Custom Days',
-        help='Used only if Billing Period is set to Custom Days'
+        help='Used only if Billing Period is set to Custom Days',
+        compute='_compute_billing_period', store=True, readonly=False
     )
 
     trial_period_days = fields.Integer(
@@ -101,6 +102,47 @@ class SubscriptionPlan(models.Model):
                 plan.total_price = plan.product_id.with_context(pricelist=False).list_price
             else:
                 plan.total_price = 0.0
+
+    @api.depends('billing_period_value', 'billing_period_unit')
+    def _compute_billing_period(self):
+        """Automatically sync the internal backend 'billing_period' field with the user-facing 'billing_period_value' and 'billing_period_unit' fields."""
+        for plan in self:
+            val = plan.billing_period_value
+            unit = plan.billing_period_unit
+            
+            if not val or not unit:
+                continue
+
+            if unit == 'days':
+                if val == 1:
+                    plan.billing_period = 'daily'
+                else:
+                    plan.billing_period = 'custom'
+                    plan.custom_days = val
+            elif unit == 'weeks':
+                if val == 1:
+                    plan.billing_period = 'weekly'
+                else:
+                    plan.billing_period = 'custom'
+                    plan.custom_days = val * 7
+            elif unit == 'months':
+                if val == 1:
+                    plan.billing_period = 'monthly'
+                elif val == 3:
+                    plan.billing_period = 'quarterly'
+                elif val == 6:
+                    plan.billing_period = 'semi_annually'
+                elif val == 12:
+                    plan.billing_period = 'yearly'
+                else:
+                    plan.billing_period = 'custom'
+                    plan.custom_days = val * 30
+            elif unit == 'years':
+                if val == 1:
+                    plan.billing_period = 'yearly'
+                else:
+                    plan.billing_period = 'custom'
+                    plan.custom_days = val * 365
 
     @api.depends('name')
     def _compute_counts(self):

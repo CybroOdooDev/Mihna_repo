@@ -32,124 +32,257 @@
     <template id="portal_my_subscriptions" name="My Subscriptions">
         <t t-call="portal.portal_layout">
             <t t-set="breadcrumbs_searchbar" t-value="True"/>
-            
+
+            <t t-call="portal.portal_searchbar">
+                <t t-set="title">Subscriptions</t>
+            </t>
+
             <style>
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap');
-                .portal-subscription-wrap {
-                    font-family: 'Inter', sans-serif !important;
+                :root {
+                  --odoo-purple: #875A7B;
+                  --odoo-purple-100: #F2EAEE;
+                  --odoo-purple-600: #714B67;
+                  --odoo-teal: #00A09D;
+                  --bg-surface: #FFFFFF;
+                  --gray-100: #F8F9FA;
+                  --gray-200: #E9ECEF;
+                  --gray-400: #CED4DA;
+                  --border-default: #DEE2E6;
+                  --fg-strong: #212529;
+                  --fg-default: #495057;
+                  --fg-muted: #6C757D;
+                  --space-4: 1rem;
+                  --space-5: 1.5rem;
+                  --radius-md: 0.375rem;
+                  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
+                  --duration-base: 180ms;
+                  --ease-default: ease-in-out;
+                  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
                 }
+                
+                .saas-tabs {
+                  display: flex; gap: 0; border-bottom: 1px solid var(--border-default);
+                  margin-bottom: var(--space-5);
+                  padding-left: 0;
+                  list-style: none;
+                }
+                .saas-tabs a {
+                  display: inline-block;
+                  padding: 10px 16px; color: var(--fg-default); font-size: 14px;
+                  border-bottom: 2px solid transparent; margin-bottom: -1px; font-weight: 500;
+                  text-decoration: none;
+                }
+                .saas-tabs a:hover { color: var(--odoo-purple); text-decoration: none; }
+                .saas-tabs a.active { color: var(--odoo-purple); border-bottom-color: var(--odoo-purple); font-weight: 600; }
+                
                 .saas-card {
-                    background: #ffffff;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 16px !important;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important;
+                  background: var(--bg-surface);
+                  border: 1px solid var(--border-default);
+                  border-radius: var(--radius-md);
+                  box-shadow: var(--shadow-card);
+                  overflow: hidden;
                 }
-                .saas-header {
-                    background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%) !important;
-                    border-radius: 16px !important;
-                    color: white;
+                
+                .sub-row {
+                  display: flex; align-items: center; gap: var(--space-4);
+                  padding: var(--space-4) var(--space-5);
+                  border-bottom: 1px solid var(--border-default);
+                  cursor: pointer;
+                  transition: background var(--duration-base) var(--ease-default);
+                  text-decoration: none !important;
                 }
-                .saas-table th {
-                    background-color: #f8fafc !important;
-                    color: #475569 !important;
-                    font-weight: 600 !important;
-                    text-transform: uppercase;
-                    font-size: 0.8rem;
-                    letter-spacing: 0.5px;
-                    border-bottom: 2px solid #e2e8f0 !important;
-                    padding: 16px !important;
+                .sub-row:last-child { border-bottom: 0; }
+                .sub-row:hover { background: var(--gray-100); }
+                .sub-row .icon-tile {
+                  width: 44px; height: 44px; border-radius: 6px;
+                  background: var(--odoo-purple-100); color: var(--odoo-purple);
+                  display: flex; align-items: center; justify-content: center; font-size: 20px;
+                  flex-shrink: 0;
                 }
-                .saas-table td {
-                    color: #0f172a !important;
-                    padding: 16px !important;
-                    border-bottom: 1px solid #f1f5f9 !important;
+                .sub-row .grow { flex: 1; min-width: 0; }
+                .sub-row .title { font-weight: 600; color: var(--fg-strong); margin-bottom: 2px; font-size: 15px; }
+                .sub-row .ref { font-family: var(--font-mono); font-size: 12px; color: var(--fg-muted); }
+                .sub-row .state-badge { margin-left: 10px; }
+                .sub-row .price { font-weight: 600; color: var(--fg-strong); font-size: 15px; text-align: right; }
+                .sub-row .price small { color: var(--fg-muted); font-weight: 400; font-size: 13px; }
+                .sub-row .chev { color: var(--gray-400); font-size: 14px; margin-left: 8px; }
+                
+                .saas-badge {
+                  display: inline-flex; align-items: center; gap: 5px;
+                  padding: 3px 10px; border-radius: 9999px;
+                  font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
                 }
-                .saas-badge-success { background-color: rgba(16, 185, 129, 0.1) !important; color: #10b981 !important; }
-                .saas-badge-info { background-color: rgba(14, 165, 233, 0.1) !important; color: #0ea5e9 !important; }
-                .saas-badge-warning { background-color: rgba(245, 158, 11, 0.1) !important; color: #f59e0b !important; }
-                .saas-badge-danger { background-color: rgba(239, 68, 68, 0.1) !important; color: #ef4444 !important; }
-                .saas-btn-outline {
-                    background-color: rgba(79, 70, 229, 0.05);
-                    color: #4f46e5;
-                    border: 1px solid rgba(79, 70, 229, 0.2);
+                .saas-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; opacity: 0.85; }
+                .saas-badge-success { background: #D4EDDA; color: #1e7e34; }
+                .saas-badge-warning { background: #FFF3CD; color: #856404; }
+                .saas-badge-danger  { background: #F8D7DA; color: #842029; }
+                .saas-badge-muted   { background: var(--gray-200); color: var(--fg-default); }
+
+                /* ======== Stats strip ======== */
+                .stat-strip {
+                  display: grid; grid-template-columns: repeat(4, 1fr);
+                  gap: var(--space-4); margin-bottom: var(--space-5);
                 }
-                .saas-btn-outline:hover {
-                    background-color: rgba(79, 70, 229, 0.1);
-                    color: #4f46e5;
+                @media (max-width: 992px) {
+                  .stat-strip { grid-template-columns: repeat(2, 1fr); }
                 }
+                @media (max-width: 576px) {
+                  .stat-strip { grid-template-columns: 1fr; }
+                }
+                .stat {
+                  background: var(--bg-surface);
+                  border: 1px solid var(--border-default);
+                  border-radius: var(--radius-md);
+                  padding: var(--space-4) var(--space-4);
+                  box-shadow: var(--shadow-card);
+                }
+                .stat .k {
+                  font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+                  color: var(--fg-muted); font-weight: 600; margin-bottom: 6px;
+                }
+                .stat .v { font-size: 22px; font-weight: 600; color: var(--fg-strong); }
+                .stat .delta { font-size: 12px; color: var(--fg-muted); margin-top: 2px; }
+                .stat .delta.danger { color: #dc2626; }
+                
+                .saas-alert {
+                  padding: 12px 16px; border-radius: 4px; border: 1px solid;
+                  font-size: 14px; display: flex; gap: 10px; align-items: flex-start;
+                  margin-bottom: var(--space-4);
+                }
+                .saas-alert-danger { background: #F8D7DA; border-color: #F5C6CB; color: #721C24; font-weight: 500; }
             </style>
-            
-            <div class="portal-subscription-wrap">
-                <!-- Sleek SaaS Header -->
-                <div class="card border-0 shadow-sm mb-4 saas-header">
-                    <div class="card-body p-4">
-                        <h3 class="font-weight-bold mb-1">My Subscriptions</h3>
-                        <p class="mb-0 opacity-75">View and manage your active plans, recurring invoices, and scheduled deliveries.</p>
+
+            <div class="mt-4 mb-4 d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="font-weight-bold mb-1" style="color: var(--fg-strong); font-size: 28px; font-family: 'Inter', sans-serif;">Your Subscriptions</h2>
+                    <p class="mb-0" style="color: var(--fg-muted); font-size: 14px;">All recurring services on your account.</p>
+                </div>
+                <a href="/subscriptions" class="btn font-weight-bold" style="background-color: var(--odoo-purple); color: white; border-radius: 4px; padding: 8px 16px; font-size: 14px;"><i class="fa fa-plus me-1"></i> New Subscription</a>
+            </div>
+
+            <!-- Overdue Alert (Dynamic if possible, static placeholder for design) -->
+            <div class="saas-alert saas-alert-danger">
+                <i class="fa fa-exclamation-circle" style="margin-top: 2px;"></i>
+                <div><strong>One invoice is overdue.</strong> <a href="/my/invoices" style="text-decoration: underline; color: inherit;">Review your invoices</a> to pay it now.</div>
+            </div>
+
+            <!-- Stat Strip -->
+            <div class="stat-strip">
+                <div class="stat">
+                    <div class="k">Active Subscriptions</div>
+                    <div class="v"><t t-esc="subscription_counts.get('in_progress', 0)"/></div>
+                    <div class="delta"><t t-esc="subscription_counts.get('to_renew', 0)"/> due to renew</div>
+                </div>
+                <div class="stat">
+                    <div class="k">Recurring</div>
+                    <div class="v">
+                        <t t-set="total_recurring" t-value="sum(sum(l.price_subtotal for l in sub.order_line.filtered(lambda x: x.product_id.recurring_ok)) for sub in subscriptions if sub.subscription_state in ['3_progress', '5_renewed'])"/>
+                        <span t-esc="total_recurring" t-options="{'widget': 'monetary', 'display_currency': request.env.company.currency_id}"/>
+                    </div>
+                    <div class="delta">per month</div>
+                </div>
+                <div class="stat">
+                    <div class="k">Next Invoice</div>
+                    <div class="v">
+                        <t t-set="next_subs" t-value="subscriptions.filtered(lambda s: s.next_invoice_date).sorted(key=lambda s: s.next_invoice_date)"/>
+                        <t t-if="next_subs">
+                            <span t-field="next_subs[0].next_invoice_date" t-options="{'widget': 'date', 'format': 'MMM dd'}"/>
+                        </t>
+                        <t t-else="">—</t>
+                    </div>
+                    <div class="delta">
+                        <t t-if="next_subs">
+                            <span t-esc="sum(l.price_subtotal for l in next_subs[0].order_line.filtered(lambda x: x.product_id.recurring_ok))" t-options="{'widget': 'monetary', 'display_currency': next_subs[0].currency_id}"/> · <t t-esc="next_subs[0].plan_id.name"/>
+                        </t>
+                        <t t-else="">No upcoming invoices</t>
                     </div>
                 </div>
+                <div class="stat">
+                    <div class="k">Outstanding</div>
+                    <div class="v">$49.00</div>
+                    <div class="delta danger">1 invoice overdue</div>
+                </div>
+            </div>
 
-                <t t-if="not subscriptions">
-                    <div class="alert alert-info shadow-sm" role="alert" style="border-radius: 12px; background-color: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.2); color: #0f172a;">
-                        You do not have any subscription history. Explore our <a href="/subscriptions" class="alert-link font-weight-bold text-primary">Pricing Plans</a> to subscribe!
-                    </div>
-                </t>
-                
-                <t t-if="subscriptions">
-                    <div class="card border-0 mb-4 saas-card overflow-hidden">
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0 align-middle saas-table">
-                                <thead>
-                                    <tr>
-                                        <th class="ps-4">Reference</th>
-                                        <th>Plan</th>
-                                        <th>Next Invoice Date</th>
-                                        <th>Recurring Total</th>
-                                        <th>Status</th>
-                                        <th class="pe-4 text-end">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <t t-foreach="subscriptions" t-as="sub">
-                                        <tr class="align-middle">
-                                            <td class="ps-4">
-                                                <a t-attf-href="/my/subscription/#{sub.id}" class="font-weight-bold text-decoration-none" style="color: #4f46e5;">
-                                                    <t t-esc="sub.name"/>
-                                                </a>
-                                            </td>
-                                            <td>
-                                                <div class="font-weight-bold"><t t-esc="sub.plan_id.name"/></div>
-                                                <small class="text-muted"><t t-esc="sub.plan_id.billing_period"/></small>
-                                            </td>
-                                            <td>
-                                                <span t-if="sub.next_invoice_date" t-field="sub.next_invoice_date" t-options="{'widget': 'date'}"/>
-                                                <span t-else="" class="text-muted">—</span>
-                                            </td>
-                                            <td class="font-weight-bold">
-                                                <t t-set="total_sub" t-value="sum(l.price_subtotal for l in sub.order_line.filtered(lambda x: x.product_id.recurring_ok))"/>
-                                                <span t-esc="total_sub" t-options="{'widget': 'monetary', 'display_currency': sub.currency_id}"/>
-                                            </td>
-                                            <td>
-                                                <!-- High-fidelity state badge colors -->
-                                                <span t-if="sub.subscription_state == '3_progress'" class="badge rounded-pill saas-badge-success px-3 py-2 font-weight-bold">Active</span>
-                                                <span t-elif="sub.subscription_state == '1_draft'" class="badge rounded-pill saas-badge-info px-3 py-2 font-weight-bold">Draft</span>
-                                                <span t-elif="sub.subscription_state == '4_paused'" class="badge rounded-pill saas-badge-warning px-3 py-2 font-weight-bold">Paused</span>
-                                                <span t-elif="sub.subscription_state == '6_churn'" class="badge rounded-pill saas-badge-danger px-3 py-2 font-weight-bold">Cancelled</span>
-                                                <span t-elif="sub.subscription_state == '8_blocked'" class="badge rounded-pill bg-danger text-white px-3 py-2 font-weight-bold">Blocked</span>
-                                                <span t-else="" class="badge rounded-pill bg-light text-dark px-3 py-2 font-weight-bold"><t t-esc="sub.subscription_state"/></span>
-                                            </td>
-                                            <td class="pe-4 text-end">
-                                                <a t-attf-href="/my/subscription/#{sub.id}" class="btn btn-sm saas-btn-outline rounded-pill px-3 font-weight-bold">Manage</a>
-                                            </td>
-                                        </tr>
+            <!-- Custom Tabs -->
+            <ul class="saas-tabs">
+                <li>
+                    <a t-attf-class="#{'active' if filterby == 'all' else ''}" href="/my/subscriptions?filterby=all">All <span class="text-muted small ms-1"><t t-esc="subscription_counts.get('all', 0)"/></span></a>
+                </li>
+                <li>
+                    <a t-attf-class="#{'active' if filterby == 'in_progress' else ''}" href="/my/subscriptions?filterby=in_progress">In Progress <span class="text-muted small ms-1"><t t-esc="subscription_counts.get('in_progress', 0)"/></span></a>
+                </li>
+                <li>
+                    <a t-attf-class="#{'active' if filterby == 'to_renew' else ''}" href="/my/subscriptions?filterby=to_renew">To Renew <span class="text-muted small ms-1"><t t-esc="subscription_counts.get('to_renew', 0)"/></span></a>
+                </li>
+                <li>
+                    <a t-attf-class="#{'active' if filterby == 'closed' else ''}" href="/my/subscriptions?filterby=closed">Closed <span class="text-muted small ms-1"><t t-esc="subscription_counts.get('closed', 0)"/></span></a>
+                </li>
+            </ul>
+
+            <t t-if="not subscriptions">
+                <div class="alert alert-info mt-3" style="background: #D1ECF1; color: #0c5460; border-color: #BEE5EB; border-radius: 4px;" role="alert">
+                    You do not have any subscription history. Explore our <a href="/subscriptions" class="alert-link font-weight-bold" style="color: #0c5460;">Pricing Plans</a> to subscribe!
+                </div>
+            </t>
+
+            <t t-if="subscriptions">
+                <div class="saas-card mb-4">
+                    <t t-foreach="subscriptions" t-as="sub">
+                        <a t-attf-href="/my/subscription/#{sub.id}" class="sub-row">
+                            <div class="icon-tile">
+                                <i class="fa fa-refresh"></i>
+                            </div>
+                            <div class="grow">
+                                <div class="title">
+                                    <t t-esc="sub.plan_id.name"/> — <span class="text-capitalize"><t t-esc="sub.plan_id.billing_period"/></span>
+                                </div>
+                                <div class="ref">
+                                    <t t-esc="sub.name"/> • Started <span t-field="sub.date_order" t-options="{'widget': 'date', 'format': 'MMM dd, yyyy'}"/>
+                                </div>
+                            </div>
+                            
+                            <div class="text-end me-4" style="min-width: 120px;">
+                                <div style="font-size: 11px; color: var(--fg-muted); text-transform: capitalize; margin-bottom: 2px;">Next invoice</div>
+                                <div style="font-size: 13px; font-weight: 600; color: var(--fg-strong);">
+                                    <t t-if="sub.next_invoice_date">
+                                        <span t-field="sub.next_invoice_date" t-options="{'widget': 'date', 'format': 'MMM dd, yyyy'}"/>
                                     </t>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div t-if="pager" class="o_portal_pager d-flex justify-content-center">
-                        <t t-call="portal.pager"/>
-                    </div>
-                </t>
+                                    <t t-else="">—</t>
+                                </div>
+                            </div>
+
+                            <div class="me-4 text-center" style="min-width: 100px;">
+                                <t t-set="state_label" t-value="dict(sub._fields['subscription_state'].selection).get(sub.subscription_state)"/>
+                                <span t-if="sub.subscription_state in ['3_progress', '5_renewed']" class="saas-badge saas-badge-success">
+                                    <div class="dot"></div><t t-esc="state_label"/>
+                                </span>
+                                <span t-elif="sub.subscription_state in ['2_renewal', '7_upsell', '4_paused']" class="saas-badge saas-badge-warning">
+                                    <div class="dot"></div><t t-esc="state_label"/>
+                                </span>
+                                <span t-elif="sub.subscription_state in ['6_churn', '8_blocked']" class="saas-badge saas-badge-danger">
+                                    <div class="dot"></div><t t-esc="state_label"/>
+                                </span>
+                                <span t-else="" class="saas-badge saas-badge-muted">
+                                    <div class="dot"></div><t t-esc="state_label"/>
+                                </span>
+                            </div>
+
+                            <div class="price" style="min-width: 90px; text-align: right;">
+                                <t t-set="total_sub" t-value="sum(l.price_subtotal for l in sub.order_line.filtered(lambda x: x.product_id.recurring_ok))"/>
+                                <span t-esc="total_sub" t-options="{'widget': 'monetary', 'display_currency': sub.currency_id}"/>
+                                <small>/mo</small>
+                            </div>
+                            
+                            <div class="chev">
+                                <i class="fa fa-chevron-right"></i>
+                            </div>
+                        </a>
+                    </t>
+                </div>
+            </t>
+            <div t-if="pager" class="o_portal_pager d-flex justify-content-center mt-3">
+                <t t-call="portal.pager"/>
             </div>
         </t>
     </template>
@@ -157,54 +290,7 @@
     <!-- Detailed Subscription Page -->
     <template id="portal_my_subscription_detail" name="My Subscription Detail">
         <t t-call="portal.portal_layout">
-            <style>
-                @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap');
-                .portal-subscription-wrap {
-                    font-family: 'Inter', sans-serif !important;
-                }
-                .saas-card {
-                    background: #ffffff;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 16px !important;
-                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03) !important;
-                }
-                .saas-card-header {
-                    background-color: #f8fafc !important;
-                    border-bottom: 1px solid #e2e8f0 !important;
-                }
-                .saas-badge-success { background-color: rgba(16, 185, 129, 0.1) !important; color: #10b981 !important; border: 1px solid rgba(16, 185, 129, 0.2); }
-                .saas-badge-info { background-color: rgba(14, 165, 233, 0.1) !important; color: #0ea5e9 !important; border: 1px solid rgba(14, 165, 233, 0.2); }
-                .saas-badge-warning { background-color: rgba(245, 158, 11, 0.1) !important; color: #f59e0b !important; border: 1px solid rgba(245, 158, 11, 0.2); }
-                .saas-badge-danger { background-color: rgba(239, 68, 68, 0.1) !important; color: #ef4444 !important; border: 1px solid rgba(239, 68, 68, 0.2); }
-                .saas-text-primary { color: #4f46e5 !important; }
-                .saas-text-muted { color: #64748b !important; }
-                .saas-text-dark { color: #0f172a !important; }
-                
-                .saas-table th {
-                    background-color: #f8fafc !important;
-                    color: #475569 !important;
-                    font-weight: 600 !important;
-                    text-transform: uppercase;
-                    font-size: 0.8rem;
-                    letter-spacing: 0.5px;
-                    border-bottom: 2px solid #e2e8f0 !important;
-                    padding: 16px !important;
-                }
-                .saas-table td {
-                    color: #0f172a !important;
-                    padding: 16px !important;
-                    border-bottom: 1px solid #f1f5f9 !important;
-                }
-                
-                .saas-forecast-card {
-                    background-color: #ffffff !important;
-                    border: 2px dashed rgba(14, 165, 233, 0.4) !important;
-                }
-                .saas-forecast-header {
-                    background-color: rgba(14, 165, 233, 0.05) !important;
-                    border-bottom: 1px solid rgba(14, 165, 233, 0.2) !important;
-                }
-            </style>
+
             
             <div id="wrap" class="container py-4 portal-subscription-wrap">
                 
@@ -219,12 +305,11 @@
                         <div class="mt-3 mt-sm-0">
                             <!-- High-fidelity state badge -->
                             <h4 class="mb-0">
-                                <span t-if="subscription.subscription_state == '3_progress'" class="badge saas-badge-success px-4 py-2 font-weight-bold" style="border-radius: 20px;">Active</span>
-                                <span t-elif="subscription.subscription_state == '1_draft'" class="badge saas-badge-info px-4 py-2 font-weight-bold" style="border-radius: 20px;">Draft</span>
-                                <span t-elif="subscription.subscription_state == '4_paused'" class="badge saas-badge-warning px-4 py-2 font-weight-bold" style="border-radius: 20px;">Paused</span>
-                                <span t-elif="subscription.subscription_state == '6_churn'" class="badge saas-badge-danger px-4 py-2 font-weight-bold" style="border-radius: 20px;">Cancelled</span>
-                                <span t-elif="subscription.subscription_state == '8_blocked'" class="badge bg-danger text-white px-4 py-2 font-weight-bold" style="border-radius: 20px;">Blocked</span>
-                                <span t-else="" class="badge bg-light text-dark px-4 py-2 font-weight-bold" style="border-radius: 20px;"><t t-esc="subscription.subscription_state"/></span>
+                                <t t-set="state_label" t-value="dict(subscription._fields['subscription_state'].selection).get(subscription.subscription_state)"/>
+                                <span t-if="subscription.subscription_state in ['3_progress', '5_renewed']" class="badge rounded-pill" style="border: 1px solid #10b981 !important; color: #059669 !important; background-color: transparent !important; padding: 8px 16px; font-weight: 600;"><i class="fa fa-circle" style="font-size: 0.6em; vertical-align: middle; margin-right: 4px;"></i> <t t-esc="state_label"/></span>
+                                <span t-elif="subscription.subscription_state in ['2_renewal', '7_upsell', '4_paused']" class="badge rounded-pill" style="border: 1px solid #f6ad55 !important; color: #dd6b20 !important; background-color: transparent !important; padding: 8px 16px; font-weight: 600;"><i class="fa fa-circle" style="font-size: 0.6em; vertical-align: middle; margin-right: 4px;"></i> <t t-esc="state_label"/></span>
+                                <span t-elif="subscription.subscription_state in ['6_churn', '8_blocked']" class="badge rounded-pill" style="border: 1px solid #ef4444 !important; color: #dc2626 !important; background-color: transparent !important; padding: 8px 16px; font-weight: 600;"><i class="fa fa-circle" style="font-size: 0.6em; vertical-align: middle; margin-right: 4px;"></i> <t t-esc="state_label"/></span>
+                                <span t-else="" class="badge rounded-pill" style="border: 1px solid #6b7280 !important; color: #4b5563 !important; background-color: transparent !important; padding: 8px 16px; font-weight: 600;"><i class="fa fa-circle" style="font-size: 0.6em; vertical-align: middle; margin-right: 4px;"></i> <t t-esc="state_label"/></span>
                             </h4>
                         </div>
                     </div>
@@ -249,8 +334,8 @@
                             </div>
                             <div class="col-md-6 ps-md-4 d-flex flex-column justify-content-between">
                                 <div>
-                                    <h5 class="font-weight-bold mb-3 saas-text-primary">Customer Self-Service</h5>
-                                    <p class="saas-text-muted small">Update your plan status directly. Paused plans will halt invoicing until resumed. Cancelled plans will end billing cycles completely.</p>
+                                    <h5 class="font-weight-bold mb-3 text-primary">Customer Self-Service</h5>
+                                    <p class="text-muted small">Update your plan status directly. Paused plans will halt invoicing until resumed. Cancelled plans will end billing cycles completely.</p>
                                 </div>
                                 
                                 <div class="d-flex flex-wrap gap-2 mt-3">
@@ -258,22 +343,22 @@
                                     <t t-if="subscription.subscription_state == '3_progress' and subscription.plan_id.is_pausable">
                                         <form t-attf-action="/my/subscription/#{subscription.id}/pause" method="POST" class="d-inline">
                                             <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                                            <button type="submit" class="btn rounded-pill px-4 font-weight-bold shadow-sm" style="background-color: #f59e0b; border: none; color: white;">Pause Subscription</button>
+                                            <button type="submit" class="btn rounded-pill px-4 font-weight-bold shadow-sm" style="background-color: #83527a; color: white; border: none;">Pause Subscription</button>
                                         </form>
                                     </t>
                                     <t t-if="subscription.subscription_state == '4_paused' and subscription.plan_id.is_pausable">
                                         <form t-attf-action="/my/subscription/#{subscription.id}/resume" method="POST" class="d-inline">
                                             <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                                            <button type="submit" class="btn rounded-pill px-4 font-weight-bold shadow-sm" style="background-color: #10b981; border: none; color: white;">Resume Subscription</button>
+                                            <button type="submit" class="btn rounded-pill px-4 font-weight-bold shadow-sm" style="background-color: #83527a; color: white; border: none;">Resume Subscription</button>
                                         </form>
                                     </t>
                                     <t t-if="subscription.subscription_state not in ('6_churn',) and subscription.plan_id.is_closable">
-                                        <button type="button" class="btn rounded-pill px-4 font-weight-bold ms-sm-2" style="background-color: #fef2f2; color: #ef4444; border: 1px solid #fca5a5;" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                                        <button type="button" class="btn rounded-pill px-4 font-weight-bold ms-sm-2" style="border: 2px solid #83527a; color: #83527a; background-color: transparent;" data-bs-toggle="modal" data-bs-target="#cancelModal">
                                             Cancel Plan
                                         </button>
                                     </t>
                                     <t t-if="subscription.subscription_state in ('6_churn',)">
-                                        <div class="saas-text-muted small fst-italic">
+                                        <div class="text-muted small fst-italic">
                                             This subscription has been terminated. Please contact support to initiate reactivation.
                                         </div>
                                     </t>
@@ -284,12 +369,12 @@
                 </div>
 
                 <!-- Subscription Line items -->
-                <div class="card border-0 mb-4 saas-card overflow-hidden">
-                    <div class="card-body p-4 saas-card-header">
-                        <h5 class="font-weight-bold mb-0 saas-text-dark">Subscription Line Items</h5>
+                <div class="card border mb-4 overflow-hidden">
+                    <div class="card-body p-4 bg-light border-bottom">
+                        <h5 class="font-weight-bold mb-0 text-dark">Subscription Line Items</h5>
                     </div>
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0 align-middle saas-table">
+                        <table class="table table-hover mb-0 align-middle">
                             <thead>
                                 <tr>
                                     <th class="ps-4">Product</th>
@@ -303,36 +388,36 @@
                                 <t t-foreach="subscription.order_line.filtered(lambda x: x.product_id.recurring_ok)" t-as="line">
                                     <tr>
                                         <td class="ps-4">
-                                            <div class="font-weight-bold saas-text-dark"><t t-esc="line.product_id.name"/></div>
-                                            <small class="saas-text-muted"><t t-esc="line.name"/></small>
+                                            <div class="font-weight-bold text-dark"><t t-esc="line.product_id.name"/></div>
+                                            <small class="text-muted"><t t-esc="line.name"/></small>
                                         </td>
                                         <td>
                                             <span class="font-weight-bold"><t t-esc="line.product_uom_qty"/></span>
                                             <t t-if="subscription.subscription_state == '3_progress'">
-                                                <button class="btn btn-sm btn-link py-0 ms-1 saas-text-primary" data-bs-toggle="modal" t-attf-data-bs-target="#changeSeatsModal_#{line.id}" title="Change Seats/Quantity">
+                                                <button class="btn btn-sm btn-link py-0 ms-1 text-primary" data-bs-toggle="modal" t-attf-data-bs-target="#changeSeatsModal_#{line.id}" title="Change Seats/Quantity">
                                                     <i class="fa fa-pencil"/>
                                                 </button>
                                                 <!-- Change Seats Modal -->
                                                 <div class="modal fade text-start" t-attf-id="changeSeatsModal_#{line.id}" tabindex="-1" aria-hidden="true">
                                                     <div class="modal-dialog modal-dialog-centered">
-                                                        <div class="modal-content border-0 shadow" style="border-radius: 16px;">
+                                                        <div class="modal-content border-0 shadow">
                                                             <form t-attf-action="/my/subscription/#{subscription.id}/change_seats" method="POST">
                                                                 <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                                                                 <input type="hidden" name="line_id" t-att-value="line.id"/>
                                                                 <div class="modal-header border-0 pb-0">
-                                                                    <h5 class="modal-title font-weight-bold saas-text-dark">Update Quantity</h5>
+                                                                    <h5 class="modal-title font-weight-bold text-dark">Update Quantity</h5>
                                                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                                                 </div>
                                                                 <div class="modal-body py-3">
-                                                                    <p class="saas-text-muted small">Update the number of seats/quantity for <strong class="saas-text-dark" t-esc="line.product_id.name"/>. Mid-cycle additions will be prorated on your next invoice.</p>
+                                                                    <p class="text-muted small">Update the number of seats/quantity for <strong class="text-dark" t-esc="line.product_id.name"/>. Mid-cycle additions will be prorated on your next invoice.</p>
                                                                     <div class="mb-3">
-                                                                        <label class="form-label font-weight-bold saas-text-dark">New Quantity</label>
-                                                                        <input type="number" class="form-control rounded-pill px-3" style="border: 1px solid #e2e8f0;" name="new_quantity" t-att-value="int(line.product_uom_qty)" step="1" min="1" required="1"/>
+                                                                        <label class="form-label font-weight-bold text-dark">New Quantity</label>
+                                                                        <input type="number" class="form-control rounded-pill px-3" name="new_quantity" t-att-value="int(line.product_uom_qty)" step="1" min="1" required="1"/>
                                                                     </div>
                                                                 </div>
                                                                 <div class="modal-footer border-0 pt-0">
                                                                     <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
-                                                                    <button type="submit" class="btn rounded-pill px-4 font-weight-bold" style="background-color: #4f46e5; color: white;">Confirm Change</button>
+                                                                    <button type="submit" class="btn btn-primary rounded-pill px-4 font-weight-bold">Confirm Change</button>
                                                                 </div>
                                                             </form>
                                                         </div>
@@ -349,7 +434,7 @@
                                 </t>
                             </tbody>
                             <tfoot>
-                                <tr style="background-color: #f8fafc;">
+                                <tr class="bg-light">
                                     <td colspan="3" class="ps-4 font-weight-bold text-end saas-text-muted">Total Recurring:</td>
                                     <td t-if="any(l.discount > 0 for l in subscription.order_line.filtered(lambda x: x.product_id.recurring_ok))"/>
                                     <td class="pe-4 text-end font-weight-bold saas-text-primary" style="font-size: 1.15rem;">
@@ -496,6 +581,10 @@
                                             </t>
                                         </select>
                                     </div>
+                                    <div class="mb-3">
+                                        <label for="customer_signature" class="form-label font-weight-bold saas-text-dark">Customer Signature (Type your name to confirm)</label>
+                                        <input type="text" class="form-control rounded-pill px-3" style="border: 1px solid #e2e8f0;" id="customer_signature" name="customer_signature" required="1" placeholder="e.g. John Doe"/>
+                                    </div>
                                 </div>
                                 <div class="modal-footer border-0 pt-0">
                                     <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Close</button>
@@ -506,341 +595,218 @@
                     </div>
                 </div>
 
+                <!-- Odoo Chatter / Message Thread -->
+                <div class="card border-0 mb-4 saas-card mt-5">
+                    <div class="card-body p-4 saas-card-header">
+                        <h5 class="font-weight-bold mb-0 saas-text-dark"><i class="fa fa-comments mr-2 saas-text-muted"/> Communication History</h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <t t-call="portal.message_thread">
+                            <t t-set="object" t-value="subscription"/>
+                        </t>
+                    </div>
+                </div>
+
             </div>
         </t>
     </template>
 
     <!-- Pricing Page Template -->
     <template id="subscription_plans_page" name="Subscription Plans">
-        <t t-call="website.layout">
-            <div id="wrap" class="oe_structure oe_empty">
-                <style>
-                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;display=swap');
-                    
-                    .subscription-pricing-section {
-                        font-family: 'Inter', sans-serif !important;
-                        background-color: #f8fafc !important;
-                        color: #0f172a !important;
-                        padding: 100px 0;
-                        position: relative;
-                        overflow: hidden;
-                        min-height: 85vh;
-                    }
-                    
-                    .pricing-bg-glow {
-                        position: absolute;
-                        width: 600px;
-                        height: 600px;
-                        background: radial-gradient(circle, rgba(79, 70, 229, 0.05) 0%, rgba(255, 255, 255, 0) 70%);
-                        top: -150px;
-                        left: -100px;
-                        pointer-events: none;
-                        z-index: 1;
-                    }
-                    
-                    .pricing-bg-glow-right {
-                        position: absolute;
-                        width: 600px;
-                        height: 600px;
-                        background: radial-gradient(circle, rgba(56, 189, 248, 0.05) 0%, rgba(255, 255, 255, 0) 70%);
-                        bottom: -150px;
-                        right: -100px;
-                        pointer-events: none;
-                        z-index: 1;
-                    }
-                    
-                    .pricing-title-gradient {
-                        background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
-                        -webkit-background-clip: text;
-                        -webkit-text-fill-color: transparent;
-                        font-weight: 800;
-                        font-size: 3.5rem;
-                        letter-spacing: -1.5px;
-                        line-height: 1.2;
-                    }
-                    
-                    .pricing-subtitle {
-                        color: #64748b;
-                        font-size: 1.25rem;
-                        max-width: 600px;
-                        margin: 0 auto;
-                        font-weight: 400;
-                    }
-                    
-                    .pricing-card-modern {
-                        background: #ffffff !important;
-                        border: 1px solid #e2e8f0 !important;
-                        border-radius: 24px !important;
-                        transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
-                        color: #0f172a !important;
-                        position: relative;
-                        overflow: visible !important;
-                        z-index: 2;
-                        padding: 40px 32px 32px 32px;
-                        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03) !important;
-                    }
-                    
-                    .pricing-card-modern:hover {
-                        transform: translateY(-12px) !important;
-                        border-color: #cbd5e1 !important;
-                        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08), 0 0 40px rgba(79, 70, 229, 0.05) !important;
-                    }
-                    
-                    /* Featured card style */
-                    .pricing-card-featured {
-                        border: 2px solid #4f46e5 !important;
-                        box-shadow: 0 20px 40px rgba(79, 70, 229, 0.08) !important;
-                        transform: scale(1.02);
-                    }
-                    
-                    .pricing-card-featured:hover {
-                        transform: translateY(-12px) scale(1.02) !important;
-                        border-color: #4f46e5 !important;
-                        box-shadow: 0 25px 50px rgba(79, 70, 229, 0.15) !important;
-                    }
-                    
-                    .popular-badge {
-                        position: absolute;
-                        top: -16px;
-                        left: 50%;
-                        transform: translateX(-50%);
-                        background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);
-                        color: #ffffff;
-                        font-size: 0.75rem;
-                        font-weight: 800;
-                        text-transform: uppercase;
-                        letter-spacing: 1.5px;
-                        padding: 6px 20px;
-                        border-radius: 9999px;
-                        box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
-                        z-index: 10;
-                    }
-                    
-                    .plan-name-pill {
-                        background: #f1f5f9;
-                        border: 1px solid #e2e8f0;
-                        border-radius: 9999px;
-                        font-size: 0.75rem;
-                        font-weight: 700;
-                        letter-spacing: 0.5px;
-                        color: #475569;
-                        display: inline-block;
-                        padding: 4px 12px;
-                        margin-bottom: 20px;
-                    }
-                    
-                    .featured-name-pill {
-                        background: rgba(79, 70, 229, 0.1);
-                        border: 1px solid rgba(79, 70, 229, 0.2);
-                        color: #4f46e5;
-                    }
-                    
-                    .plan-title {
-                        font-size: 1.75rem;
-                        font-weight: 800;
-                        letter-spacing: -0.5px;
-                        margin-bottom: 15px;
-                        color: #0f172a;
-                    }
-                    
-                    .price-container {
-                        margin-bottom: 30px;
-                        display: flex;
-                        align-items: baseline;
-                        justify-content: center;
-                    }
-                    
-                    .price-val {
-                        font-size: 3.5rem;
-                        font-weight: 800;
-                        letter-spacing: -1.5px;
-                        color: #0f172a;
-                    }
-                    
-                    .price-term {
-                        font-size: 1rem;
-                        color: #64748b;
-                        margin-left: 6px;
-                        font-weight: 500;
-                    }
-                    
-                    .divider-modern {
-                        height: 1px;
-                        background: #e2e8f0;
-                        margin: 25px 0;
-                    }
-                    
-                    .features-list {
-                        margin-bottom: 35px;
-                    }
-                    
-                    .feature-item-modern {
-                        display: flex;
-                        align-items: flex-start;
-                        margin-bottom: 14px;
-                        font-size: 0.95rem;
-                        color: #475569;
-                        text-align: left;
-                        font-weight: 500;
-                    }
-                    
-                    .feature-icon-wrapper {
-                        background: rgba(16, 185, 129, 0.1);
-                        border-radius: 50%;
-                        width: 20px;
-                        height: 20px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        margin-right: 12px;
-                        flex-shrink: 0;
-                        margin-top: 2px;
-                    }
-                    
-                    .feature-icon-check {
-                        color: #10b981;
-                        font-size: 0.7rem;
-                    }
-                    
-                    .feature-icon-gift-wrapper {
-                        background: rgba(14, 165, 233, 0.1);
-                        border-radius: 50%;
-                        width: 20px;
-                        height: 20px;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        margin-right: 12px;
-                        flex-shrink: 0;
-                        margin-top: 2px;
-                    }
-                    
-                    .feature-icon-gift {
-                        color: #0ea5e9;
-                        font-size: 0.7rem;
-                    }
-                    
-                    .cta-btn-modern {
-                        background: #f1f5f9 !important;
-                        border: 1px solid #e2e8f0 !important;
-                        color: #0f172a !important;
-                        border-radius: 16px !important;
-                        padding: 14px 24px !important;
-                        font-weight: 700 !important;
-                        font-size: 1rem !important;
-                        transition: all 0.3s ease !important;
-                        box-shadow: none !important;
-                        width: 100%;
-                    }
-                    
-                    .cta-btn-modern:hover {
-                        background: #e2e8f0 !important;
-                        transform: translateY(-2px) !important;
-                    }
-                    
-                    .cta-btn-featured {
-                        background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%) !important;
-                        color: #ffffff !important;
-                        border: none !important;
-                        box-shadow: 0 8px 20px rgba(79, 70, 229, 0.25) !important;
-                    }
-                    
-                    .cta-btn-featured:hover {
-                        box-shadow: 0 12px 25px rgba(79, 70, 229, 0.4) !important;
-                        transform: translateY(-2px) !important;
-                    }
-                    
-                    @keyframes fadeInUp {
-                        from {
-                            opacity: 0;
-                            transform: translateY(30px);
-                        }
-                        to {
-                            opacity: 1;
-                            transform: translateY(0);
-                        }
-                    }
-                    
-                    .animate-fade-in-up {
-                        animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) both;
-                    }
-                </style>
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+            <style>
+                :root {
+                  --odoo-purple: #875A7B;
+                  --odoo-purple-100: #F2EAEE;
+                  --odoo-purple-600: #714B67;
+                  --odoo-teal: #00A09D;
+                  --bg-surface: #FFFFFF;
+                  --bg-page: #F8F9FA;
+                  --gray-100: #F8F9FA;
+                  --gray-200: #E9ECEF;
+                  --gray-400: #CED4DA;
+                  --border-default: #DEE2E6;
+                  --fg-strong: #212529;
+                  --fg-default: #495057;
+                  --fg-muted: #6C757D;
+                  --space-4: 1rem;
+                  --space-5: 1.5rem;
+                  --radius-md: 0.375rem;
+                  --radius-lg: 0.5rem;
+                  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
+                  --shadow-raised: 0 2px 6px rgba(0, 0, 0, 0.06);
+                  --duration-base: 180ms;
+                  --ease-default: ease-in-out;
+                  --font-sans: "Inter", "Lato", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+                }
                 
-                <section class="subscription-pricing-section">
-                    <div class="pricing-bg-glow"/>
-                    <div class="pricing-bg-glow-right"/>
-                    
-                    <div class="container position-relative" style="z-index: 5;">
-                        <!-- Header Title Block -->
-                        <div class="text-center mb-5 pb-3 animate-fade-in-up">
-                            <h1 class="pricing-title-gradient mb-3">Choose Your Perfect Plan</h1>
-                            <p class="pricing-subtitle">Unlock robust subscription scaling and customer management workflows with our premium tiers.</p>
+                .saas-pricing-page {
+                  font-family: var(--font-sans);
+                  background: var(--bg-page);
+                  color: var(--fg-default);
+                  min-height: calc(100vh - 72px);
+                  padding-bottom: 4rem;
+                }
+                
+                .saas-pricing-title {
+                  color: var(--fg-strong);
+                  font-size: 2.25rem;
+                  font-weight: 600;
+                  margin-bottom: 0.5rem;
+                }
+                
+                .saas-pricing-subtitle {
+                  color: var(--fg-muted);
+                  font-size: 1.125rem;
+                }
+
+                .plan-grid {
+                  display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-5);
+                  max-width: 1140px; margin: 0 auto;
+                }
+                @media (max-width: 992px) {
+                  .plan-grid { grid-template-columns: repeat(2, 1fr); }
+                }
+                @media (max-width: 768px) {
+                  .plan-grid { grid-template-columns: 1fr; }
+                }
+                
+                .plan-card {
+                  background: var(--bg-surface);
+                  border: 1px solid var(--border-default);
+                  border-radius: var(--radius-lg);
+                  display: flex; flex-direction: column;
+                  position: relative;
+                  transition: border-color var(--duration-base) var(--ease-default), box-shadow var(--duration-base) var(--ease-default);
+                  box-shadow: var(--shadow-card);
+                }
+                .plan-card:hover { border-color: var(--gray-400); }
+                .plan-card.popular {
+                  border-color: var(--odoo-purple);
+                  box-shadow: 0 0 0 1px var(--odoo-purple), var(--shadow-raised);
+                  padding-top: 16px;
+                }
+                
+                .plan-header {
+                  padding: var(--space-5) var(--space-5) 0;
+                  text-align: center;
+                }
+                .plan-card h3 { margin: 0 0 4px; font-size: 1.25rem; font-weight: 600; color: var(--fg-strong); }
+                
+                .plan-price { display: flex; align-items: baseline; justify-content: center; gap: 4px; margin: var(--space-4) 0; }
+                .plan-price .amount { font-size: 2.5rem; font-weight: 700; color: var(--fg-strong); line-height: 1; }
+                .plan-price .unit { color: var(--fg-muted); font-size: 0.875rem; font-weight: 500; }
+                
+                .plan-features {
+                  list-style: none; padding: 0 var(--space-5); margin: 0 0 var(--space-5);
+                  font-size: 0.875rem; color: var(--fg-default); flex: 1;
+                }
+                .plan-features li {
+                  display: flex; gap: 10px; padding: 9px 0; align-items: flex-start;
+                }
+                .plan-features li:last-child { }
+                .plan-features li .check-icon { color: #00A09D; font-size: 13px; margin-top: 2px; flex-shrink: 0; font-weight: 700; }
+                .plan-features li .cross-icon { color: #cbd5e1; font-size: 13px; margin-top: 2px; flex-shrink: 0; }
+                .plan-features li.feat-disabled span { color: #94a3b8; text-decoration: line-through; }
+                
+                .plan-footer {
+                  padding: 0 var(--space-5) var(--space-5);
+                  margin-top: auto;
+                }
+                
+                .saas-btn {
+                  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+                  font-family: var(--font-sans); font-size: 15px; font-weight: 600;
+                  padding: 13px 16px; border-radius: 9999px;
+                  border: 1px solid transparent; cursor: pointer;
+                  transition: all var(--duration-base) var(--ease-default);
+                  width: 100%; text-decoration: none;
+                }
+                .saas-btn-primary { background: var(--odoo-purple); color: white; border-color: var(--odoo-purple); }
+                .saas-btn-primary:hover { background: var(--odoo-purple-600); border-color: var(--odoo-purple-600); color: white; text-decoration: none; }
+                .saas-btn-outline { background: transparent; color: var(--odoo-purple); border-color: var(--odoo-purple); }
+                .saas-btn-outline:hover { background: var(--odoo-purple-100); color: var(--odoo-purple); text-decoration: none; }
+                
+                .popular-badge-wrap {
+                  position: absolute;
+                  top: -14px;
+                  left: 50%;
+                  transform: translateX(-50%);
+                  white-space: nowrap;
+                  z-index: 3;
+                }
+                .popular-badge {
+                  display: inline-block;
+                  background: var(--odoo-purple); color: white;
+                  font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+                  text-transform: uppercase;
+                  padding: 5px 16px; border-radius: 20px;
+                  box-shadow: 0 2px 6px rgba(135,90,123,0.3);
+                }
+            </style>
+
+            <div id="wrap" class="oe_structure oe_empty saas-pricing-page">
+                <section class="py-5">
+                    <div class="container">
+                        <div class="text-center mb-5">
+                            <h1 class="saas-pricing-title">Choose Your Perfect Plan</h1>
+                            <p class="saas-pricing-subtitle">Unlock robust scaling and premium workflows. Switch or cancel anytime.</p>
                         </div>
                         
                         <!-- Pricing Grid -->
-                        <div class="row align-items-stretch justify-content-center">
+                        <div class="plan-grid">
                             <t t-foreach="plans" t-as="plan">
                                 <t t-set="is_popular" t-value="plan.is_popular"/>
                                 
-                                <div class="col-lg-4 col-md-6 mb-4 d-flex animate-fade-in-up" t-attf-style="animation-delay: #{plan_index * 150}ms;">
-                                    <div t-attf-class="card pricing-card-modern w-100 border-0 #{'pricing-card-featured' if is_popular else ''}">
-                                        <div t-if="is_popular" class="popular-badge">Most Popular</div>
-                                        
-                                        <!-- Top Header info -->
-                                        <div class="text-center">
-                                            <span t-attf-class="plan-name-pill #{'featured-name-pill' if is_popular else ''}" t-esc="plan.code"/>
-                                            <h3 class="plan-title" t-esc="plan.name"/>
+                                <div t-attf-class="plan-card #{'popular' if is_popular else ''}">
+                                    <t t-if="is_popular">
+                                        <div class="popular-badge-wrap">
+                                            <span class="popular-badge">Most Popular</span>
                                         </div>
-                                        
-                                        <!-- Price -->
-                                        <div class="price-container">
-                                            <span class="price-val" t-field="plan.total_price" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/>
-                                            <span class="price-term">/ <t t-esc="plan.billing_period"/></span>
+                                    </t>
+                                    
+                                    <div class="plan-header">
+                                        <h3 t-esc="plan.name"/>
+                                        <p t-if="plan.description" style="font-size: 13px; color: #64748b; margin: 4px 0 8px; line-height: 1.5;" t-esc="plan.description"/>
+                                        <div class="plan-price">
+                                            <span class="amount" t-field="plan.total_price" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/>
+                                            <span class="unit">/<t t-esc="plan.billing_period"/></span>
                                         </div>
-                                        
-                                        <div class="divider-modern"/>
-                                        
-                                        <!-- Plan Features -->
-                                        <div class="features-list flex-grow-1">
-                                            <div t-if="plan.description" class="feature-item-modern">
-                                                <div class="feature-icon-wrapper">
-                                                    <i class="fa fa-check feature-icon-check"/>
-                                                </div>
-                                                <span t-esc="plan.description"/>
-                                            </div>
-                                            <!-- Product inclusions from pricing_ids -->
-                                            <t t-foreach="plan.pricing_ids" t-as="pricing_line">
-                                                <div class="feature-item-modern">
-                                                    <div class="feature-icon-wrapper" style="background: rgba(79, 70, 229, 0.1); color: #4f46e5;">
-                                                        <i class="fa fa-cube" style="font-size: 0.7rem; color: #4f46e5;"/>
-                                                    </div>
-                                                    <span>Includes: <strong class="text-dark"><t t-esc="pricing_line.product_id.name"/></strong></span>
-                                                </div>
-                                            </t>
-                                            <div class="feature-item-modern">
-                                                <div class="feature-icon-wrapper">
-                                                    <i class="fa fa-check feature-icon-check"/>
-                                                </div>
-                                                <span>Billing Frequency: <strong class="text-dark text-capitalize"><t t-esc="plan.billing_period"/></strong></span>
-                                            </div>
-                                            <div t-if="plan.trial_period_days > 0" class="feature-item-modern">
-                                                <div class="feature-icon-gift-wrapper">
-                                                    <i class="fa fa-gift feature-icon-gift"/>
-                                                </div>
-                                                <span class="text-info">Includes a <strong class="text-dark"><t t-esc="plan.trial_period_days"/> day</strong> free trial</span>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Action CTA -->
-                                        <a t-attf-href="/subscriptions/checkout/#{plan.id}" t-attf-class="btn cta-btn-modern #{'cta-btn-featured' if is_popular else ''} mt-auto">Subscribe Now</a>
+                                    </div>
+                                    
+                                    <ul class="plan-features">
+
+                                        <t t-foreach="plan.pricing_ids" t-as="pricing_line">
+                                            <li>
+                                                <span class="check-icon">&#10003;</span>
+                                                <span><t t-esc="pricing_line.product_id.name"/></span>
+                                            </li>
+                                        </t>
+                                        <li>
+                                            <span class="check-icon">&#10003;</span>
+                                            <span>Billed <strong class="text-capitalize"><t t-esc="plan.billing_period"/></strong></span>
+                                        </li>
+                                        <li t-if="plan.trial_period_days > 0">
+                                            <span class="check-icon">&#10003;</span>
+                                            <span><strong><t t-esc="plan.trial_period_days"/>-day</strong> free trial included</span>
+                                        </li>
+                                    </ul>
+                                    
+                                    <div class="plan-footer">
+                                        <a t-attf-href="/subscriptions/checkout/#{plan.id}"
+                                           t-attf-class="saas-btn #{'saas-btn-primary' if is_popular else 'saas-btn-outline'}">
+                                            Choose <t t-esc="plan.name"/> &#8594;
+                                        </a>
                                     </div>
                                 </div>
                             </t>
                             
                             <t t-if="not plans">
-                                <div class="col-12 text-center py-5 animate-fade-in-up">
-                                    <i class="fa fa-frown-o fa-4x mb-3 text-muted"></i>
-                                    <p class="lead">No active subscription plans are currently configured.</p>
+                                <div class="text-center py-5" style="grid-column: 1 / -1; color: var(--fg-muted);">
+                                    <i class="fa fa-rocket fa-4x mb-4" style="color: var(--gray-400);"></i>
+                                    <h3 style="color: var(--fg-strong);">Coming Soon</h3>
+                                    <p class="lead">We are currently crafting our subscription plans.</p>
                                 </div>
                             </t>
                         </div>
@@ -850,217 +816,190 @@
         </t>
     </template>
 
-    <!-- Checkout Page Template -->
+            <!-- Checkout Page Template -->
     <template id="subscription_checkout_page" name="Subscription Checkout">
-        <t t-call="website.layout">
-            <div id="wrap" class="oe_structure oe_empty bg-light portal-checkout-wrap">
-                <style>
-                    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap');
-                    .portal-checkout-wrap {
-                        font-family: 'Inter', sans-serif !important;
-                    }
-                    .payment-provider-card {
-                        transition: all 0.2s ease;
-                    }
-                    .payment-provider-card:hover {
-                        border-color: #4f46e5 !important;
-                        background: rgba(79, 70, 229, 0.05) !important;
-                        transform: translateY(-1px);
-                    }
-                    .payment-provider-card input[type="radio"]:checked + div {
-                        color: #4f46e5;
-                    }
-                    .payment-provider-card:has(input[type="radio"]:checked) {
-                        background: rgba(79, 70, 229, 0.08) !important;
-                        border-color: #4f46e5 !important;
-                        box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
-                    }
-                    .checkout-card-modern {
-                        border-radius: 16px;
-                        box-shadow: 0 4px 20px rgba(0,0,0,0.03);
-                        border: 1px solid #e2e8f0;
-                    }
-                    .checkout-form-label {
-                        font-weight: 600;
-                        font-size: 0.9rem;
-                        margin-bottom: 6px;
-                        color: #475569;
-                    }
-                    .checkout-form-input {
-                        border-radius: 8px;
-                        padding: 10px 14px;
-                        border: 1px solid #e2e8f0;
-                        color: #0f172a;
-                    }
-                    .checkout-form-input:focus {
-                        border-color: #4f46e5;
-                        box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
-                    }
-                    .btn-pay-modern {
-                        background: #4f46e5;
-                        border: none;
-                        color: #ffffff;
-                        border-radius: 8px;
-                        padding: 12px 24px;
-                        font-weight: 700;
-                        font-size: 1.05rem;
-                        transition: all 0.2s ease;
-                        width: 100%;
-                    }
-                    .btn-pay-modern:hover {
-                        background: #4338ca;
-                        color: #ffffff;
-                    }
-                    .saas-step-badge {
-                        background: rgba(79, 70, 229, 0.1);
-                        color: #4f46e5;
-                        width: 28px;
-                        height: 28px;
-                        display: inline-flex;
-                        align-items: center;
-                        justify-content: center;
-                        border-radius: 50%;
-                        font-size: 0.95rem;
-                        margin-right: 10px;
-                    }
-                </style>
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+            <t t-set="page_name" t-value="'subscriptions'"/>
+            <style>
+                .checkout-wrap { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: #212529; }
+                .checkout-stepper { display: flex; align-items: center; max-width: 650px; margin-bottom: 2.5rem; margin-top: 1rem; }
+                .step { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; }
+                .step-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
                 
-                <section class="py-5">
-                    <div class="container">
-                        <div class="text-center mb-5">
-                            <h1 class="mb-2 font-weight-bold" style="color: #0f172a;">Secure Checkout</h1>
-                            <p class="text-muted">Complete your billing details to activate your subscription plan.</p>
-                            <!-- Portal link for logged in users -->
-                            <t t-if="not request.env.user._is_public()">
-                                <div class="mt-3">
-                                    <a href="/my/subscriptions" class="btn btn-outline-secondary rounded-pill px-4 py-2 font-weight-bold shadow-sm" style="font-size: 0.85rem; color: #475569;">
-                                        <i class="fa fa-user-circle me-1"></i> View My Active Subscriptions
-                                    </a>
-                                </div>
-                            </t>
+                .form-control, .form-select { border: 1px solid #DEE2E6; border-radius: 6px; padding: 10px 14px; font-size: 14px; box-shadow: none; color: #212529; }
+                .form-control:focus, .form-select:focus { border-color: #875A7B; box-shadow: 0 0 0 3px rgba(135, 90, 123, 0.15); outline: none; }
+                .form-label { font-size: 13px; font-weight: 600; color: #212529; margin-bottom: 6px; }
+                
+                .section-marker { display: flex; align-items: center; gap: 10px; margin-bottom: 1.25rem; margin-top: 2rem; }
+                .section-marker .num { width: 20px; height: 20px; background: #875A7B; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+                .section-marker .lbl { font-size: 11px; font-weight: 700; color: #6C757D; letter-spacing: 0.05em; text-transform: uppercase; }
+                
+                button[name="o_payment_submit_button"] {
+                    background: #875A7B !important;
+                    color: white !important;
+                    border: none !important;
+                    border-radius: 6px !important;
+                    padding: 14px !important;
+                    font-weight: 600 !important;
+                    font-size: 15px !important;
+                    box-shadow: 0 4px 6px rgba(135, 90, 123, 0.2) !important;
+                    width: 100% !important;
+                    margin-top: 1rem !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    gap: 8px !important;
+                }
+                button[name="o_payment_submit_button"]::before {
+                    content: "\f023";
+                    font-family: FontAwesome;
+                }
+                .o_payment_form {
+                    padding: 0 !important;
+                }
+            </style>
+
+            <div id="wrap" class="oe_structure oe_empty pb-5 checkout-wrap">
+                <div class="container mt-4">
+                    <h2 class="font-weight-bold mb-1" style="color: #212529; font-size: 28px;">Checkout</h2>
+                    <p class="mb-4" style="color: #6C757D; font-size: 14px;">Confirm your subscription details and pay securely.</p>
+                    
+                    <div class="checkout-stepper">
+                        <div class="step step-complete">
+                            <div class="step-icon" style="background: #00A09D; color: white;"><i class="fa fa-check"></i></div>
+                            <span style="color: #212529;">Choose Plan</span>
                         </div>
-                        
-                        <div class="row">
-                            <!-- Left: Order Summary -->
-                            <div class="col-lg-5 mb-4 mb-lg-0">
-                                <div class="card checkout-card-modern p-4 bg-white">
-                                    <h4 class="font-weight-bold mb-4" style="color: #4f46e5;">Order Summary</h4>
-                                    
-                                    <div class="d-flex align-items-center justify-content-between mb-3 bg-light p-3" style="border-radius: 12px; border: 1px solid #f1f5f9;">
-                                        <div>
-                                            <span class="badge bg-secondary text-dark px-3 py-2 font-weight-bold" style="border-radius: 20px;"><t t-esc="plan.code"/></span>
-                                            <h5 class="font-weight-bold mt-2 mb-0" style="color: #0f172a;" t-esc="plan.name"/>
-                                            <small class="text-muted">Recurring billing: <span class="text-capitalize font-weight-bold"><t t-esc="plan.billing_period"/></span></small>
-                                        </div>
-                                        <div class="text-end">
-                                            <h4 class="font-weight-bold mb-0" style="color: #0f172a;" t-field="plan.total_price" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/>
-                                            <span class="text-muted small">/ <t t-esc="plan.billing_period"/></span>
-                                        </div>
-                                    </div>
-                                    
-                                    <hr class="my-4" style="border-color: #e2e8f0;"/>
-                                    
-                                    <!-- Inclusions -->
-                                    <div class="mb-4">
-                                        <h6 class="font-weight-bold mb-3" style="color: #64748b;">Plan Inclusions:</h6>
-                                        <div t-if="plan.description" class="d-flex align-items-start mb-2 small text-muted">
-                                            <i class="fa fa-check text-success mr-2 mt-1"/>
-                                            <span t-esc="plan.description"/>
-                                        </div>
-                                        <t t-foreach="plan.pricing_ids" t-as="line">
-                                            <div class="d-flex align-items-start mb-2 small text-muted">
-                                                <i class="fa fa-cube mr-2 mt-1" style="color: #4f46e5;"/>
-                                                <span>Includes: <strong style="color: #0f172a;"><t t-esc="line.product_id.name"/></strong></span>
+                        <div class="flex-grow-1 mx-3" style="height: 2px; background: #00A09D;"></div>
+                        <div class="step step-active">
+                            <div class="step-icon" style="background: #875A7B; color: white;">2</div>
+                            <span style="color: #212529;">Checkout</span>
+                        </div>
+                        <div class="flex-grow-1 mx-3" style="height: 2px; background: #E9ECEF;"></div>
+                        <div class="step step-pending opacity-75">
+                            <div class="step-icon" style="background: #E9ECEF; color: #6C757D;">3</div>
+                            <span style="color: #6C757D;">Confirmation</span>
+                        </div>
+                    </div>
+                    
+                    <div id="checkout_form_container">
+                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                        <div class="row align-items-start">
+                            <!-- Left Column -->
+                            <div class="col-lg-7 pr-lg-5 mb-4">
+                                <!-- Plan Configuration -->
+                                <div style="background: white; border: 1px solid #DEE2E6; border-radius: 8px; margin-bottom: 2rem; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                                    <!-- Gradient Header Area -->
+                                    <div class="p-4 d-flex align-items-center justify-content-between" style="background: linear-gradient(180deg, #F8F0F5 0%, #FFFFFF 100%); border-bottom: 1px solid #DEE2E6;">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div style="width: 56px; height: 56px; background: white; color: #875A7B; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #f0f0f0;">
+                                                <i class="fa fa-refresh"></i>
                                             </div>
-                                        </t>
-                                        <div class="d-flex align-items-start mb-2 small text-muted">
-                                            <i class="fa fa-calendar text-info mr-2 mt-1"/>
-                                            <span>Frequency: <strong class="text-capitalize" style="color: #0f172a;"><t t-esc="plan.billing_period"/></strong></span>
+                                            <div>
+                                                <div class="font-weight-bold" style="font-size: 18px; color: #0f172a;"><t t-esc="plan.name"/></div>
+                                                <div style="font-size: 14px; color: #64748b;"><t t-esc="plan.description or 'For growing teams that need more.'"/></div>
+                                            </div>
                                         </div>
-                                        <div t-if="plan.trial_period_days > 0" class="d-flex align-items-start mb-2 small text-info">
-                                            <i class="fa fa-gift mr-2 mt-1"/>
-                                            <span>Includes <strong style="color: #0f172a;"><t t-esc="plan.trial_period_days"/> Days</strong> Free Trial</span>
-                                        </div>
+                                        <a href="/subscriptions" style="color: #875A7B; font-weight: 500; font-size: 15px; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+                                            <i class="fa fa-pencil"></i> Change
+                                        </a>
                                     </div>
                                     
-                                    <hr class="my-4" style="border-color: #e2e8f0;"/>
-                                    
-                                    <!-- Price Details -->
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="text-muted">Subtotal:</span>
-                                        <span class="font-weight-bold" style="color: #0f172a;" id="summary_subtotal_val" t-field="plan.total_price" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/>
-                                    </div>
-                                    <div class="d-flex justify-content-between mb-2 text-success" id="summary_discount_row" style="display: none !important;">
-                                        <span class="font-weight-bold">Coupon Discount:</span>
-                                        <span class="font-weight-bold" id="summary_discount_val">-$0.00</span>
-                                    </div>
-                                    <div t-if="plan.trial_period_days > 0" class="d-flex justify-content-between mb-2 text-info">
-                                        <span>Trial discount (100% off):</span>
-                                        <span class="font-weight-bold">-<span t-field="plan.total_price" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/></span>
-                                    </div>
-                                    <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top" style="border-color: #e2e8f0 !important;">
-                                        <span class="font-weight-bold h5 mb-0" style="color: #0f172a;">Today's Payment:</span>
-                                        <div class="text-end">
-                                            <h4 class="font-weight-bold mb-0" style="color: #10b981; font-size: 1.85rem;" id="summary_total_val">
-                                                <t t-if="plan.trial_period_days > 0">
-                                                    <span>$0.00</span>
-                                                </t>
-                                                <t t-else="">
-                                                    <span t-field="plan.total_price" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/>
-                                                </t>
-                                            </h4>
-                                            <small class="text-muted fst-italic" t-if="plan.trial_period_days > 0">First charge after <t t-esc="plan.trial_period_days"/> days</small>
+                                    <!-- Configuration Area -->
+                                    <div class="p-4">
+                                        <div class="d-flex align-items-center gap-2 mb-4">
+                                            <div style="width: 24px; height: 24px; background: #875A7B; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">1</div>
+                                            <span style="font-size: 13px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; text-transform: uppercase;">Configure your plan</span>
+                                        </div>
+                                        
+                                        <div class="row">
+                                            <div class="col-sm-5 mb-3 mb-sm-0">
+                                                <label class="form-label" style="font-size: 15px; color: #334155; font-weight: 500; margin-bottom: 8px;">Seats</label>
+                                                <div style="display: inline-flex; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; height: 42px; background: white;">
+                                                    <button type="button" id="seat-minus" style="background: transparent; border: none; width: 42px; color: #94a3b8; font-size: 20px; outline: none; cursor: pointer;">-</button>
+                                                    <input type="text" t-att-value="int(order.order_line[0].product_uom_qty) if order.order_line else 1" id="seat-input" readonly="1" style="border: none; border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; width: 60px; text-align: center; font-size: 15px; font-weight: 600; color: #0f172a; outline: none;"/>
+                                                    <button type="button" id="seat-plus" style="background: transparent; border: none; width: 42px; color: #334155; font-size: 20px; outline: none; cursor: pointer;">+</button>
+                                                </div>
+                                                <div class="mt-2" style="font-size: 13px; color: #64748b;"><span t-field="plan.total_price" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/> per seat per <t t-esc="plan.billing_period"/></div>
+                                            </div>
+                                            <div class="col-sm-7">
+                                                <label class="form-label" style="font-size: 15px; color: #334155; font-weight: 500; margin-bottom: 8px;">Billing Cycle</label>
+                                                <div style="display: inline-flex; background: #f8fafc; padding: 4px; border-radius: 8px; border: 1px solid #f1f5f9;">
+                                                    <div id="cycle-monthly" class="cycle-btn" style="cursor: pointer; transition: 0.2s; background: #{'white' if plan.billing_period == 'monthly' else 'transparent'}; color: #{'#875A7B' if plan.billing_period == 'monthly' else '#475569'}; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: #{'600' if plan.billing_period == 'monthly' else '500'}; box-shadow: #{'0 1px 3px rgba(0,0,0,0.05)' if plan.billing_period == 'monthly' else 'none'}; border: #{'1px solid #e2e8f0' if plan.billing_period == 'monthly' else '1px solid transparent'}; display: flex; align-items: center;">
+                                                        Monthly
+                                                    </div>
+                                                    <div id="cycle-yearly" class="cycle-btn" style="cursor: pointer; transition: 0.2s; background: #{'white' if plan.billing_period == 'yearly' else 'transparent'}; color: #{'#875A7B' if plan.billing_period == 'yearly' else '#475569'}; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: #{'600' if plan.billing_period == 'yearly' else '500'}; box-shadow: #{'0 1px 3px rgba(0,0,0,0.05)' if plan.billing_period == 'yearly' else 'none'}; border: #{'1px solid #e2e8f0' if plan.billing_period == 'yearly' else '1px solid transparent'}; display: flex; align-items: center;">
+                                                        Yearly 
+                                                        <span style="background: #dcfce7; color: #166534; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 12px; margin-left: 6px;">-17%</span>
+                                                    </div>
+                                                </div>
+                                                <div class="mt-2" style="font-size: 13px; color: #64748b;">Billed every <t t-esc="plan.billing_period"/>. Cancel anytime.</div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <!-- Right: Billing & Payment Card Form -->
-                            <div class="col-lg-7">
-                                <t t-if="coupon_error">
-                                    <div class="alert alert-danger shadow-sm mb-4 d-flex align-items-center" role="alert" style="border-radius: 12px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); color: #ef4444;">
-                                        <i class="fa fa-exclamation-triangle me-2" style="font-size: 1.2rem;"/>
-                                        <span t-esc="coupon_error"/>
-                                    </div>
-                                </t>
                                 
-                                <div class="card checkout-card-modern p-4 bg-white">
-                                    <form t-attf-action="/subscriptions/checkout/#{plan.id}/confirm" method="POST">
-                                        <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
-                                        
-                                        <!-- Step 1: Account Info -->
-                                        <h4 class="font-weight-bold mb-4" style="color: #0f172a;"><span class="saas-step-badge">1</span> Account Information</h4>
-                                        <div class="row mb-4">
-                                            <div class="col-md-6 mb-3 mb-md-0">
-                                                <label for="name" class="form-label checkout-form-label">Full Name</label>
-                                                <input type="text" class="form-control checkout-form-input" id="name" name="name" required="1" placeholder="John Doe" t-att-value="partner.name if partner else (kw.get('name') if kw else '')"/>
+                                <!-- 2. Billing Details -->
+                                <div style="background: white; border: 1px solid #DEE2E6; border-radius: 8px; margin-bottom: 2rem; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                                    <div class="p-4 pb-0 d-flex align-items-center gap-2" style="background: #ffffff;">
+                                        <div style="width: 24px; height: 24px; background: #875A7B; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">2</div>
+                                        <span style="font-size: 13px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; text-transform: uppercase;">Billing Details</span>
+                                    </div>
+                                    <div class="p-4">
+                                        <div class="row g-3 mb-4">
+                                            <div class="col-md-6">
+                                                <label for="name" class="form-label" style="font-size: 14px; font-weight: 500; color: #334155; margin-bottom: 6px;">Full Name</label>
+                                                <input type="text" class="form-control" id="name" name="name" required="1" t-att-value="partner.name if partner else (kw.get('name') if kw else '')" style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; color: #0f172a;"/>
                                             </div>
                                             <div class="col-md-6">
-                                                <label for="email" class="form-label checkout-form-label">Email Address</label>
-                                                <input type="email" class="form-control checkout-form-input" id="email" name="email" required="1" placeholder="john.doe@example.com" t-att-value="partner.email if partner else (kw.get('email') if kw else '')" t-att-readonly="'readonly' if partner else None"/>
+                                                <label for="email" class="form-label" style="font-size: 14px; font-weight: 500; color: #334155; margin-bottom: 6px;">Email</label>
+                                                <input type="email" class="form-control" id="email" name="email" required="1" t-att-value="partner.email if partner else (kw.get('email') if kw else '')" t-att-readonly="'readonly' if partner else None" style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; color: #0f172a;"/>
                                             </div>
                                         </div>
-                                        
-                                        <!-- Step 2: Billing Address -->
-                                        <h4 class="font-weight-bold mb-4" style="color: #0f172a;"><span class="saas-step-badge">2</span> Billing Address</h4>
-                                        <div class="row mb-3">
+                                        <div class="row g-3 mb-4">
+                                            <div class="col-md-6">
+                                                <label for="company" class="form-label" style="font-size: 14px; font-weight: 500; color: #334155; margin-bottom: 6px;">Company</label>
+                                                <input type="text" class="form-control" id="company" name="company" t-att-value="partner.parent_id.name if partner and partner.parent_id else (partner.company_name if partner else '')" style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; color: #0f172a;"/>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="vat" class="form-label" style="font-size: 14px; font-weight: 500; color: #334155; margin-bottom: 6px;">VAT Number <span class="text-muted font-weight-normal">(optional)</span></label>
+                                                <input type="text" class="form-control" id="vat" name="vat" placeholder="e.g. EU123456789" t-att-value="partner.vat if partner else ''" style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; color: #0f172a;"/>
+                                            </div>
+                                        </div>
+                                        <div class="row g-3 mb-4">
                                             <div class="col-12">
-                                                <label for="street" class="form-label checkout-form-label">Street Address</label>
-                                                <input type="text" class="form-control checkout-form-input" id="street" name="street" required="1" placeholder="123 Main St" t-att-value="partner.street if partner else (kw.get('street') if kw else '')"/>
+                                                <label for="street" class="form-label" style="font-size: 14px; font-weight: 500; color: #334155; margin-bottom: 6px;">Street Address</label>
+                                                <input type="text" class="form-control" id="street" name="street" required="1" t-att-value="partner.street if partner else (kw.get('street') if kw else '')" style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; color: #0f172a;"/>
                                             </div>
                                         </div>
-                                        <div class="row mb-4">
-                                            <div class="col-md-6 mb-3 mb-md-0">
-                                                <label for="city" class="form-label checkout-form-label">City</label>
-                                                <input type="text" class="form-control checkout-form-input" id="city" name="city" required="1" placeholder="San Francisco" t-att-value="partner.city if partner else (kw.get('city') if kw else '')"/>
+                                        <div class="row g-3 mb-4">
+                                            <div class="col-md-6">
+                                                <label for="city" class="form-label" style="font-size: 14px; font-weight: 500; color: #334155; margin-bottom: 6px;">City</label>
+                                                <input type="text" class="form-control" id="city" name="city" required="1" t-att-value="partner.city if partner else (kw.get('city') if kw else '')" style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; color: #0f172a;"/>
                                             </div>
-                                            <div class="col-md-3 mb-3 mb-md-0">
-                                                <label for="zip" class="form-label checkout-form-label">ZIP / Postal Code</label>
-                                                <input type="text" class="form-control checkout-form-input" id="zip" name="zip" required="1" placeholder="94105" t-att-value="partner.zip if partner else (kw.get('zip') if kw else '')"/>
+                                            <div class="col-md-6">
+                                                <label for="zip" class="form-label" style="font-size: 14px; font-weight: 500; color: #334155; margin-bottom: 6px;">ZIP / Postal Code</label>
+                                                <input type="text" class="form-control" id="zip" name="zip" required="1" t-att-value="partner.zip if partner else (kw.get('zip') if kw else '')" style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; color: #0f172a;"/>
                                             </div>
-                                            <div class="col-md-3">
-                                                <label for="country_id" class="form-label checkout-form-label">Country</label>
-                                                <select class="form-select checkout-form-input" id="country_id" name="country_id" required="1">
+                                        </div>
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label for="state_id" class="form-label" style="font-size: 14px; font-weight: 500; color: #334155; margin-bottom: 6px;">State / Region</label>
+                                                <select class="form-select" id="state_id" name="state_id" style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; color: #0f172a;">
+                                                    <option value="">Select...</option>
+                                                    <t t-foreach="states" t-as="state">
+                                                        <option
+                                                            t-att-value="state.id"
+                                                            t-att-data-country="state.country_id.id"
+                                                            t-att-selected="partner and partner.state_id and partner.state_id.id == state.id"
+                                                            t-esc="state.name"
+                                                        />
+                                                    </t>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="country_id" class="form-label" style="font-size: 14px; font-weight: 500; color: #334155; margin-bottom: 6px;">Country</label>
+                                                <select class="form-select" id="country_id" name="country_id" required="1" style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 10px 14px; color: #0f172a;">
                                                     <option value="">Select...</option>
                                                     <t t-foreach="countries" t-as="country">
                                                         <option t-att-value="country.id" t-att-selected="(partner and partner.country_id and partner.country_id.id == country.id) or (kw and kw.get('country_id') == str(country.id))" t-esc="country.name"/>
@@ -1068,143 +1007,23 @@
                                                 </select>
                                             </div>
                                         </div>
-                                        
-                                        <!-- Step 3: Payment Details -->
-                                        <h4 class="font-weight-bold mb-4" style="color: #0f172a;"><span class="saas-step-badge">3</span> Choose Payment Method</h4>
-                                        <div class="p-4 mb-4 rounded" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px;">
-                                            <!-- Promo Code / Coupon Section -->
-                                            <div class="mb-2">
-                                                <label for="coupon_code" class="form-label checkout-form-label">Promo / Coupon Code</label>
-                                                <div class="input-group">
-                                                    <input type="text" class="form-control checkout-form-input" id="coupon_code" name="coupon_code" placeholder="e.g. SAVE20" t-att-value="kw.get('coupon_code') if kw else ''" style="border-top-right-radius: 0; border-bottom-right-radius: 0;"/>
-                                                    <button class="btn font-weight-bold" type="button" id="btn_apply_coupon" style="border-top-left-radius: 0; border-bottom-left-radius: 0; background: #4f46e5; border-color: #4f46e5; color: white; font-size: 0.9rem; padding: 10px 20px;">Apply</button>
-                                                </div>
-                                                <div id="coupon_msg" class="mt-2 small" style="display: none;"/>
-                                            </div>
-                                        </div>
-
-                                        <!-- Complete Button -->
-                                        <button type="submit" class="btn btn-pay-modern mt-4 shadow-sm" style="background: linear-gradient(135deg, #4f46e5 0%, #3b82f6 100%);">
-                                            <span>Continue to Payment <i class="fa fa-arrow-right ms-2"></i></span>
-                                        </button>
-                                        
-                                        <p class="text-center text-muted small mt-3 mb-0">
-                                            By continuing, you agree to our Terms of Service. Future renewals occur automatically.
-                                        </p>
-                                    </form>
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-                <script type="text/javascript">
-                    document.addEventListener('DOMContentLoaded', function() {
-                        const btnApply = document.getElementById('btn_apply_coupon');
-                        const couponInput = document.getElementById('coupon_code');
-                        const couponMsg = document.getElementById('coupon_msg');
-                        
-                        const discountRow = document.getElementById('summary_discount_row');
-                        const discountVal = document.getElementById('summary_discount_val');
-                        const totalVal = document.getElementById('summary_total_val');
-                        
-                        if (btnApply &amp;&amp; couponInput) {
-                            btnApply.addEventListener('click', function() {
-                                const couponCode = couponInput.value.trim();
-                                if (!couponCode) {
-                                    couponMsg.style.display = 'none';
-                                    if (discountRow) discountRow.setAttribute('style', 'display: none !important;');
-                                    return;
-                                }
                                 
-                                const planId = "<t t-esc="plan.id"/>";
-                                
-                                btnApply.innerHTML = '<i class="fa fa-spinner fa-spin"></i> Applying...';
-                                btnApply.disabled = true;
-                                
-                                fetch('/subscriptions/checkout/validate_coupon', {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                    },
-                                    body: JSON.stringify({
-                                        jsonrpc: '2.0',
-                                        method: 'call',
-                                        params: {
-                                            coupon_code: couponCode,
-                                            plan_id: planId
-                                        }
-                                    })
-                                })
-                                .then(res => res.json())
-                                .then(data => {
-                                    btnApply.innerHTML = 'Apply';
-                                    btnApply.disabled = false;
-                                    
-                                    const result = data.result;
-                                    if (result &amp;&amp; result.valid) {
-                                        couponMsg.className = 'mt-2 small text-success';
-                                        couponMsg.innerHTML = '<i class="fa fa-check-circle"></i> ' + result.message;
-                                        couponMsg.style.display = 'block';
-                                        
-                                        if (discountRow &amp;&amp; discountVal &amp;&amp; totalVal) {
-                                            discountVal.innerHTML = '-' + result.discount_amount;
-                                            discountRow.style.display = 'flex';
-                                            discountRow.removeAttribute('style'); // Remove the !important display: none
-                                            
-                                            // Update total
-                                            totalVal.innerHTML = result.new_total;
-                                        }
-                                    } else {
-                                        couponMsg.className = 'mt-2 small text-danger';
-                                        couponMsg.innerHTML = '<i class="fa fa-times-circle"></i> ' + (result ? result.message : 'Invalid coupon code.');
-                                        couponMsg.style.display = 'block';
-                                        
-                                        if (discountRow) discountRow.setAttribute('style', 'display: none !important;');
-                                    }
-                                })
-                                .catch(err => {
-                                    btnApply.innerHTML = 'Apply';
-                                    btnApply.disabled = false;
-                                    console.error('Error applying coupon:', err);
-                                });
-                            });
-                        }
-
-                        // We removed custom provider toggles because we are using Odoo's native payment system
-                    });
-                </script>
-            </div>
-        </t>
-    </template>
-
-    <!-- Payment Page using Native Payment Gateways -->
-    <template id="subscription_payment_page" name="Subscription Payment">
-        <t t-call="website.layout">
-            <div id="wrap" class="oe_structure oe_empty">
-                <section class="pt64 pb64 bg-light" style="min-height: 80vh; background: radial-gradient(circle, #fbfbfb 0%, #f3f4f6 100%);">
-                    <div class="container">
-                        <div class="row">
-                            <div class="col-lg-8 mx-auto">
-                                <div class="mb-3">
-                                    <a t-attf-href="/subscriptions/checkout/#{plan.id}" class="btn btn-light shadow-sm text-muted rounded-pill px-4 py-2" style="border: 1px solid rgba(0,0,0,0.05); transition: all 0.2s ease;">
-                                        <i class="fa fa-arrow-left me-2"></i> Back to Details
-                                    </a>
-                                </div>
-                                <h3 class="mb-4 text-center font-weight-bold" style="color: #2d3748;">Complete Your Subscription Payment</h3>
-                                <div class="card shadow-sm border-0" style="border-radius: 12px; background: white;">
-                                    <div class="card-body p-5">
-                                        <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-4">
-                                            <div>
-                                                <h5 class="font-weight-bold text-dark mb-1">Plan: <t t-esc="plan.name"/></h5>
-                                                <small class="text-muted">You will be billed automatically based on this plan's frequency.</small>
-                                            </div>
-                                            <span class="font-weight-bold text-primary h3 mb-0">
-                                                <span t-field="order.amount_total" t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/>
-                                            </span>
-                                        </div>
-                                        
+                                <!-- 3. Payment Method -->
+                                <div style="background: white; border: 1px solid #DEE2E6; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                                    <div class="p-4 border-bottom d-flex align-items-center gap-2" style="background: #ffffff; border-bottom: 1px solid #DEE2E6;">
+                                        <div style="width: 24px; height: 24px; background: #875A7B; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">3</div>
+                                        <span style="font-size: 13px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; text-transform: uppercase;">Payment Method</span>
+                                    </div>
+                                    <div class="p-4">
                                         <!-- Native Odoo Payment Gateway Integration -->
-                                        <div id="payment_method" class="o_not_editable mt-4">
+                                        <div id="payment_method" class="o_not_editable">
+                                            <style>
+                                                #payment_method button[name="o_payment_submit_button"] {
+                                                    display: none !important;
+                                                }
+                                            </style>
                                             <t t-call="payment.form"/>
                                         </div>
                                         <t t-if="not (payment_methods_sudo or tokens_sudo)">
@@ -1215,50 +1034,532 @@
                                     </div>
                                 </div>
                             </div>
+                            
+                            <!-- Right Column (Order Summary) -->
+                            <div class="col-lg-5">
+                                <t t-if="coupon_error">
+                                    <div class="alert alert-danger shadow-sm mb-3" role="alert">
+                                        <i class="fa fa-exclamation-triangle me-2"></i> <span t-esc="coupon_error"/>
+                                    </div>
+                                </t>
+                                
+                                <div style="background: white; border: 1px solid #E9ECEF; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden;">
+                                    <div class="p-4 border-bottom d-flex justify-content-between align-items-center" style="background: white;">
+                                        <h5 class="font-weight-bold mb-0" style="color: #212529; font-size: 16px;">Order Summary</h5>
+                                        <span class="badge" style="background: #F2EAEE; color: #875A7B; font-size: 11px; padding: 5px 8px; border-radius: 4px;"><t t-esc="plan.code"/></span>
+                                    </div>
+                                    
+                                    <div class="p-4">
+                                        <t t-set="seat_qty" t-value="int(order.order_line[0].product_uom_qty) if order.order_line else 1"/>
+                                        <t t-set="subtotal" t-value="plan.total_price * seat_qty"/>
+                                        <div class="d-flex justify-content-between align-items-start mb-1">
+                                            <div>
+                                                <div class="font-weight-bold" style="color: #212529; font-size: 15px;"><t t-esc="plan.name"/></div>
+                                                <div class="text-muted" style="font-size: 12px;"><t t-esc="seat_qty"/> seat(s) × <span t-field="plan.total_price" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/> / <t t-esc="plan.billing_period"/></div>
+                                            </div>
+                                            <div class="font-weight-bold" style="color: #212529; font-size: 15px;">
+                                                <span t-esc="subtotal" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/>
+                                            </div>
+                                        </div>
+                                        
+                                        <hr style="border-color: #E9ECEF; margin: 1.5rem 0;"/>
+                                        
+                                        <div class="d-flex justify-content-between mb-3" style="font-size: 14px; color: #495057;">
+                                            <span>Subtotal</span>
+                                            <span class="font-weight-bold" style="color: #212529;"><span t-esc="subtotal" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/></span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2" style="font-size: 14px; color: #495057;">
+                                            <span>Tax (10%)</span>
+                                            <span class="font-weight-bold" style="color: #212529;">
+                                                <t t-set="tax_amount" t-value="subtotal * 0.1"/>
+                                                <span t-esc="tax_amount" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/>
+                                            </span>
+                                        </div>
+                                        
+                                        <hr style="border-color: #E9ECEF; margin: 1.5rem 0;"/>
+                                        
+                                        <div class="d-flex justify-content-between align-items-end mb-1">
+                                            <div class="font-weight-bold" style="color: #212529; font-size: 16px;">Total</div>
+                                            <div class="font-weight-bold" style="color: #212529; font-size: 24px; line-height: 1;">
+                                                <t t-set="grand_total" t-value="subtotal + tax_amount"/>
+                                                <span t-esc="grand_total" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/>
+                                            </div>
+                                        </div>
+                                        <div class="text-muted mb-4" style="font-size: 12px;">
+                                            Charged today, then every <t t-esc="plan.billing_period"/>
+                                        </div>
+
+                                        <!-- Pay Button -->
+                                        <button
+                                            type="button"
+                                            id="summary_pay_btn"
+                                            class="btn w-100 mb-2"
+                                            style="background: #875A7B; color: white; border-radius: 8px; padding: 14px; font-weight: 700; font-size: 16px; border: none; box-shadow: 0 4px 12px rgba(135,90,123,0.25); display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer;"
+                                            onclick="document.querySelector('button[name=\'o_payment_submit_button\']') &amp;&amp; document.querySelector('button[name=\'o_payment_submit_button\']').click();"
+                                        >
+                                            <i class="fa fa-lock"></i>
+                                            Pay
+                                            <span>
+                                                <t t-set="grand_total_btn" t-value="subtotal + tax_amount"/>
+                                                <t t-esc="grand_total_btn" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/>
+                                            </span>
+                                        </button>
+
+                                        <!-- Terms text -->
+                                        <div class="text-center mb-3" style="color: #94a3b8; font-size: 12px; line-height: 1.5;">
+                                            By clicking pay, you agree to the
+                                            <a href="/terms" style="color: #875A7B; text-decoration: underline;">Terms of Service</a>
+                                            and authorize recurring charges.
+                                        </div>
+
+                                        <hr style="border-color: #E9ECEF; margin: 0.75rem 0;"/>
+
+                                        <div class="d-flex justify-content-center gap-4 mt-2" style="font-size: 12px; font-weight: 600;">
+                                            <div style="color: #00A09D;"><i class="fa fa-lock me-1"></i> Secure payment</div>
+                                            <div style="color: #00A09D;"><i class="fa fa-refresh me-1"></i> Cancel anytime</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </section>
+                    
+                    <script type="text/javascript">
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const countrySelect = document.getElementById('country_id');
+                            const stateSelect = document.getElementById('state_id');
+                            
+                            // Store all state options with their country data-attribute
+                            const allStateOptions = Array.from(stateSelect.querySelectorAll('option[data-country]'));
+                            
+                            // Configuration handlers (Seats and Cycle)
+                            function updateConfig(seats, cycle) {
+                                // Disable interactions and show loading state
+                                document.getElementById('seat-input').style.opacity = '0.5';
+                                
+                                fetch('/subscriptions/checkout/update_config', {
+                                    method: 'POST',
+                                    headers: {'Content-Type': 'application/json'},
+                                    body: JSON.stringify({
+                                        params: {
+                                            plan_id: parseInt('<t t-esc="plan.id"/>'),
+                                            seats: seats,
+                                            cycle: cycle
+                                        }
+                                    })
+                                }).then(res => res.json()).then(data => {
+                                    if(data.result &amp;&amp; data.result.success) {
+                                        if (data.result.redirect) {
+                                            window.location.href = data.result.redirect;
+                                        } else {
+                                            window.location.reload();
+                                        }
+                                    } else if (data.result &amp;&amp; data.result.error) {
+                                        alert(data.result.error);
+                                        document.getElementById('seat-input').style.opacity = '1';
+                                    }
+                                }).catch(() => {
+                                    document.getElementById('seat-input').style.opacity = '1';
+                                });
+                            }
+
+                            document.getElementById('seat-minus')?.addEventListener('click', () => {
+                                let val = parseInt(document.getElementById('seat-input').value);
+                                if(val > 1) updateConfig(val - 1, null);
+                            });
+                            
+                            document.getElementById('seat-plus')?.addEventListener('click', () => {
+                                let val = parseInt(document.getElementById('seat-input').value);
+                                updateConfig(val + 1, null);
+                            });
+                            
+                            document.getElementById('cycle-monthly')?.addEventListener('click', () => {
+                                if ('<t t-esc="plan.billing_period"/>' !== 'monthly') updateConfig(null, 'monthly');
+                            });
+                            
+                            document.getElementById('cycle-yearly')?.addEventListener('click', () => {
+                                if ('<t t-esc="plan.billing_period"/>' !== 'yearly') updateConfig(null, 'yearly');
+                            });
+                            
+                            function filterStates(countryId, selectedStateId) {
+                                // Remove all existing state options except the placeholder
+                                Array.from(stateSelect.options).forEach(opt => {
+                                    if (opt.value !== '') stateSelect.removeChild(opt);
+                                });
+                                
+                                const matching = allStateOptions.filter(opt => 
+                                    !countryId || opt.dataset.country == countryId
+                                );
+                                
+                                if (matching.length === 0) {
+                                    stateSelect.style.display = 'none';
+                                    stateSelect.closest('.col-md-6').style.display = 'none';
+                                } else {
+                                    stateSelect.style.display = '';
+                                    stateSelect.closest('.col-md-6').style.display = '';
+                                    matching.forEach(opt => {
+                                        const clone = opt.cloneNode(true);
+                                        if (selectedStateId &amp;&amp; clone.value == selectedStateId) {
+                                            clone.selected = true;
+                                        }
+                                        stateSelect.appendChild(clone);
+                                    });
+                                }
+                            }
+                            
+                            // Initial filter on page load
+                            const initialCountry = countrySelect ? countrySelect.value : '';
+                            const initialState = stateSelect ? stateSelect.querySelector('option[selected]') : null;
+                            filterStates(initialCountry, initialState ? initialState.value : null);
+                            
+                            // Filter when country changes
+                            if (countrySelect) {
+                                countrySelect.addEventListener('change', function() {
+                                    filterStates(this.value, null);
+                                });
+                            }
+                            
+                            // Auto-save address on input (debounced)
+                            let timeout = null;
+                            const inputs = document.querySelectorAll('#name, #email, #street, #city, #zip, #country_id, #state_id');
+                            
+                            inputs.forEach(input => {
+                                input.addEventListener('input', function() {
+                                    clearTimeout(timeout);
+                                    timeout = setTimeout(() => {
+                                        const data = {
+                                            name: document.getElementById('name') ? document.getElementById('name').value : '',
+                                            email: document.getElementById('email') ? document.getElementById('email').value : '',
+                                            street: document.getElementById('street') ? document.getElementById('street').value : '',
+                                            city: document.getElementById('city') ? document.getElementById('city').value : '',
+                                            zip_code: document.getElementById('zip') ? document.getElementById('zip').value : '',
+                                            country_id: document.getElementById('country_id') ? document.getElementById('country_id').value : '',
+                                            state_id: document.getElementById('state_id') ? document.getElementById('state_id').value : '',
+                                        };
+                                        fetch('/subscriptions/checkout/save_address', {
+                                            method: 'POST',
+                                            headers: {'Content-Type': 'application/json'},
+                                            body: JSON.stringify({params: data})
+                                        });
+                                    }, 500);
+                                });
+                            });
+                        });
+                    </script>
+                </div>
             </div>
+        </t>
+    </template>
+
+
+
+    <!-- Payment Page using Native Payment Gateways -->
+    <template id="subscription_payment_page" name="Subscription Payment">
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+            <t t-set="page_name" t-value="'subscriptions'"/>
+            <style>
+                .checkout-wrap { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; color: #212529; }
+                .checkout-stepper { display: flex; align-items: center; max-width: 650px; margin-bottom: 2.5rem; margin-top: 1rem; }
+                .step { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; }
+                .step-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+                
+                button[name="o_payment_submit_button"] {
+                    background: #875A7B !important;
+                    color: white !important;
+                    border: none !important;
+                    border-radius: 6px !important;
+                    padding: 14px !important;
+                    font-weight: 600 !important;
+                    font-size: 15px !important;
+                    box-shadow: 0 4px 6px rgba(135, 90, 123, 0.2) !important;
+                    width: 100% !important;
+                    margin-top: 1rem !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    gap: 8px !important;
+                }
+                button[name="o_payment_submit_button"]::before {
+                    content: "\f023";
+                    font-family: FontAwesome;
+                }
+                .o_payment_form {
+                    padding: 0 !important;
+                }
+            </style>
+            <div id="wrap" class="oe_structure oe_empty pb-5 checkout-wrap">
+                <div class="container mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <h2 class="font-weight-bold mb-0" style="color: #212529; font-size: 28px;">Checkout</h2>
+                        <a t-attf-href="/subscriptions/checkout/#{plan.id}" class="btn btn-light shadow-sm text-muted rounded-pill px-4 py-2" style="border: 1px solid rgba(0,0,0,0.05); transition: all 0.2s ease;">
+                            <i class="fa fa-arrow-left me-2"></i> Back to Details
+                        </a>
+                    </div>
+                    <p class="mb-4" style="color: #6C757D; font-size: 14px;">Complete your subscription payment.</p>
+                    
+                    <div class="checkout-stepper">
+                        <div class="step step-complete">
+                            <div class="step-icon" style="background: #00A09D; color: white;"><i class="fa fa-check"></i></div>
+                            <span style="color: #212529;">Choose Plan</span>
+                        </div>
+                        <div class="flex-grow-1 mx-3" style="height: 2px; background: #00A09D;"></div>
+                        <div class="step step-complete">
+                            <div class="step-icon" style="background: #00A09D; color: white;"><i class="fa fa-check"></i></div>
+                            <span style="color: #212529;">Checkout</span>
+                        </div>
+                        <div class="flex-grow-1 mx-3" style="height: 2px; background: #00A09D;"></div>
+                        <div class="step step-active">
+                            <div class="step-icon" style="background: #875A7B; color: white;">3</div>
+                            <span style="color: #212529;">Confirmation</span>
+                        </div>
+                    </div>
+                        
+                    <div class="row align-items-start">
+                            <!-- Left Column (Payment Form) -->
+                            <div class="col-lg-7 pr-lg-5 mb-4">
+                                <div style="background: white; border: 1px solid #DEE2E6; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                                    <div class="p-4 border-bottom d-flex align-items-center gap-2" style="background: #ffffff; border-bottom: 1px solid #DEE2E6;">
+                                        <div style="width: 24px; height: 24px; background: #875A7B; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">3</div>
+                                        <span style="font-size: 13px; font-weight: 700; color: #64748b; letter-spacing: 0.05em; text-transform: uppercase;">Payment Method</span>
+                                    </div>
+                                    <div class="p-4">
+                                        <!-- Native Odoo Payment Gateway Integration -->
+                                        <div id="payment_method" class="o_not_editable">
+                                            <t t-call="payment.form"/>
+                                        </div>
+                                        <t t-if="not (payment_methods_sudo or tokens_sudo)">
+                                            <div class="alert alert-warning mt-3 border-0 shadow-sm" style="border-radius: 8px;">
+                                                <i class="fa fa-exclamation-triangle me-2"></i> No payment providers are fully configured. Please configure a payment provider (e.g. Stripe, Demo Simulator, Wire Transfer) in the backend.
+                                            </div>
+                                        </t>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Right Column (Order Summary) -->
+                            <div class="col-lg-5">
+                                <div style="background: white; border: 1px solid #E9ECEF; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden;">
+                                    <div class="p-4 border-bottom d-flex justify-content-between align-items-center" style="background: white;">
+                                        <h5 class="font-weight-bold mb-0" style="color: #212529; font-size: 16px;">Order Summary</h5>
+                                        <span class="badge" style="background: #F2EAEE; color: #875A7B; font-size: 11px; padding: 5px 8px; border-radius: 4px;"><t t-esc="plan.code"/></span>
+                                    </div>
+                                    
+                                    <div class="p-4">
+                                        <div class="d-flex justify-content-between align-items-start mb-1">
+                                            <div>
+                                                <div class="font-weight-bold" style="color: #212529; font-size: 15px;"><t t-esc="plan.name"/></div>
+                                                <div class="text-muted" style="font-size: 12px;">1 seat × <span t-field="order.amount_untaxed" t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/> / <t t-esc="plan.billing_period"/></div>
+                                            </div>
+                                            <div class="font-weight-bold" style="color: #212529; font-size: 15px;">
+                                                <span t-field="order.amount_untaxed" t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/>
+                                            </div>
+                                        </div>
+                                        
+                                        <hr style="border-color: #E9ECEF; margin: 1.5rem 0;"/>
+                                        
+                                        <div class="d-flex justify-content-between mb-3" style="font-size: 14px; color: #495057;">
+                                            <span>Subtotal</span>
+                                            <span class="font-weight-bold" style="color: #212529;"><span t-field="order.amount_untaxed" t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/></span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2" style="font-size: 14px; color: #495057;">
+                                            <span>Tax</span>
+                                            <span class="font-weight-bold" style="color: #212529;">
+                                                <span t-field="order.amount_tax" t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/>
+                                            </span>
+                                        </div>
+                                        
+                                        <hr style="border-color: #E9ECEF; margin: 1.5rem 0;"/>
+                                        
+                                        <div class="d-flex justify-content-between align-items-end mb-1">
+                                            <div class="font-weight-bold" style="color: #212529; font-size: 16px;">Total</div>
+                                            <div class="font-weight-bold" style="color: #212529; font-size: 24px; line-height: 1;">
+                                                <span t-field="order.amount_total" t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/>
+                                            </div>
+                                        </div>
+                                        <div class="text-muted mb-4" style="font-size: 12px;">
+                                            Charged today, then every <t t-esc="plan.billing_period"/>
+                                        </div>
+                                        
+                                        <div class="d-flex justify-content-center gap-4 mt-4" style="font-size: 12px; font-weight: 600;">
+                                            <div style="color: #00A09D;"><i class="fa fa-lock me-1"></i> Secure payment</div>
+                                            <div style="color: #00A09D;"><i class="fa fa-refresh me-1"></i> Cancel anytime</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
         </t>
     </template>
 
     <!-- Success Screen -->
     <template id="subscription_success_page" name="Subscription Success">
-        <t t-call="website.layout">
-            <div id="wrap" class="oe_structure oe_empty">
-                <section class="pt64 pb64 d-flex align-items-center justify-content-center" style="min-height: 80vh; background: radial-gradient(circle, #fbfbfb 0%, #f3f4f6 100%);">
-                    <div class="container text-center max-w-lg">
-                        <div class="card border-0 shadow-lg p-5" style="border-radius: 24px; background: white;">
-                            <!-- Animated Success icon wrapper -->
-                            <div class="d-inline-flex align-items-center justify-content-center mb-4" style="width: 100px; height: 100px; border-radius: 50%; background-color: #d1e7dd; color: #0f5132;">
-                                <i class="fa fa-check-circle fa-4x"></i>
+        <t t-call="portal.portal_layout">
+            <t t-set="breadcrumbs_searchbar" t-value="True"/>
+            <t t-set="page_name" t-value="'subscriptions'"/>
+            <style>
+                .success-wrap { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; min-height: 80vh; padding-bottom: 3rem; }
+                .checkout-stepper { display: flex; align-items: center; max-width: 650px; margin-bottom: 2.5rem; margin-top: 1.5rem; }
+                .step { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 500; }
+                .step-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; }
+
+                .success-hero { background: linear-gradient(160deg, #e8f8f7 0%, #f0f7ff 60%, #faf5ff 100%); border-radius: 16px; padding: 3rem 2rem 2.5rem; text-align: center; margin-bottom: 1.5rem; border: 1px solid #e2e8f0; }
+                .success-icon-ring { width: 80px; height: 80px; border-radius: 50%; background: #00A09D; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1.25rem; box-shadow: 0 0 0 12px rgba(0,160,157,0.12); }
+                .success-icon-ring i { font-size: 36px; color: white; }
+                .success-label { font-size: 12px; font-weight: 700; color: #00A09D; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 0.5rem; }
+                .success-heading { font-size: 32px; font-weight: 800; color: #0f172a; margin-bottom: 0.75rem; }
+                .success-sub { font-size: 15px; color: #475569; line-height: 1.7; margin-bottom: 1.75rem; max-width: 480px; margin-left: auto; margin-right: auto; }
+
+                .btn-manage { background: #875A7B; color: white; border: none; border-radius: 8px; padding: 12px 28px; font-weight: 600; font-size: 15px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: background 0.2s; }
+                .btn-manage:hover { background: #6d4763; color: white; text-decoration: none; }
+                .btn-home { background: white; color: #334155; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 28px; font-weight: 600; font-size: 15px; text-decoration: none; display: inline-flex; align-items: center; transition: border-color 0.2s; }
+                .btn-home:hover { border-color: #875A7B; color: #875A7B; text-decoration: none; }
+
+                .receipt-card { background: white; border: 1px solid #e2e8f0; border-radius: 14px; padding: 2rem; margin-bottom: 1.5rem; }
+                .receipt-divider { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+                .receipt-divider::before, .receipt-divider::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
+                .receipt-divider span { font-size: 11px; font-weight: 700; color: #94a3b8; letter-spacing: 0.08em; text-transform: uppercase; }
+                .receipt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem 2rem; }
+                .receipt-item-label { font-size: 11px; font-weight: 700; color: #94a3b8; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
+                .receipt-item-value { font-size: 15px; font-weight: 600; color: #0f172a; }
+                .receipt-item-value.amount { font-size: 26px; color: #875A7B; }
+                .receipt-item-value.code { font-family: monospace; font-size: 14px; background: #f8fafc; padding: 3px 8px; border-radius: 4px; border: 1px solid #e2e8f0; display: inline-block; }
+
+                .action-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: block; transition: border-color 0.2s, box-shadow 0.2s; }
+                .action-card:hover { border-color: #875A7B; box-shadow: 0 4px 12px rgba(135,90,123,0.1); text-decoration: none; color: inherit; }
+                .action-card-icon { width: 44px; height: 44px; background: #f5f0f4; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; color: #875A7B; font-size: 18px; }
+                .action-card-title { font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 4px; }
+                .action-card-desc { font-size: 13px; color: #64748b; line-height: 1.5; margin-bottom: 0.75rem; }
+                .action-card-link { font-size: 13px; font-weight: 600; color: #875A7B; display: flex; align-items: center; gap: 6px; }
+                .what-next-label { font-size: 12px; font-weight: 700; color: #94a3b8; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 1rem; }
+            </style>
+
+            <div id="wrap" class="oe_structure oe_empty success-wrap">
+                <div class="container mt-4" style="max-width: 740px;">
+
+                    <!-- Step Indicator -->
+                    <div class="checkout-stepper">
+                        <div class="step">
+                            <div class="step-icon" style="background: #00A09D; color: white;"><i class="fa fa-check"></i></div>
+                            <span style="color: #475569;">Choose Plan</span>
+                        </div>
+                        <div class="flex-grow-1 mx-3" style="height: 2px; background: #00A09D;"></div>
+                        <div class="step">
+                            <div class="step-icon" style="background: #00A09D; color: white;"><i class="fa fa-check"></i></div>
+                            <span style="color: #475569;">Checkout</span>
+                        </div>
+                        <div class="flex-grow-1 mx-3" style="height: 2px; background: #875A7B;"></div>
+                        <div class="step">
+                            <div class="step-icon" style="background: #875A7B; color: white;">3</div>
+                            <span style="color: #0f172a; font-weight: 600;">Confirmation</span>
+                        </div>
+                    </div>
+
+                    <!-- Hero Section -->
+                    <div class="success-hero">
+                        <div class="success-icon-ring">
+                            <i class="fa fa-check"></i>
+                        </div>
+                        <div class="success-label">Payment Successful</div>
+                        <h1 class="success-heading">You're all set<t t-if="partner">, <t t-esc="partner.name.split()[0] if partner.name else ''"/>!</t><t t-else="">!</t></h1>
+                        <p class="success-sub">
+                            Thanks for subscribing to <strong t-esc="plan.name if plan else 'your plan'"/>. We've sent a receipt to
+                            <strong t-esc="partner.email if partner and partner.email else 'your email'"/>. Your subscription is active right now.
+                        </p>
+                        <div class="d-flex justify-content-center gap-3 flex-wrap">
+                            <a href="/my/subscriptions" class="btn-manage">Manage Subscription <i class="fa fa-arrow-right"></i></a>
+                            <a href="/" class="btn-home">Back to Home</a>
+                        </div>
+                    </div>
+
+                    <!-- Receipt Card -->
+                    <div class="receipt-card">
+                        <div class="receipt-divider"><span>Receipt</span></div>
+                        <div class="receipt-grid">
+                            <div>
+                                <div class="receipt-item-label">Amount Charged</div>
+                                <div class="receipt-item-value amount">
+                                    <t t-if="subscription">
+                                        <span t-field="subscription.amount_total" t-options="{'widget': 'monetary', 'display_currency': subscription.currency_id}"/>
+                                    </t>
+                                    <t t-else="">—</t>
+                                </div>
                             </div>
-                            
-                            <h2 class="font-weight-extrabold mb-3" style="color: #2d3748;">Subscription Received!</h2>
-                            <p class="lead text-muted mb-4" t-esc="message"/>
-                            
-                            <div class="bg-light p-4 mb-5" style="border-radius: 16px;">
-                                <div class="row mb-2">
-                                    <div class="col-6 text-start text-muted font-weight-semibold">Selected Plan:</div>
-                                    <div class="col-6 text-end font-weight-bold text-dark"><span t-esc="plan.name"/></div>
-                                </div>
-                                <div class="row mb-2" t-if="subscription">
-                                    <div class="col-6 text-start text-muted font-weight-semibold">Reference ID:</div>
-                                    <div class="col-6 text-end font-weight-bold text-primary"><span t-esc="subscription.name"/></div>
-                                </div>
-                                <div class="row" t-if="subscription">
-                                    <div class="col-6 text-start text-muted font-weight-semibold">Billing Term:</div>
-                                    <div class="col-6 text-end text-muted text-capitalize"><t t-esc="subscription.plan_id.billing_period"/></div>
+                            <div>
+                                <div class="receipt-item-label">Plan</div>
+                                <div class="receipt-item-value">
+                                    <t t-if="plan"><t t-esc="plan.name"/> · billed <t t-esc="plan.billing_period or 'monthly'"/></t>
+                                    <t t-else="">—</t>
                                 </div>
                             </div>
-                            
-                            <div class="d-flex flex-column flex-sm-row gap-2 justify-content-center">
-                                <a href="/my/subscriptions" class="btn btn-primary btn-lg rounded-pill px-4 font-weight-bold shadow-sm" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">Go to Subscriptions Portal</a>
-                                <a href="/subscriptions" class="btn btn-outline-primary btn-lg rounded-pill px-4 font-weight-bold ms-sm-2">Browse More Plans</a>
+                            <div>
+                                <div class="receipt-item-label">Subscription</div>
+                                <div class="receipt-item-value">
+                                    <span class="code" t-esc="subscription.name if subscription else '—'"/>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="receipt-item-label">Invoice</div>
+                                <div class="receipt-item-value">
+                                    <t t-if="invoice">
+                                        <span class="code" t-esc="invoice.name"/>
+                                    </t>
+                                    <t t-else=""><span style="color: #94a3b8;">Generating…</span></t>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="receipt-item-label">Next Billing Date</div>
+                                <div class="receipt-item-value">
+                                    <t t-if="next_billing">
+                                        <t t-esc="next_billing.strftime('%b %d, %Y')"/>
+                                    </t>
+                                    <t t-else="">—</t>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="receipt-item-label">Recurring</div>
+                                <div class="receipt-item-value" style="color: #0f172a;">
+                                    <t t-if="subscription">
+                                        <span t-field="subscription.amount_total" t-options="{'widget': 'monetary', 'display_currency': subscription.currency_id}"/>
+                                        every <t t-esc="plan.billing_period or 'month'"/>
+                                    </t>
+                                    <t t-else="">—</t>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </section>
+
+                    <!-- What's Next -->
+                    <div class="what-next-label">What's Next</div>
+                    <div class="row g-3 mb-5">
+                        <div class="col-md-4">
+                            <a href="/my/subscriptions" class="action-card">
+                                <div class="action-card-icon"><i class="fa fa-envelope-o"></i></div>
+                                <div class="action-card-title">Check your inbox</div>
+                                <div class="action-card-desc">A receipt and welcome email are on their way to <t t-esc="partner.email if partner and partner.email else 'your email'"/>.</div>
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a t-attf-href="/my/invoices#{('?search=' + invoice.name) if invoice else ''}" class="action-card">
+                                <div class="action-card-icon"><i class="fa fa-download"></i></div>
+                                <div class="action-card-title">Download your invoice</div>
+                                <div class="action-card-desc">A PDF copy is available in your invoices.</div>
+                                <div class="action-card-link">View invoices <i class="fa fa-arrow-right"></i></div>
+                            </a>
+                        </div>
+                        <div class="col-md-4">
+                            <a href="/my/home" class="action-card">
+                                <div class="action-card-icon"><i class="fa fa-users"></i></div>
+                                <div class="action-card-title">Set up your team</div>
+                                <div class="action-card-desc">Invite teammates and start collaborating.</div>
+                                <div class="action-card-link">Go to account <i class="fa fa-arrow-right"></i></div>
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </t>
     </template>
@@ -1270,4 +1571,64 @@
         <field name="parent_id" ref="website.main_menu"/>
         <field name="sequence" type="int">55</field>
     </record>
+
+    <!-- Already Subscribed Guard Page -->
+    <template id="subscription_already_subscribed" name="Already Subscribed">
+        <t t-call="portal.portal_layout">
+            <t t-set="page_name" t-value="'subscriptions'"/>
+            <style>
+                .already-wrap { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; min-height: 70vh; display: flex; align-items: center; }
+                .already-card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 3rem 2.5rem; text-align: center; max-width: 520px; margin: 3rem auto; box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
+                .already-icon { width: 72px; height: 72px; border-radius: 50%; background: #fef3c7; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 1.5rem; font-size: 32px; color: #d97706; }
+                .already-heading { font-size: 24px; font-weight: 800; color: #0f172a; margin-bottom: 0.5rem; }
+                .already-sub { font-size: 15px; color: #475569; line-height: 1.7; margin-bottom: 2rem; }
+                .already-badge { display: inline-block; background: #d1fae5; color: #065f46; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; margin-bottom: 1rem; }
+                .already-meta { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 2rem; text-align: left; }
+                .already-meta-row { display: flex; justify-content: space-between; font-size: 14px; color: #475569; padding: 4px 0; }
+                .already-meta-row strong { color: #0f172a; }
+                .btn-manage-sub { background: #875A7B; color: white; border: none; border-radius: 8px; padding: 12px 28px; font-weight: 600; font-size: 15px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px; transition: background 0.2s; }
+                .btn-manage-sub:hover { background: #6d4763; color: white; text-decoration: none; }
+                .btn-browse { background: white; color: #334155; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px 24px; font-weight: 600; font-size: 15px; text-decoration: none; display: inline-flex; align-items: center; transition: border-color 0.2s; }
+                .btn-browse:hover { border-color: #875A7B; color: #875A7B; text-decoration: none; }
+            </style>
+            <div id="wrap" class="oe_structure oe_empty already-wrap">
+                <div class="container">
+                    <div class="already-card">
+                        <div class="already-icon"><i class="fa fa-check-circle"></i></div>
+                        <div class="already-badge">&#x2713; Active Subscription</div>
+                        <h1 class="already-heading">You're already subscribed!</h1>
+                        <p class="already-sub">
+                            You already have an active <strong t-esc="plan.name"/> subscription.
+                            No need to subscribe again — you're all set!
+                        </p>
+
+                        <div class="already-meta" t-if="subscription">
+                            <div class="already-meta-row">
+                                <span>Plan</span>
+                                <strong t-esc="plan.name"/>
+                            </div>
+                            <div class="already-meta-row">
+                                <span>Subscription ID</span>
+                                <strong t-esc="subscription.name"/>
+                            </div>
+                            <div class="already-meta-row">
+                                <span>Status</span>
+                                <strong style="color: #00A09D;">In Progress</strong>
+                            </div>
+                            <div class="already-meta-row">
+                                <span>Billing</span>
+                                <strong t-esc="plan.billing_period or 'monthly'"/>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-center gap-3 flex-wrap">
+                            <a href="/my/subscriptions" class="btn-manage-sub">Manage Subscription <i class="fa fa-arrow-right"></i></a>
+                            <a href="/subscriptions" class="btn-browse">Browse Plans</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
 </odoo>

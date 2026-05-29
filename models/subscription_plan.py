@@ -73,6 +73,7 @@ class SubscriptionPlan(models.Model):
     is_add_products = fields.Boolean(string='Add Products')
     is_renew = fields.Boolean(string='Renew')
     is_popular = fields.Boolean(string='Most Popular')
+    supports_teams = fields.Boolean(string='Supports Team Members', help='Check this if the plan allows users to invite team members.')
 
     optional_plan_ids = fields.Many2many(
         'subscription.plan',

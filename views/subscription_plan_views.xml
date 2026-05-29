@@ -70,6 +70,7 @@
                             <field name="is_add_products" string="Add Products"/>
                             <field name="is_renew" string="Renew"/>
                             <field name="is_popular" string="Most Popular"/>
+                            <field name="supports_teams" string="Supports Team Members"/>
                             <field name="optional_plan_ids" string="Optional Plans" widget="many2many_tags" placeholder="Select plans..."/>
                         </group>
                     </group>

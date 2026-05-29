@@ -3,34 +3,12 @@ from odoo import http, _
 from odoo.http import request
 from odoo.addons.portal.controllers.portal import CustomerPortal, pager as portal_pager
 from odoo.addons.payment.controllers.portal import PaymentPortal
-
+from odoo.addons.payment.controllers.post_processing import PaymentPostProcessing
 
 class SubscriptionController(http.Controller):
     """Subscription Controller managing the public frontend website plans,
     subscribe routes, checkouts, coupon validation, and payment endpoints."""
 
-    @http.route(['/debug/plans'], type='http', auth="public", website=True)
-    def debug_plans(self, **kw):
-        plans = request.env['subscription.plan'].sudo().search([])
-        data = []
-        for p in plans:
-            ramp_data = [{'start': r.start_cycle, 'price': r.price_unit} for r in p.ramp_ids]
-            pricing_data = [r.price for r in p.pricing_ids]
-            data.append(f"Plan: {p.name} | Total Computed Price: {p.total_price} | Product Base List Price: {p.product_id.with_context(pricelist=False).list_price if p.product_id else 'None'} | Ramps: {ramp_data} | Pricing Lines: {pricing_data}")
-        
-        data.append("<br/><b>Recent Sales Orders:</b>")
-        orders = request.env['sale.order'].sudo().search([('plan_id', '!=', False)], order='id desc', limit=5)
-        for o in orders:
-            lines = [f"[Product ID: {l.product_id.id}, Product: {l.product_id.name}, recurring_ok: {l.product_id.recurring_ok}, Qty: {l.product_uom_qty}, Price Unit: {l.price_unit}, Subtotal: {l.price_subtotal}]" for l in o.order_line]
-            data.append(f"Order: {o.name} | Amount Total: {o.amount_total} | Locked: {o.is_price_locked} | Lines: {lines}")
-            
-        data.append("<br/><b>Products Check:</b>")
-        recurring_products = request.env['product.product'].sudo().search([('recurring_ok', '=', True)])
-        data.append(f"Total Products with recurring_ok=True: {len(recurring_products)}")
-        for p in recurring_products:
-            data.append(f"Product: {p.name} | recurring_ok: {p.recurring_ok} | subscription_plan_id: {p.subscription_plan_id.name if p.subscription_plan_id else 'None'}")
-            
-        return request.make_response("<br/>".join(data))
 
     @http.route(['/subscriptions'], type='http', auth="public", website=True)
     def subscription_plans(self, **kw):
@@ -292,42 +270,6 @@ class SubscriptionController(http.Controller):
             if not clean_code:
                 return {'valid': False, 'message': 'Please enter a coupon code.'}
 
-            # Fully generic self-healing database repair hook
-            if clean_code:
-                # 1. Check in loyalty.rule (for promo codes)
-                rule = request.env['loyalty.rule'].sudo().with_context(active_test=False).search([('code', '=ilike', clean_code)], limit=1)
-                if rule:
-                    try:
-                        prog = rule.program_id
-                        if not prog.sale_ok or not prog.ecommerce_ok or not prog.active:
-                            prog.write({
-                                'sale_ok': True,
-                                'ecommerce_ok': True,
-                                'active': True,
-                            })
-                    except Exception:
-                        pass
-                else:
-                    # 2. Check in loyalty.card (for coupon codes)
-                    card = request.env['loyalty.card'].sudo().with_context(active_test=False).search([('code', '=ilike', clean_code)], limit=1)
-                    if card:
-                        try:
-                            prog = card.program_id
-                            if not prog.sale_ok or not prog.ecommerce_ok or not prog.active:
-                                prog.write({
-                                    'sale_ok': True,
-                                    'ecommerce_ok': True,
-                                    'active': True,
-                                })
-                            # Make sure card has points and is active
-                            min_points = min(prog.reward_ids.mapped('required_points')) if prog.reward_ids else 1
-                            if card.points < min_points or not card.active:
-                                card.write({
-                                    'points': max(card.points, min_points, 10),
-                                    'active': True,
-                                })
-                        except Exception:
-                            pass
 
             # 1. Search in loyalty.rule (for promo codes)
             rule = request.env['loyalty.rule'].sudo().search([('code', '=ilike', clean_code)], limit=1)
@@ -474,6 +416,8 @@ class SubscriptionController(http.Controller):
 
         order = request.env['sale.order'].sudo().create({
             'partner_id': partner.id,
+            'partner_invoice_id': partner.id,
+            'partner_shipping_id': partner.id,
             'plan_id': plan.id,
             'state': 'draft',
             'is_price_locked': True,
@@ -620,12 +564,18 @@ class SubscriptionController(http.Controller):
                 order_sudo.action_confirm()
             except Exception:
                 pass  # Already confirmed or payment gateway handled it
+                
+        # Instantly generate the first invoice if it hasn't been generated yet
+        # (This catches orders confirmed by the payment gateway before reaching this page)
+        if not order_sudo.invoice_ids and order_sudo.state in ('sale', 'done'):
+            try:
+                order_sudo._generate_recurring_invoice()
+            except Exception:
+                pass
 
-        # Get last invoice for this order
-        invoice = request.env['account.move'].sudo().search([
-            ('invoice_origin', '=', order_sudo.name),
-            ('move_type', '=', 'out_invoice'),
-        ], order='id desc', limit=1)
+        # Get last invoice directly linked to this order
+        invoices = order_sudo.invoice_ids.filtered(lambda i: i.move_type == 'out_invoice')
+        invoice = invoices.sorted(key=lambda i: i.id, reverse=True)[0] if invoices else request.env['account.move']
 
         # Calculate next billing date
         from datetime import date
@@ -650,9 +600,88 @@ class SubscriptionController(http.Controller):
             'message': 'Your transaction was successful, and your subscription is now active!',
         })
 
+    @http.route(['/subscriptions/api/trigger_emails/<int:order_id>'], type='http', auth="public", website=True, csrf=False)
+    def trigger_subscription_emails(self, order_id, **kw):
+        """API endpoint to trigger welcome and receipt emails asynchronously."""
+        import json
+        
+        order_sudo = request.env['sale.order'].sudo().browse(order_id)
+        if not order_sudo.exists():
+            return request.make_response(json.dumps({'status': 'error', 'message': 'Order not found'}), headers=[('Content-Type', 'application/json')])
+            
+        # Security Validation
+        access_token = kw.get('access_token')
+        if not request.env.user._is_public():
+            if order_sudo.partner_id != request.env.user.partner_id and not request.env.user.has_group('base.group_user'):
+                return request.make_response(json.dumps({'status': 'error', 'message': 'Access denied'}), headers=[('Content-Type', 'application/json')])
+        else:
+            if order_sudo.access_token and order_sudo.access_token != access_token:
+                return request.make_response(json.dumps({'status': 'error', 'message': 'Access denied'}), headers=[('Content-Type', 'application/json')])
+
+        if order_sudo.state not in ['sale', 'done']:
+            return request.make_response(json.dumps({'status': 'error', 'message': 'Invalid order state'}), headers=[('Content-Type', 'application/json')])
+
+        if not order_sudo.partner_id.email:
+            return request.make_response(json.dumps({'status': 'error', 'message': 'Missing customer email'}), headers=[('Content-Type', 'application/json')])
+            
+        welcome_queued = False
+        receipt_queued = False
+        # Trigger Welcome Email synchronously
+        try:
+            sale_template = request.env.ref('sale.mail_template_sale_confirmation', raise_if_not_found=False)
+            if sale_template:
+                # Force send_mail to bypass follower preferences and guarantee a mail.mail record
+                sale_template.sudo().send_mail(order_sudo.id, force_send=True)
+        except Exception as e:
+            order_sudo.message_post(body="Failed to trigger Welcome Email: %s" % str(e))
+            
+        # Trigger Receipt/Invoice Email synchronously
+        try:
+            invoice = request.env['account.move'].sudo().search([
+                ('invoice_origin', '=', order_sudo.name),
+                ('move_type', '=', 'out_invoice'),
+                ('state', '=', 'posted')
+            ], order='id desc', limit=1)
+            if invoice:
+                inv_template = request.env.ref('account.email_template_edi_invoice', raise_if_not_found=False)
+                if inv_template:
+                    inv_template.sudo().send_mail(invoice.id, force_send=True)
+        except Exception as e:
+            order_sudo.message_post(body="Failed to trigger Receipt Email: %s" % str(e))
+
+        return request.make_response(json.dumps({
+            'status': 'success',
+            'email': order_sudo.partner_id.email,
+        }), headers=[('Content-Type', 'application/json')])
+
+
+from odoo.addons.account.controllers.portal import PortalAccount
 
 class CustomerPortalSubscription(CustomerPortal):
     """Customer Portal Subscription controller."""
+
+class CustomPortalAccount(PortalAccount):
+    """Extend default account portal to support custom invoice tabs."""
+
+    def _get_account_searchbar_filters(self):
+        filters = super()._get_account_searchbar_filters()
+        
+        from odoo import fields
+        
+        filters.update({
+            'paid': {'label': 'Paid', 'domain': [('payment_state', 'in', ('paid', 'in_payment', 'reversed'))]},
+            'awaiting': {'label': 'Awaiting Payment', 'domain': [
+                ('state', 'not in', ('cancel', 'draft')),
+                ('payment_state', 'in', ('not_paid', 'partial')),
+                '|', ('invoice_date_due', '>=', fields.Date.today()), ('invoice_date_due', '=', False)
+            ]},
+            'overdue_invoices': {'label': 'Overdue', 'domain': [
+                ('state', 'not in', ('cancel', 'draft')),
+                ('payment_state', 'in', ('not_paid', 'partial')),
+                ('invoice_date_due', '<', fields.Date.today())
+            ]},
+        })
+        return filters
 
     def _prepare_home_portal_values(self, selectors=None):
         """Inject the active subscription count into the customer portal home values."""
@@ -703,6 +732,45 @@ class CustomerPortalSubscription(CustomerPortal):
         )
         subscriptions = SaleOrder.search(domain, limit=10, offset=pager['offset'])
 
+        # --- Metrics Calculation ---
+        from odoo import fields
+        AccountMove = request.env['account.move'].sudo()
+        today = fields.Date.today()
+        
+        # Outstanding & Overdue Invoices
+        unpaid_invoices = AccountMove.search([
+            ('commercial_partner_id', '=', partner.commercial_partner_id.id),
+            ('state', 'not in', ('cancel', 'draft')),
+            ('payment_state', 'in', ('not_paid', 'partial')),
+            ('move_type', '=', 'out_invoice')
+        ])
+        portal_outstanding_amount = sum(unpaid_invoices.mapped('amount_residual'))
+        portal_overdue_count = sum(1 for inv in unpaid_invoices if inv.invoice_date_due and inv.invoice_date_due < today)
+
+        # Global MRR & Next Invoice
+        all_active_subs = SaleOrder.search(base_domain + searchbar_filters['in_progress']['domain'])
+        portal_mrr = 0.0
+        portal_next_invoice_date = False
+        portal_next_invoice_amount = 0.0
+        portal_next_invoice_plan = ""
+
+        subs_with_next_date = all_active_subs.filtered(lambda s: s.next_invoice_date).sorted(key=lambda s: s.next_invoice_date)
+        if subs_with_next_date:
+            first_sub = subs_with_next_date[0]
+            portal_next_invoice_date = first_sub.next_invoice_date
+            portal_next_invoice_plan = first_sub.plan_id.name
+            portal_next_invoice_amount = sum(l.price_subtotal for l in first_sub.order_line if l.product_id.recurring_ok)
+
+        for sub in all_active_subs:
+            sub_total = sum(l.price_subtotal for l in sub.order_line if l.product_id.recurring_ok)
+            period = sub.plan_id.billing_period or 'monthly'
+            if period == 'weekly':
+                portal_mrr += sub_total * 4.333
+            elif period == 'monthly':
+                portal_mrr += sub_total
+            elif period == 'yearly':
+                portal_mrr += sub_total / 12.0
+
         values.update({
             'subscriptions': subscriptions,
             'page_name': 'subscription',
@@ -710,6 +778,12 @@ class CustomerPortalSubscription(CustomerPortal):
             'default_url': '/my/subscriptions',
             'filterby': filterby,
             'subscription_counts': subscription_counts,
+            'portal_outstanding_amount': portal_outstanding_amount,
+            'portal_overdue_count': portal_overdue_count,
+            'portal_mrr': portal_mrr,
+            'portal_next_invoice_date': portal_next_invoice_date,
+            'portal_next_invoice_amount': portal_next_invoice_amount,
+            'portal_next_invoice_plan': portal_next_invoice_plan,
         })
         return request.render("subscription_management.portal_my_subscriptions", values)
 
@@ -788,3 +862,16 @@ class CustomerPortalSubscription(CustomerPortal):
                 close_reason_id=int(close_reason_id) if close_reason_id else None,
             )
         return request.redirect('/my/subscription/%s' % subscription_id)
+
+class SubscriptionPaymentPostProcessing(PaymentPostProcessing):
+    @http.route('/payment/status', type='http', auth='public', website=True, sitemap=False)
+    def display_status(self, **kwargs):
+        monitored_tx = self._get_monitored_transaction()
+        if monitored_tx and monitored_tx.landing_route and monitored_tx.landing_route.startswith('/subscriptions/success'):
+            if not monitored_tx.is_post_processed:
+                try:
+                    monitored_tx._post_process()
+                except Exception:
+                    request.env.cr.rollback()
+            return request.redirect(monitored_tx.landing_route)
+        return super().display_status(**kwargs)

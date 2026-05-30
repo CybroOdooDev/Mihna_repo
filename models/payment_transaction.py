@@ -2,9 +2,13 @@
 from odoo import models
 
 class PaymentTransaction(models.Model):
+    """Extension of Payment Transaction to auto-link saved payment tokens
+    to subscription sales orders for future automated billing."""
     _inherit = 'payment.transaction'
 
     def _post_process(self):
+        """Hook into the transaction post-processing flow to grab successful
+        payment tokens and assign them to the originating subscription order."""
         super()._post_process()
         # Automatically assign the saved payment token to the subscription order
         # so that future recurring invoices can be charged automatically without manual intervention.

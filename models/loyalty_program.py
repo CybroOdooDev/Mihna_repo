@@ -2,6 +2,9 @@
 from odoo import models, fields
 
 class LoyaltyProgram(models.Model):
+    """Extension of the standard Odoo Loyalty/Coupon Program to support 
+    recurring subscription discounts, limited invoice application, and
+    first-time customer constraints."""
     _inherit = 'loyalty.program'
 
     recurring_type = fields.Selection([

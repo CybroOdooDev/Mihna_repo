@@ -205,6 +205,8 @@ class SubscriptionController(http.Controller):
 
     @http.route(['/subscriptions/checkout/save_address'], type='json', auth="public", methods=['POST'], website=True, csrf=False)
     def save_address(self, name, email, street, city, zip_code, country_id, state_id, **kw):
+        """AJAX endpoint to save the billing address of the current user or guest
+        during the subscription checkout process."""
         partner = request.env.user.partner_id if not request.env.user._is_public() else False
         if not partner:
             partner_id = request.session.get('subscription_guest_partner_id')
@@ -225,6 +227,8 @@ class SubscriptionController(http.Controller):
 
     @http.route(['/subscriptions/checkout/update_config'], type='json', auth="public", methods=['POST'], website=True, csrf=False)
     def update_config(self, plan_id, seats=None, cycle=None, **kw):
+        """AJAX endpoint to dynamically update seat count or billing cycle
+        on the active draft sales order before finalizing checkout."""
         session_key = f'subscription_order_{plan_id}'
         order_id = request.session.get(session_key)
         
@@ -660,6 +664,69 @@ from odoo.addons.account.controllers.portal import PortalAccount
 class CustomerPortalSubscription(CustomerPortal):
     """Customer Portal Subscription controller."""
 
+    @http.route([
+        '/my/subscription/<int:order_id>/close_signature',
+        '/my/orders/<int:order_id>/close_signature'
+    ], type='http', auth="public", website=True)
+    def portal_subscription_close_signature(self, order_id, access_token=None, **kw):
+        try:
+            order_sudo = self._document_check_access('sale.order', order_id, access_token=access_token)
+        except Exception:
+            return request.redirect('/my/subscriptions')
+
+        if order_sudo.subscription_state != '6_churn' or order_sudo.close_signature:
+            return request.redirect(order_sudo.get_portal_url())
+
+        values = {
+            'sale_order': order_sudo,
+            'page_name': 'subscription_close_signature',
+        }
+        return request.render('subscription_management.subscription_close_signature_page', values)
+
+    @http.route([
+        '/my/subscription/<int:order_id>/close_signature/accept',
+        '/my/orders/<int:order_id>/close_signature/accept'
+    ], type='jsonrpc', auth="public", website=True)
+    def portal_subscription_close_signature_accept(self, order_id, access_token=None, name=None, signature=None):
+        import binascii
+        from odoo import fields
+        
+        access_token = access_token or request.httprequest.args.get('access_token')
+        try:
+            order_sudo = self._document_check_access('sale.order', order_id, access_token=access_token)
+        except Exception:
+            return {'error': _('Invalid order.')}
+
+        if order_sudo.subscription_state != '6_churn':
+            return {'error': _('The subscription is not closed yet.')}
+        if not signature:
+            return {'error': _('Signature is missing.')}
+
+        try:
+            order_sudo.write({
+                'close_signed_by': name,
+                'close_signed_on': fields.Datetime.now(),
+                'close_signature': signature,
+            })
+            request.env.cr.flush()
+        except (TypeError, binascii.Error) as e:
+            return {'error': _('Invalid signature data.')}
+
+        order_sudo.message_post(
+            author_id=(
+                order_sudo.partner_id.id
+                if request.env.user._is_public()
+                else request.env.user.partner_id.id
+            ),
+            body=_('Subscription close accepted and signed by %s', name),
+            message_type='comment',
+        )
+
+        return {
+            'force_refresh': True,
+            'redirect_url': order_sudo.get_portal_url(),
+        }
+
 class CustomPortalAccount(PortalAccount):
     """Extend default account portal to support custom invoice tabs."""
 
@@ -683,13 +750,13 @@ class CustomPortalAccount(PortalAccount):
         })
         return filters
 
-    def _prepare_home_portal_values(self, selectors=None):
+    def _prepare_home_portal_values(self, counters):
         """Inject the active subscription count into the customer portal home values."""
-        values = super()._prepare_home_portal_values(selectors)
+        values = super()._prepare_home_portal_values(counters)
         partner = request.env.user.partner_id
         subscription_count = request.env['sale.order'].sudo().search_count([
             ('partner_id', '=', partner.id),
-            ('subscription_state', 'in', ['3_progress', '4_paused', '1_draft']),
+            ('subscription_state', '!=', False),
         ])
         values['subscription_count'] = subscription_count
         return values
@@ -759,10 +826,10 @@ class CustomPortalAccount(PortalAccount):
             first_sub = subs_with_next_date[0]
             portal_next_invoice_date = first_sub.next_invoice_date
             portal_next_invoice_plan = first_sub.plan_id.name
-            portal_next_invoice_amount = sum(l.price_subtotal for l in first_sub.order_line if l.product_id.recurring_ok)
+            portal_next_invoice_amount = sum(l.price_subtotal for l in first_sub.order_line if (l.product_template_id.recurring_ok or l.product_id.recurring_ok))
 
         for sub in all_active_subs:
-            sub_total = sum(l.price_subtotal for l in sub.order_line if l.product_id.recurring_ok)
+            sub_total = sum(l.price_subtotal for l in sub.order_line if (l.product_template_id.recurring_ok or l.product_id.recurring_ok))
             period = sub.plan_id.billing_period or 'monthly'
             if period == 'weekly':
                 portal_mrr += sub_total * 4.333

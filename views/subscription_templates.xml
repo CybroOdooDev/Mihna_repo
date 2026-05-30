@@ -10,8 +10,9 @@
                 <t t-set="icon" t-value="'/portal/static/src/img/portal-connection.svg'"/>
                 <t t-set="title">Subscriptions</t>
                 <t t-set="url" t-value="'/my/subscriptions'"/>
+                <t t-set="text">View and manage your subscriptions</t>
                 <t t-set="placeholder_count" t-value="'subscription_count'"/>
-                <t t-set="count" t-value="subscription_count"/>
+                <t t-set="show_count" t-value="True"/>
             </t>
         </xpath>
     </template>
@@ -25,6 +26,21 @@
             <li t-if="page_name == 'subscription_detail'" class="breadcrumb-item active">
                 <t t-esc="subscription.name"/>
             </li>
+        </xpath>
+    </template>
+
+    <template id="sale_order_portal_content_inherit_close_signature" name="Portal layout: Close Signature" inherit_id="sale.sale_order_portal_content">
+        <xpath expr="//section[@id='details']" position="after">
+            <section t-if="sale_order.close_signature" id="close_signature" name="Close Signature">
+                <div class="row mt-4" name="close_signature">
+                    <div t-attf-class="#{'col-3' if report_type != 'html' else 'col-sm-7 col-md-4'} ms-auto text-center">
+                        <h5>Signature</h5>
+                        <img t-att-src="image_data_uri(sale_order.close_signature)" style="max-height: 6rem; max-width: 100%;"/>
+                        <p t-field="sale_order.close_signed_by"/>
+                        <small class="text-muted"><span t-field="sale_order.close_signed_on"/></small>
+                    </div>
+                </div>
+            </section>
         </xpath>
     </template>
 
@@ -560,18 +576,28 @@
 
                         <!-- Footer Actions -->
                         <div class="d-flex flex-wrap justify-content-between align-items-center mt-5 mb-3 p-4 bg-white border" style="border-radius: 8px; border-color: #e2e8f0 !important;">
-                            <div style="color: #64748b; font-size: 13px;" class="mb-3 mb-md-0">
-                                Need to stop this subscription? You can close it at any time. Active until the end of the billing period.
-                            </div>
                             <t t-if="subscription.subscription_state not in ('6_churn',) and subscription.plan_id.is_closable">
+                                <div style="color: #64748b; font-size: 13px;" class="mb-3 mb-md-0">
+                                    Need to stop this subscription? You can close it at any time. Active until the end of the billing period.
+                                </div>
                                 <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#cancelModal" style="border: 1px solid #ef4444; color: #ef4444; background-color: transparent; border-radius: 6px; font-size: 14px; font-weight: 500;">
                                     Close Subscription
                                 </button>
                             </t>
-                            <t t-if="subscription.subscription_state in ('6_churn',)">
-                                <div class="text-muted small fst-italic">
-                                    Subscription closed.
-                                </div>
+                            <t t-elif="subscription.subscription_state in ('6_churn',)">
+                                <t t-if="not subscription.close_signature">
+                                    <div class="alert alert-warning mb-0" style="font-size: 13px; border-radius: 6px; flex-grow: 1; text-align: left; padding: 10px 15px; color: #856404; background-color: #fff3cd; border-color: #ffeeba;">
+                                        <strong>Action Required:</strong> Please provide your final signature to complete the cancellation process.
+                                    </div>
+                                    <a t-att-href="subscription.get_portal_url(suffix='/close_signature')" class="btn ms-3" style="background-color: #875A7B; color: white; border-radius: 6px; font-size: 14px; font-weight: 500; white-space: nowrap;">
+                                        <i class="fa fa-pencil me-1"></i> Sign Document
+                                    </a>
+                                </t>
+                                <t t-else="">
+                                    <div class="text-muted small w-100 text-center" style="color: #64748b !important;">
+                                        <i class="fa fa-check-circle me-1" style="color: #10b981;"></i> Subscription is closed and cancellation signature has been recorded.
+                                    </div>
+                                </t>
                             </t>
                         </div>
                     </div> <!-- End Overview -->
@@ -675,10 +701,6 @@
                                                 <option t-att-value="reason.id"><t t-esc="reason.name"/></option>
                                             </t>
                                         </select>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="customer_signature" class="form-label font-weight-bold" style="color: #334155;">Customer Signature (Type your name to confirm)</label>
-                                        <input type="text" class="form-control" style="border: 1px solid #e2e8f0; border-radius: 6px;" id="customer_signature" name="customer_signature" required="1" placeholder="e.g. John Doe"/>
                                     </div>
                                 </div>
                                 <div class="modal-footer border-0 pb-4 px-4 pt-0">
@@ -1995,5 +2017,56 @@
                 </div>
             </t>
         </xpath>
+    </template>
+
+    <template id="subscription_close_signature_page" name="Close Subscription Signature">
+        <t t-call="portal.portal_layout">
+            <t t-set="no_breadcrumbs" t-value="True"/>
+            <div id="wrap" class="container mt-5 mb-5 pt-3 pb-5">
+                <div class="row justify-content-center">
+                    <div class="col-md-8 col-lg-6">
+                        <div class="card shadow-sm border-0" style="border-radius: 12px; overflow: hidden;">
+                            <div class="card-header bg-white border-bottom-0 pt-4 pb-0 px-4 text-center">
+                                <div class="mb-3">
+                                    <i class="fa fa-pencil-square-o" style="font-size: 48px; color: #875A7B;"></i>
+                                </div>
+                                <h3 class="mb-1 fw-bold" style="color: #111827;">Sign to Close Subscription</h3>
+                                <p class="text-muted mb-0">Please sign below to confirm the cancellation of your subscription.</p>
+                            </div>
+                            <div class="card-body px-4 py-4">
+                                <div class="bg-light p-3 mb-4" style="border-radius: 8px;">
+                                    <div class="row mb-2">
+                                        <div class="col-4 text-muted small">Subscription</div>
+                                        <div class="col-8 fw-bold" style="color: #111827;"><t t-esc="sale_order.name"/></div>
+                                    </div>
+                                    <div class="row mb-2">
+                                        <div class="col-4 text-muted small">Plan</div>
+                                        <div class="col-8 fw-bold" style="color: #111827;"><t t-esc="sale_order.plan_id.name"/></div>
+                                    </div>
+                                    <div class="row">
+                                        <div class="col-4 text-muted small">Customer</div>
+                                        <div class="col-8 fw-bold" style="color: #111827;"><t t-esc="sale_order.partner_id.name"/></div>
+                                    </div>
+                                </div>
+
+                                <form t-attf-action="/my/subscription/#{sale_order.id}/close_signature/accept"
+                                      method="POST"
+                                      id="accept"
+                                      t-att-data-order-id="sale_order.id"
+                                      t-att-data-token="sale_order.access_token"
+                                      class="js_accept_json js_website_submit_form">
+                                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                    
+                                    <t t-call="portal.signature_form">
+                                        <t t-set="call_url" t-value="sale_order.get_portal_url(suffix='/close_signature/accept')"/>
+                                        <t t-set="default_name" t-value="request.env.user.name if not request.env.user._is_public() else (sale_order.partner_id.name or sale_order.partner_id.commercial_partner_id.name)"/>
+                                    </t>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
     </template>
 </odoo>

@@ -111,6 +111,23 @@
                 </div>
             </xpath>
 
+            <!-- 8. Close Information Page -->
+            <xpath expr="//notebook" position="inside">
+                <page string="Close Signature" name="close_information" invisible="subscription_state != '6_churn'">
+                    <group>
+                        <group string="Close Information">
+                            <field name="close_reason_id" readonly="1"/>
+                            <field name="close_reason_notes" readonly="1"/>
+                        </group>
+                        <group string="Signature">
+                            <field name="close_signed_by" readonly="1"/>
+                            <field name="close_signed_on" readonly="1"/>
+                            <field name="close_signature" widget="signature" readonly="1"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+
             <!-- Inject web_ribbon inside the sheet -->
             <xpath expr="//sheet" position="inside">
                 <widget name="web_ribbon" title="Blocked" bg_color="bg-danger" invisible="subscription_state != '8_blocked'"/>

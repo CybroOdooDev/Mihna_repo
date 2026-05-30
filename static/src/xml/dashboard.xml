@@ -2,85 +2,363 @@
 <templates xml:space="preserve">
     <t t-name="subscription_management.Dashboard" owl="1">
         <div class="o_subscription_dashboard container-fluid py-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="dashboard-title">Subscription Overview</h1>
-            </div>
             
             <t t-if="state.isLoading">
-                <div class="text-center py-5">
+                <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
                     <div class="spinner-border text-primary" role="status"></div>
-                    <p class="mt-2 text-muted">Loading Analytics...</p>
+                    <span class="ms-3 text-muted fw-bold">Loading Executive Analytics...</span>
+                </div>
+            </t>
+            <t t-elif="state.error">
+                <div class="alert alert-danger m-4 shadow-sm" role="alert">
+                    <h4 class="alert-heading fw-bold"><i class="fa fa-exclamation-triangle me-2"></i>Dashboard Data Error</h4>
+                    <hr/>
+                    <pre class="bg-light p-3 border rounded text-dark" style="white-space: pre-wrap; font-size: 13px;"><t t-esc="state.error"/></pre>
+                    <p class="mt-3 mb-0 text-muted">Please provide this traceback to the developer.</p>
                 </div>
             </t>
             <t t-else="">
-                <!-- KPI Cards -->
-                <div class="row g-4 mb-4">
-                    <div class="col-md-4 col-sm-6">
-                        <div class="kpi-card card-mrr">
-                            <div class="kpi-icon"><i class="fa fa-line-chart"></i></div>
-                            <div class="kpi-content">
-                                <h3>$<t t-esc="state.kpi.mrr"/></h3>
-                                <span>Monthly Recurring Revenue (MRR)</span>
-                            </div>
+                <!-- Executive Summary Banner -->
+                <div class="executive-banner mb-4">
+                    <div class="row align-items-center">
+                        <div class="col-lg-5">
+                            <h1 class="welcome-title">Overview</h1>
+                            <p class="welcome-subtitle">Here's your subscription business health at a glance.</p>
                         </div>
-                    </div>
-                    <div class="col-md-4 col-sm-6">
-                        <div class="kpi-card card-arr">
-                            <div class="kpi-icon"><i class="fa fa-bar-chart"></i></div>
-                            <div class="kpi-content">
-                                <h3>$<t t-esc="state.kpi.arr"/></h3>
-                                <span>Annual Recurring Revenue (ARR)</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-4 col-sm-6">
-                        <div class="kpi-card card-users" t-on-click="openSubscriptions" style="cursor: pointer;">
-                            <div class="kpi-icon"><i class="fa fa-users"></i></div>
-                            <div class="kpi-content">
-                                <h3><t t-esc="state.kpi.active_subscriptions"/></h3>
-                                <span>Active Subscriptions</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-6">
-                        <div class="kpi-card card-churn">
-                            <div class="kpi-icon"><i class="fa fa-level-down"></i></div>
-                            <div class="kpi-content">
-                                <h3><t t-esc="state.kpi.churn_rate"/>%</h3>
-                                <span>30-Day Churn Rate</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-6">
-                        <div class="kpi-card card-arpu">
-                            <div class="kpi-icon"><i class="fa fa-user-plus"></i></div>
-                            <div class="kpi-content">
-                                <h3>$<t t-esc="state.kpi.arpu"/></h3>
-                                <span>Average Revenue Per User (ARPU)</span>
+                        <div class="col-lg-7">
+                            <div class="row text-center text-md-start">
+                                <div class="col-6 col-md-3 mb-3 mb-md-0 banner-metric">
+                                    <span class="text-muted text-uppercase small fw-bold">Total Revenue</span>
+                                    <h4 class="fw-bolder mb-0">$<t t-esc="state.kpi.mrr"/></h4>
+                                </div>
+                                <div class="col-6 col-md-3 mb-3 mb-md-0 banner-metric">
+                                    <span class="text-muted text-uppercase small fw-bold">Active Customers</span>
+                                    <h4 class="fw-bolder mb-0"><t t-esc="state.kpi.total_customers"/></h4>
+                                </div>
+                                <div class="col-6 col-md-3 banner-metric">
+                                    <span class="text-muted text-uppercase small fw-bold">Monthly Growth</span>
+                                    <h4 t-attf-class="fw-bolder mb-0 #{state.kpi.mrr_trend &gt;= 0 ? 'text-success' : 'text-danger'}">
+                                        <t t-esc="state.kpi.mrr_trend &gt; 0 ? '+' : ''"/><t t-esc="state.kpi.mrr_trend"/>%
+                                    </h4>
+                                </div>
+                                <div class="col-6 col-md-3 banner-metric border-0">
+                                    <span class="text-muted text-uppercase small fw-bold">Upcoming Renewals</span>
+                                    <h4 class="fw-bolder mb-0"><t t-esc="state.widgets.upcoming_renewals.length"/></h4>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Charts Row -->
-                <div class="row g-4">
+                <!-- Action Cards -->
+                <div class="action-cards-container mb-4">
+                    <div class="action-card" t-on-click="actionCreateSubscription">
+                        <div class="action-icon bg-primary-soft"><i class="fa fa-plus text-primary"></i></div>
+                        <span class="action-label">Create Subscription</span>
+                    </div>
+                    <div class="action-card" t-on-click="actionAddCustomer">
+                        <div class="action-icon bg-info-soft"><i class="fa fa-user-plus text-info"></i></div>
+                        <span class="action-label">Add Customer</span>
+                    </div>
+                    <div class="action-card" t-on-click="actionGenerateInvoices">
+                        <div class="action-icon bg-success-soft"><i class="fa fa-file-text-o text-success"></i></div>
+                        <span class="action-label">Generate Invoice</span>
+                    </div>
+                    <div class="action-card" t-on-click="actionManagePlans">
+                        <div class="action-icon bg-warning-soft"><i class="fa fa-cubes text-warning"></i></div>
+                        <span class="action-label">Manage Plans</span>
+                    </div>
+                    <div class="action-card" t-on-click="actionRevenueReports">
+                        <div class="action-icon bg-purple-soft"><i class="fa fa-bar-chart text-purple"></i></div>
+                        <span class="action-label">Analytics</span>
+                    </div>
+                </div>
+
+                <!-- Featured Revenue Analytics & KPIs -->
+                <div class="row g-4 mb-4">
+                    <!-- Sparkline KPI Cards -->
+                    <div class="col-xl-8">
+                        <div class="row g-3">
+                            <div class="col-md-4 col-sm-6">
+                                <div class="kpi-spark-card">
+                                    <div class="kpi-header">
+                                        <div class="kpi-icon-sm bg-primary-gradient"><i class="fa fa-line-chart"></i></div>
+                                        <div t-attf-class="trend-badge #{state.kpi.mrr_trend &gt;= 0 ? 'positive' : 'negative'}">
+                                            <i t-attf-class="fa #{state.kpi.mrr_trend &gt;= 0 ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> <t t-esc="Math.abs(state.kpi.mrr_trend)"/>%
+                                        </div>
+                                    </div>
+                                    <div class="kpi-body">
+                                        <span class="kpi-title">Monthly Recurring Revenue</span>
+                                        <h3 class="kpi-value">$<t t-esc="state.kpi.mrr"/></h3>
+                                    </div>
+                                    <div class="kpi-sparkline"><canvas t-ref="sparkMrr"></canvas></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-sm-6">
+                                <div class="kpi-spark-card">
+                                    <div class="kpi-header">
+                                        <div class="kpi-icon-sm bg-success-gradient"><i class="fa fa-bar-chart"></i></div>
+                                        <div t-attf-class="trend-badge #{state.kpi.arr_trend &gt;= 0 ? 'positive' : 'negative'}">
+                                            <i t-attf-class="fa #{state.kpi.arr_trend &gt;= 0 ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> <t t-esc="Math.abs(state.kpi.arr_trend)"/>%
+                                        </div>
+                                    </div>
+                                    <div class="kpi-body">
+                                        <span class="kpi-title">Annual Recurring Revenue</span>
+                                        <h3 class="kpi-value">$<t t-esc="state.kpi.arr"/></h3>
+                                    </div>
+                                    <div class="kpi-sparkline"><canvas t-ref="sparkArr"></canvas></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-sm-6">
+                                <div class="kpi-spark-card" t-on-click="openSubscriptions" style="cursor: pointer;">
+                                    <div class="kpi-header">
+                                        <div class="kpi-icon-sm bg-info-gradient"><i class="fa fa-users"></i></div>
+                                        <div t-attf-class="trend-badge #{state.kpi.active_trend &gt;= 0 ? 'positive' : 'negative'}">
+                                            <i t-attf-class="fa #{state.kpi.active_trend &gt;= 0 ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> <t t-esc="Math.abs(state.kpi.active_trend)"/>%
+                                        </div>
+                                    </div>
+                                    <div class="kpi-body">
+                                        <span class="kpi-title">Active Subscriptions</span>
+                                        <h3 class="kpi-value"><t t-esc="state.kpi.active_subscriptions"/></h3>
+                                    </div>
+                                    <div class="kpi-sparkline"><canvas t-ref="sparkActive"></canvas></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="kpi-spark-card">
+                                    <div class="kpi-header">
+                                        <div class="kpi-icon-sm bg-danger-gradient"><i class="fa fa-level-down"></i></div>
+                                        <div t-attf-class="trend-badge #{state.kpi.churn_trend &lt;= 0 ? 'positive' : 'negative'}">
+                                            <i t-attf-class="fa #{state.kpi.churn_trend &gt; 0 ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> <t t-esc="Math.abs(state.kpi.churn_trend)"/>%
+                                        </div>
+                                    </div>
+                                    <div class="kpi-body">
+                                        <span class="kpi-title">30-Day Churn Rate</span>
+                                        <h3 class="kpi-value"><t t-esc="state.kpi.churn_rate"/>%</h3>
+                                    </div>
+                                    <div class="kpi-sparkline"><canvas t-ref="sparkChurn"></canvas></div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="kpi-spark-card">
+                                    <div class="kpi-header">
+                                        <div class="kpi-icon-sm bg-warning-gradient"><i class="fa fa-user-plus"></i></div>
+                                        <div t-attf-class="trend-badge #{state.kpi.arpu_trend &gt;= 0 ? 'positive' : 'negative'}">
+                                            <i t-attf-class="fa #{state.kpi.arpu_trend &gt;= 0 ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> <t t-esc="Math.abs(state.kpi.arpu_trend)"/>%
+                                        </div>
+                                    </div>
+                                    <div class="kpi-body">
+                                        <span class="kpi-title">Average Revenue Per User</span>
+                                        <h3 class="kpi-value">$<t t-esc="state.kpi.arpu"/></h3>
+                                    </div>
+                                    <div class="kpi-sparkline"><canvas t-ref="sparkArpu"></canvas></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Featured Revenue Analytics -->
+                    <div class="col-xl-4">
+                        <div class="featured-revenue-card">
+                            <div class="revenue-overlay"></div>
+                            <h4 class="revenue-title">Revenue Forecast</h4>
+                            <div class="revenue-amount">
+                                <h1>$<t t-esc="state.kpi.forecast_revenue"/></h1>
+                                <span class="badge bg-white text-dark rounded-pill shadow-sm"><i class="fa fa-line-chart text-success me-1"></i> Projected Next Month</span>
+                            </div>
+                            
+                            <div class="revenue-stats mt-4">
+                                <div class="d-flex justify-content-between mb-3">
+                                    <span class="text-light text-opacity-75">Current MRR</span>
+                                    <strong class="text-white">$<t t-esc="state.kpi.mrr"/></strong>
+                                </div>
+                                <div class="d-flex justify-content-between mb-3">
+                                    <span class="text-light text-opacity-75">Target Forecast</span>
+                                    <strong class="text-white">$<t t-esc="Math.round(state.kpi.mrr * 1.1)"/></strong>
+                                </div>
+                                <div class="progress" style="height: 6px; background: rgba(255,255,255,0.2);">
+                                    <div class="progress-bar bg-white rounded" role="progressbar" style="width: 85%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Deep Analytics Row -->
+                <div class="row g-4 mb-4">
                     <div class="col-lg-8">
                         <div class="chart-card">
-                            <h4 class="chart-title">MRR Growth (6 Months)</h4>
-                            <div class="chart-container" style="position: relative; height:300px;">
+                            <h4 class="chart-title">Revenue Growth</h4>
+                            <div class="chart-container" style="position: relative; height:320px;">
                                 <canvas t-ref="mrrChart"></canvas>
                             </div>
                         </div>
                     </div>
                     <div class="col-lg-4">
                         <div class="chart-card">
-                            <h4 class="chart-title">Active Plans</h4>
-                            <div class="chart-container" style="position: relative; height:300px;">
-                                <canvas t-ref="planChart"></canvas>
+                            <h4 class="chart-title">Plan Distribution</h4>
+                            <div class="plan-distribution-list mt-3">
+                                <t t-set="total_plans" t-value="state.charts.plan_distribution.reduce((acc, p) =&gt; acc + p.value, 0)"/>
+                                <t t-if="total_plans == 0">
+                                    <div class="text-center text-muted mt-5">No active plans found.</div>
+                                </t>
+                                <t t-foreach="state.charts.plan_distribution" t-as="plan" t-key="plan.label">
+                                    <div class="plan-item mb-4">
+                                        <div class="d-flex justify-content-between mb-1">
+                                            <span class="fw-bold text-dark"><t t-esc="plan.label"/></span>
+                                            <span class="text-muted fw-bold"><t t-esc="plan.value"/> Subs (<t t-esc="Math.round((plan.value / total_plans) * 100)"/>%)</span>
+                                        </div>
+                                        <div class="progress" style="height: 8px; background: #F1F5F9; border-radius: 4px;">
+                                            <div class="progress-bar bg-primary-gradient rounded" role="progressbar" t-attf-style="width: #{Math.round((plan.value / total_plans) * 100)}%"></div>
+                                        </div>
+                                    </div>
+                                </t>
                             </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Bottom 2x2 Widgets Grid -->
+                <div class="row g-4">
+                    <!-- Upcoming Renewals -->
+                    <div class="col-xl-6">
+                        <div class="widget-card">
+                            <div class="widget-header">
+                                <h4 class="widget-title"><i class="fa fa-calendar-o text-primary me-2"></i> Upcoming Renewals</h4>
+                                <button class="btn btn-sm btn-light rounded-pill px-3" t-on-click="openSubscriptions">View All</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table widget-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Subscription</th>
+                                            <th>Customer</th>
+                                            <th>Date</th>
+                                            <th class="text-end">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-if="!state.widgets.upcoming_renewals.length">
+                                            <tr><td colspan="4" class="text-center text-muted py-4">No upcoming renewals found.</td></tr>
+                                        </t>
+                                        <t t-foreach="state.widgets.upcoming_renewals" t-as="renewal" t-key="renewal.id">
+                                            <tr>
+                                                <td class="fw-bold"><t t-esc="renewal.name"/></td>
+                                                <td><t t-esc="renewal.customer"/></td>
+                                                <td><span class="badge bg-light text-dark rounded-pill"><t t-esc="renewal.date"/></span></td>
+                                                <td class="text-end fw-bold text-success">$<t t-esc="renewal.amount"/></td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Top Customers -->
+                    <div class="col-xl-6">
+                        <div class="widget-card">
+                            <div class="widget-header">
+                                <h4 class="widget-title"><i class="fa fa-star text-warning me-2"></i> Top Customers</h4>
+                                <button class="btn btn-sm btn-light rounded-pill px-3" t-on-click="actionViewCustomers">View All</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table widget-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Customer</th>
+                                            <th>Plan</th>
+                                            <th class="text-end">Total MRR</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-if="!state.widgets.top_customers.length">
+                                            <tr><td colspan="3" class="text-center text-muted py-4">No top customers found.</td></tr>
+                                        </t>
+                                        <t t-foreach="state.widgets.top_customers" t-as="cust" t-key="cust.id">
+                                            <tr>
+                                                <td class="fw-bold">
+                                                    <div class="d-flex align-items-center">
+                                                        <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 10px;">
+                                                            <t t-esc="cust.name.substring(0,2).toUpperCase()"/>
+                                                        </div>
+                                                        <t t-esc="cust.name"/>
+                                                    </div>
+                                                </td>
+                                                <td><span class="badge bg-light text-dark rounded-pill border"><t t-esc="cust.plan"/></span></td>
+                                                <td class="text-end fw-bold text-dark">$<t t-esc="cust.amount"/></td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="col-xl-6">
+                        <div class="widget-card">
+                            <div class="widget-header">
+                                <h4 class="widget-title"><i class="fa fa-bolt text-warning me-2"></i> Recent Activity</h4>
+                            </div>
+                            <div class="activity-feed">
+                                <t t-if="!state.widgets.recent_activity.length">
+                                    <div class="text-center text-muted py-4">No recent activity found.</div>
+                                </t>
+                                <t t-foreach="state.widgets.recent_activity" t-as="activity" t-key="activity.id">
+                                    <div class="activity-item">
+                                        <div t-attf-class="activity-icon #{activity.raw_state}">
+                                            <i t-attf-class="fa #{activity.raw_state == '3_progress' ? 'fa-play' : activity.raw_state == '6_churn' ? 'fa-times' : activity.raw_state == '5_renewed' ? 'fa-refresh' : activity.raw_state == '7_upsell' ? 'fa-arrow-up' : 'fa-pause'}"></i>
+                                        </div>
+                                        <div class="activity-content">
+                                            <div class="d-flex justify-content-between">
+                                                <strong class="text-dark"><t t-esc="activity.customer"/></strong>
+                                                <small class="text-muted"><t t-esc="activity.date"/></small>
+                                            </div>
+                                            <p class="mb-0 text-muted">
+                                                Subscription <span class="fw-bold"><t t-esc="activity.name"/></span> was marked as 
+                                                <span t-attf-class="badge-state #{activity.raw_state}"><t t-esc="activity.state"/></span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Payments -->
+                    <div class="col-xl-6">
+                        <div class="widget-card">
+                            <div class="widget-header">
+                                <h4 class="widget-title"><i class="fa fa-credit-card text-success me-2"></i> Recent Payments</h4>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table widget-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Customer</th>
+                                            <th>Date</th>
+                                            <th class="text-end">Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <t t-if="!state.widgets.recent_payments.length">
+                                            <tr><td colspan="3" class="text-center text-muted py-4">No recent payments found.</td></tr>
+                                        </t>
+                                        <t t-foreach="state.widgets.recent_payments" t-as="payment" t-key="payment.id">
+                                            <tr>
+                                                <td class="fw-bold"><t t-esc="payment.customer"/></td>
+                                                <td><span class="text-muted"><t t-esc="payment.date"/></span></td>
+                                                <td class="text-end fw-bold text-success"><t t-esc="payment.currency"/><t t-esc="payment.amount"/></td>
+                                            </tr>
+                                        </t>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </t>
         </div>
     </t>

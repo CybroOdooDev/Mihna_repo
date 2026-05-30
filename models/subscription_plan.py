@@ -92,6 +92,8 @@ class SubscriptionPlan(models.Model):
 
     @api.depends('product_id', 'product_id.list_price', 'pricing_ids.price', 'ramp_ids.price_unit', 'ramp_ids.start_cycle')
     def _compute_total_price(self):
+        """Compute the total recurring price by iterating through
+        all linked subscription item lines."""
         """Compute the total price of the subscription plan based on pricing lines, ramp rules, or product list price."""
         for plan in self:
             if plan.pricing_ids:
@@ -106,6 +108,8 @@ class SubscriptionPlan(models.Model):
 
     @api.depends('billing_period_value', 'billing_period_unit')
     def _compute_billing_period(self):
+        """Derive the billing period and custom days from the linked
+        product template, syncing pricing structures."""
         """Automatically sync the internal backend 'billing_period' field with the user-facing 'billing_period_value' and 'billing_period_unit' fields."""
         for plan in self:
             val = plan.billing_period_value
@@ -147,6 +151,8 @@ class SubscriptionPlan(models.Model):
 
     @api.depends('name')
     def _compute_counts(self):
+        """Calculate the total number of active subscriptions and items
+        associated with this billing plan."""
         """Compute stats for linked subscription sales orders and subscription line items."""
         for plan in self:
             plan.subscription_count = self.env['sale.order'].search_count(
@@ -157,6 +163,8 @@ class SubscriptionPlan(models.Model):
             )
 
     def action_view_subscriptions(self):
+        """Open a tree view showing all active subscriptions (sale.order)
+        linked to this subscription plan."""
         """Return an action displaying all confirmed subscription sales orders for this plan."""
         self.ensure_one()
         return {
@@ -170,6 +178,8 @@ class SubscriptionPlan(models.Model):
         }
 
     def action_view_subscription_items(self):
+        """Open a tree view showing all order lines (subscription items)
+        associated with this plan."""
         """Return an action displaying all confirmed subscription sales order line items for this plan."""
         self.ensure_one()
         return {

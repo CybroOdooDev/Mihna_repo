@@ -29,6 +29,7 @@ Features include:
         'data/dunning_cron.xml',
         'data/dunning_mail_templates.xml',
         'data/whatsapp_templates_data.xml',
+        'data/close_signature_mail_template.xml',
         'views/subscription_dashboard_views.xml',
         'views/loyalty_program_views.xml',
         'views/subscription_plan_views.xml',

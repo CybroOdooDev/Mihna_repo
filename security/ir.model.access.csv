@@ -17,6 +17,7 @@ access_subscription_retention_analysis_manager,subscription.retention.analysis.m
 access_subscription_usage_user,subscription.usage.user,model_subscription_usage,group_subscription_user,1,1,1,0
 access_subscription_usage_manager,subscription.usage.manager,model_subscription_usage,group_subscription_manager,1,1,1,1
 access_subscription_plan_portal,subscription.plan.portal,model_subscription_plan,base.group_portal,1,0,0,0
+access_subscription_plan_pricing_portal,subscription.plan.pricing.portal,model_subscription_plan_pricing,base.group_portal,1,0,0,0
 access_subscription_close_wizard_user,subscription.close.wizard.user,model_subscription_close_wizard,group_subscription_user,1,1,1,1
 access_subscription_change_plan_wizard_user,subscription.change.plan.wizard.user,model_subscription_change_plan_wizard,group_subscription_user,1,1,1,1
 access_subscription_plan_ramp_user,subscription.plan.ramp.user,model_subscription_plan_ramp,group_subscription_user,1,0,0,0

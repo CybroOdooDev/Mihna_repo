@@ -58,6 +58,10 @@ class SaleOrder(models.Model):
     )
     close_reason_notes = fields.Text(string='Close Notes')
 
+    close_signature = fields.Binary(string='Signature on Close', copy=False, attachment=True)
+    close_signed_by = fields.Char(string='Signed By', copy=False)
+    close_signed_on = fields.Datetime(string='Signed On', copy=False)
+
     subscription_cycle = fields.Integer(
         string='Current Cycle', default=1, copy=False,
         help="Tracks the number of billing cycles completed plus the current one."
@@ -101,8 +105,8 @@ class SaleOrder(models.Model):
             mrr_total = 0.0
             non_recurring_total = 0.0
             for line in order.order_line:
-                if line.product_id.recurring_ok:
-                    plan = line.product_id.subscription_plan_id or order.plan_id
+                if line.product_template_id.recurring_ok or line.product_id.recurring_ok:
+                    plan = line.product_template_id.subscription_plan_id or order.plan_id
                     subtotal = line.price_subtotal
                     if plan:
                         period = plan.billing_period
@@ -140,6 +144,15 @@ class SaleOrder(models.Model):
 
     def action_confirm(self):
         """Override standard action_confirm to auto-activate and set next invoice date."""
+        for order in self:
+            if order.plan_id:
+                has_recurring = any(
+                    line.product_template_id.recurring_ok or getattr(line.product_id, 'recurring_ok', False)
+                    for line in order.order_line
+                )
+                if not has_recurring:
+                    raise UserError(_("Please add a recurring product in the subscription or remove the recurring plan."))
+
         res = super().action_confirm()
         for order in self:
             if order.plan_id:
@@ -220,6 +233,11 @@ class SaleOrder(models.Model):
                 vals['close_reason_notes'] = notes
             order.write(vals)
             order.message_post(body=_("Subscription closed/churned."))
+
+            # Trigger signature email
+            template = self.env.ref('subscription_management.mail_template_subscription_close_signature_v2', raise_if_not_found=False)
+            if template:
+                template.sudo().send_mail(order.id, force_send=True)
 
     def action_mrr_smart_button(self):
         """Returns the window action details to navigate to and display MRR breakdown analysis records linked to this subscription."""

@@ -17,6 +17,8 @@ class SubscriptionWhatsAppConfig(models.Model):
     ], string='Status', default='draft')
 
     def action_test_and_confirm(self):
+        """Test the connection to the UltraMsg API using the provided credentials
+        and confirm the configuration if successful."""
         import requests
         from odoo.exceptions import UserError
         from odoo import _

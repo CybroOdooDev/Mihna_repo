@@ -25,7 +25,7 @@
         <field name="name">Quotations</field>
         <field name="res_model">sale.order</field>
         <field name="view_mode">list,kanban,form</field>
-        <field name="domain">[('subscription_state', 'in', ['1_draft', '2_renewal', '3_progress', '4_paused', '5_renewed', '6_churn', '7_upsell', '8_blocked'])]</field>
+        <field name="domain">[('plan_id', '!=', False), ('subscription_state', 'in', ['1_draft', '2_renewal', '3_progress', '4_paused', '5_renewed', '6_churn', '7_upsell', '8_blocked'])]</field>
         <field name="context">{'default_plan_id': True, 'search_default_my_subscriptions': 1}</field>
         <field name="search_view_id" ref="subscription_management.view_sales_order_filter_subscription"/>
     </record>
@@ -46,7 +46,7 @@
         <field name="name">To Renew</field>
         <field name="res_model">sale.order</field>
         <field name="view_mode">list,kanban,form</field>
-        <field name="domain">[('subscription_state', '=', '2_renewal')]</field>
+        <field name="domain">[('plan_id', '!=', False), ('subscription_state', '=', '2_renewal')]</field>
         <field name="context">{'default_plan_id': True}</field>
         <field name="search_view_id" ref="subscription_management.view_sales_order_filter_subscription"/>
     </record>
@@ -67,7 +67,7 @@
         <field name="name">Upsells</field>
         <field name="res_model">sale.order</field>
         <field name="view_mode">list,kanban,form</field>
-        <field name="domain">[('subscription_state', '=', '7_upsell')]</field>
+        <field name="domain">[('plan_id', '!=', False), ('subscription_state', '=', '7_upsell')]</field>
         <field name="context">{'default_plan_id': True}</field>
         <field name="search_view_id" ref="subscription_management.view_sales_order_filter_subscription"/>
     </record>

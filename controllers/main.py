@@ -756,9 +756,19 @@ class CustomPortalAccount(PortalAccount):
         partner = request.env.user.partner_id
         subscription_count = request.env['sale.order'].sudo().search_count([
             ('partner_id', '=', partner.id),
-            ('subscription_state', '!=', False),
+            ('plan_id', '!=', False),
+            ('state', 'in', ['sale', 'done'])
         ])
         values['subscription_count'] = subscription_count
+
+        # Override native Odoo limit=1 optimization so the sidebar badges show exact counts
+        if 'invoice_count' in counters:
+            values['invoice_count'] = request.env['account.move'].search_count(self._get_invoices_domain('out')) if request.env['account.move'].has_access('read') else 0
+        if 'order_count' in counters:
+            values['order_count'] = request.env['sale.order'].search_count(self._prepare_orders_domain(partner)) if hasattr(self, '_prepare_orders_domain') and request.env['sale.order'].has_access('read') else 0
+        if 'quotation_count' in counters:
+            values['quotation_count'] = request.env['sale.order'].search_count(self._prepare_quotations_domain(partner)) if hasattr(self, '_prepare_quotations_domain') and request.env['sale.order'].has_access('read') else 0
+
         return values
 
     @http.route(['/my/subscriptions', '/my/subscriptions/page/<int:page>'], type='http', auth="user", website=True)
@@ -771,10 +781,10 @@ class CustomPortalAccount(PortalAccount):
             filterby = 'all'
 
         searchbar_filters = {
-            'all': {'domain': [('subscription_state', 'in', ['1_draft', '2_renewal', '3_progress', '4_paused', '5_renewed', '6_churn', '7_upsell', '8_blocked'])]},
-            'in_progress': {'domain': [('subscription_state', 'in', ['3_progress', '5_renewed'])]},
-            'to_renew': {'domain': [('subscription_state', 'in', ['2_renewal', '7_upsell', '4_paused'])]},
-            'closed': {'domain': [('subscription_state', 'in', ['6_churn', '8_blocked', '1_draft'])]},
+            'all': {'domain': [('plan_id', '!=', False), ('state', 'in', ['sale', 'done'])]},
+            'in_progress': {'domain': [('plan_id', '!=', False), ('state', 'in', ['sale', 'done']), ('subscription_state', 'in', ['3_progress', '5_renewed'])]},
+            'to_renew': {'domain': [('plan_id', '!=', False), ('state', 'in', ['sale', 'done']), ('subscription_state', 'in', ['2_renewal', '7_upsell', '4_paused'])]},
+            'closed': {'domain': [('plan_id', '!=', False), ('state', 'in', ['sale', 'done']), ('subscription_state', 'in', ['6_churn', '8_blocked'])]},
         }
 
         base_domain = [('partner_id', '=', partner.id)]

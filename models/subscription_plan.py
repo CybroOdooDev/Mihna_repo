@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from odoo import models, fields, api, _
 from markupsafe import Markup
+from odoo.exceptions import UserError
 
 
 class SubscriptionPlan(models.Model):
@@ -15,6 +16,17 @@ class SubscriptionPlan(models.Model):
     code = fields.Char(string='Code', help='Unique code for this plan')
     description = fields.Text(string='Description', translate=True)
     active = fields.Boolean(default=True)
+
+    @api.ondelete(at_uninstall=False)
+    def _unlink_except_used(self):
+        """Prevent deletion of plans that are already referenced in a sale order.
+        Suggest archiving instead."""
+        for plan in self:
+            if self.env['sale.order'].search_count([('plan_id', '=', plan.id)], limit=1):
+                raise UserError(_(
+                    "You cannot delete the subscription plan '%s' because it is already in use by a quotation or subscription.\n\n"
+                    "Please archive the plan instead if you no longer wish to use it."
+                ) % plan.name)
 
     product_id = fields.Many2one(
         'product.product', string='Linked Product',

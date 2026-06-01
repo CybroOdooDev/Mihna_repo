@@ -34,7 +34,6 @@ Features include:
         'views/loyalty_program_views.xml',
         'views/subscription_plan_views.xml',
         'views/sale_order_views.xml',
-        'views/subscription_subscription_views.xml',
         'views/subscription_price_lock_views.xml',
         'views/subscription_dunning_views.xml',
         'views/subscription_whatsapp_template_views.xml',
@@ -53,6 +52,9 @@ Features include:
             'subscription_management/static/src/css/dashboard.scss',
             'subscription_management/static/src/js/dashboard.js',
             'subscription_management/static/src/xml/dashboard.xml',
+        ],
+        'web.assets_frontend': [
+            'subscription_management/static/src/css/hide_sidebar.css',
         ],
     },
     'installable': True,

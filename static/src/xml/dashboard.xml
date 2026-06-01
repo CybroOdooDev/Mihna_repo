@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
     <t t-name="subscription_management.Dashboard" owl="1">
-        <div class="o_subscription_dashboard container-fluid py-4">
-            
+        <div class="cadence-dashboard o_subscription_dashboard">
             <t t-if="state.isLoading">
                 <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">
-                    <div class="spinner-border text-primary" role="status"></div>
-                    <span class="ms-3 text-muted fw-bold">Loading Executive Analytics...</span>
+                    <div class="spinner-border text-danger" role="status"></div>
+                    <span class="ms-3 text-muted fw-bold" style="font-family: 'Playfair Display', Georgia, serif;">Loading Cadence...</span>
                 </div>
             </t>
             <t t-elif="state.error">
@@ -14,351 +13,314 @@
                     <h4 class="alert-heading fw-bold"><i class="fa fa-exclamation-triangle me-2"></i>Dashboard Data Error</h4>
                     <hr/>
                     <pre class="bg-light p-3 border rounded text-dark" style="white-space: pre-wrap; font-size: 13px;"><t t-esc="state.error"/></pre>
-                    <p class="mt-3 mb-0 text-muted">Please provide this traceback to the developer.</p>
                 </div>
             </t>
             <t t-else="">
-                <!-- Executive Summary Banner -->
-                <div class="executive-banner mb-4">
-                    <div class="row align-items-center">
-                        <div class="col-lg-5">
-                            <h1 class="welcome-title">Overview</h1>
-                            <p class="welcome-subtitle">Here's your subscription business health at a glance.</p>
+                <!-- Cadence Top Navigation -->
+                <div class="cadence-top-nav d-flex justify-content-between align-items-center pb-3 border-bottom" style="margin: -30px -30px 10px -30px; padding: 16px 30px; background: #ffffff;">
+                    <div class="d-flex align-items-center gap-4" style="font-size: 0.9rem;">
+                        <button class="btn btn-dark fw-bold px-3 py-1" style="border-radius: 6px; font-size: 0.9rem;">Overview</button>
+                        <div class="nav-item cursor-pointer" t-on-click="openSubscriptions" style="cursor: pointer;">
+                            <span class="text-dark fw-bold">Subscriptions</span> <span class="text-muted ms-1" style="font-size: 0.8rem;"><t t-esc="state.nav_counts.subscriptions.toLocaleString('en-US')"/></span>
                         </div>
-                        <div class="col-lg-7">
-                            <div class="row text-center text-md-start">
-                                <div class="col-6 col-md-3 mb-3 mb-md-0 banner-metric">
-                                    <span class="text-muted text-uppercase small fw-bold">Total Revenue</span>
-                                    <h4 class="fw-bolder mb-0">$<t t-esc="state.kpi.mrr"/></h4>
-                                </div>
-                                <div class="col-6 col-md-3 mb-3 mb-md-0 banner-metric">
-                                    <span class="text-muted text-uppercase small fw-bold">Active Customers</span>
-                                    <h4 class="fw-bolder mb-0"><t t-esc="state.kpi.total_customers"/></h4>
-                                </div>
-                                <div class="col-6 col-md-3 banner-metric">
-                                    <span class="text-muted text-uppercase small fw-bold">Monthly Growth</span>
-                                    <h4 t-attf-class="fw-bolder mb-0 #{state.kpi.mrr_trend &gt;= 0 ? 'text-success' : 'text-danger'}">
-                                        <t t-esc="state.kpi.mrr_trend &gt; 0 ? '+' : ''"/><t t-esc="state.kpi.mrr_trend"/>%
-                                    </h4>
-                                </div>
-                                <div class="col-6 col-md-3 banner-metric border-0">
-                                    <span class="text-muted text-uppercase small fw-bold">Upcoming Renewals</span>
-                                    <h4 class="fw-bolder mb-0"><t t-esc="state.widgets.upcoming_renewals.length"/></h4>
-                                </div>
+                        <div class="nav-item cursor-pointer" t-on-click="openCustomers" style="cursor: pointer;">
+                            <span class="text-dark fw-bold">Customers</span> <span class="text-muted ms-1" style="font-size: 0.8rem;"><t t-esc="state.nav_counts.customers.toLocaleString('en-US')"/></span>
+                        </div>
+                        <div class="nav-item cursor-pointer" t-on-click="openInvoices" style="cursor: pointer;">
+                            <span class="text-dark fw-bold">Invoices</span> <span class="text-muted ms-1" style="font-size: 0.8rem;"><t t-esc="state.nav_counts.invoices.toLocaleString('en-US')"/></span>
+                        </div>
+                        <div class="nav-item cursor-pointer" t-on-click="openDunningQueue" style="cursor: pointer;">
+                            <span class="text-dark fw-bold">Dunning</span> <span style="color: #C24A2A; font-size: 0.8rem;" class="ms-1 fw-bold"><t t-esc="state.nav_counts.dunning"/></span>
+                        </div>
+                        <div class="nav-item cursor-pointer text-dark fw-bold" t-on-click="openPlans" style="cursor: pointer;">
+                            Plans
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <button class="btn fw-bold text-white px-3 py-1 shadow-sm" style="background-color: #C24A2A; border-radius: 6px; font-size: 0.9rem;" t-on-click="actionNewSubscription">
+                            + New subscription
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Cadence Header -->
+                <div class="cadence-header mb-4">
+                    <h1 class="cadence-title mt-0">Overview</h1>
+                    
+                    <div class="cadence-filters d-flex gap-3 mt-4">
+                        <div class="btn-group" role="group">
+                            <button type="button" t-att-class="'btn cadence-filter-btn ' + (state.activeFilter === 'Today' ? 'btn-dark active' : 'btn-outline-secondary')" t-on-click="() => this.setFilter('Today')">Today</button>
+                            <button type="button" t-att-class="'btn cadence-filter-btn ' + (state.activeFilter === '7d' ? 'btn-dark active' : 'btn-outline-secondary')" t-on-click="() => this.setFilter('7d')">7d</button>
+                            <button type="button" t-att-class="'btn cadence-filter-btn ' + (state.activeFilter === '30d' ? 'btn-dark active' : 'btn-outline-secondary')" t-on-click="() => this.setFilter('30d')">30d</button>
+                            <button type="button" t-att-class="'btn cadence-filter-btn ' + (state.activeFilter === '90d' ? 'btn-dark active' : 'btn-outline-secondary')" t-on-click="() => this.setFilter('90d')">90d</button>
+                            <button type="button" t-att-class="'btn cadence-filter-btn ' + (state.activeFilter === 'YTD' ? 'btn-dark active' : 'btn-outline-secondary')" t-on-click="() => this.setFilter('YTD')">YTD</button>
+                            <button type="button" t-att-class="'btn cadence-filter-btn ' + (state.activeFilter === 'All' ? 'btn-dark active' : 'btn-outline-secondary')" t-on-click="() => this.setFilter('All')">All</button>
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary cadence-action-btn" t-on-click="openGlobalFilters"><i class="fa fa-sliders me-1"></i> Filters</button>
+                        <button type="button" class="btn btn-outline-secondary cadence-action-btn" t-on-click="exportDashboard"><i class="fa fa-download me-1"></i> Export</button>
+                    </div>
+                </div>
+
+                <!-- 4 KPI Cards Row -->
+                <div class="row g-4 mb-4">
+                    <div class="col-xl-3 col-md-6">
+                        <div class="cadence-kpi-card bg-red">
+                            <div class="kpi-card__top">
+                                <span class="kpi-card__eyebrow">MRR</span>
+                                <span class="kpi-card__icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 7 13.5 15.5 8.5 10.5 2 17"></path><path d="M16 7h6v6"></path>
+                                    </svg>
+                                </span>
+                            </div>
+                            <div class="kpi-card__figure">$<t t-esc="state.kpi.mrr.toLocaleString('en-US')"/></div>
+                            <div class="kpi-card__bottom">
+                                <span class="kpi-card__delta"><span class="arrow"><t t-esc="state.kpi.mrr_trend &gt; 0 ? '↗' : '↘'"/></span><t t-esc="state.kpi.mrr_trend &gt; 0 ? '+' : ''"/><t t-esc="state.kpi.mrr_trend"/>% vs last month</span>
+                                <svg width="80" height="28">
+                                    <polygon points="0,28 0,17 6.7,16 13.3,14 20,12 26.7,11 33.3,8 40,6 46.7,5 53.3,4 60,3 66.7,3 73.3,2 80,2 80,28" fill="#FFFFFF" opacity="0.18"></polygon>
+                                    <polyline points="0,17 6.7,16 13.3,14 20,12 26.7,11 33.3,8 40,6 46.7,5 53.3,4 60,3 66.7,3 73.3,2 80,2" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                        <div class="cadence-kpi-card bg-green">
+                            <div class="kpi-card__top">
+                                <span class="kpi-card__eyebrow">ARR</span>
+                                <span class="kpi-card__icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                                    </svg>
+                                </span>
+                            </div>
+                            <div class="kpi-card__figure">$<t t-esc="(state.kpi.arr / 1000000).toFixed(1)"/>M</div>
+                            <div class="kpi-card__bottom">
+                                <span class="kpi-card__delta"><span class="arrow"><t t-esc="state.kpi.arr_trend &gt; 0 ? '↗' : '↘'"/></span><t t-esc="state.kpi.arr_trend &gt; 0 ? '+' : ''"/><t t-esc="state.kpi.arr_trend"/>% annualized</span>
+                                <svg width="80" height="28">
+                                    <polygon points="0,28 0,22 10,18 20,20 30,15 40,18 50,12 60,15 70,8 80,10 80,28" fill="#FFFFFF" opacity="0.18"></polygon>
+                                    <polyline points="0,22 10,18 20,20 30,15 40,18 50,12 60,15 70,8 80,10" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                        <div class="cadence-kpi-card bg-purple" t-on-click="openSubscriptions" style="cursor: pointer;">
+                            <div class="kpi-card__top">
+                                <span class="kpi-card__eyebrow">ACTIVE SUBS</span>
+                                <span class="kpi-card__icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="9" cy="7" r="4"></circle>
+                                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                                    </svg>
+                                </span>
+                            </div>
+                            <div class="kpi-card__figure"><t t-esc="state.kpi.active_subscriptions.toLocaleString('en-US')"/></div>
+                            <div class="kpi-card__bottom">
+                                <span class="kpi-card__delta"><span class="arrow"><t t-esc="state.kpi.active_trend &gt; 0 ? '↗' : '↘'"/></span><t t-esc="state.kpi.active_trend &gt; 0 ? '+' : ''"/><t t-esc="state.kpi.active_trend"/> net this month</span>
+                                <svg width="80" height="28">
+                                    <polygon points="0,28 0,10 15,12 30,8 45,15 60,6 80,4 80,28" fill="#FFFFFF" opacity="0.18"></polygon>
+                                    <polyline points="0,10 15,12 30,8 45,15 60,6 80,4" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"></polyline>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-3 col-md-6">
+                        <div class="cadence-kpi-card bg-yellow">
+                            <div class="kpi-card__top">
+                                <span class="kpi-card__eyebrow">CHURN</span>
+                                <span class="kpi-card__icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 3v18h18"></path>
+                                        <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path>
+                                    </svg>
+                                </span>
+                            </div>
+                            <div class="kpi-card__figure"><t t-esc="state.kpi.churn_rate"/>%</div>
+                            <div class="kpi-card__bottom">
+                                <span class="kpi-card__delta"><span class="arrow"><t t-esc="state.kpi.churn_trend &gt; 0 ? '↗' : '↘'"/></span><t t-esc="state.kpi.churn_trend &gt; 0 ? '+' : ''"/><t t-esc="state.kpi.churn_trend"/> pp vs last month</span>
+                                <svg width="80" height="28">
+                                    <polygon points="0,28 0,20 15,18 30,22 45,15 60,24 80,26 80,28" fill="#FFFFFF" opacity="0.18"></polygon>
+                                    <polyline points="0,20 15,18 30,22 45,15 60,24 80,26" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linejoin="round"></polyline>
+                                </svg>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Action Cards -->
-                <div class="action-cards-container mb-4">
-                    <div class="action-card" t-on-click="actionCreateSubscription">
-                        <div class="action-icon bg-primary-soft"><i class="fa fa-plus text-primary"></i></div>
-                        <span class="action-label">Create Subscription</span>
-                    </div>
-                    <div class="action-card" t-on-click="actionAddCustomer">
-                        <div class="action-icon bg-info-soft"><i class="fa fa-user-plus text-info"></i></div>
-                        <span class="action-label">Add Customer</span>
-                    </div>
-                    <div class="action-card" t-on-click="actionGenerateInvoices">
-                        <div class="action-icon bg-success-soft"><i class="fa fa-file-text-o text-success"></i></div>
-                        <span class="action-label">Generate Invoice</span>
-                    </div>
-                    <div class="action-card" t-on-click="actionManagePlans">
-                        <div class="action-icon bg-warning-soft"><i class="fa fa-cubes text-warning"></i></div>
-                        <span class="action-label">Manage Plans</span>
-                    </div>
-                    <div class="action-card" t-on-click="actionRevenueReports">
-                        <div class="action-icon bg-purple-soft"><i class="fa fa-bar-chart text-purple"></i></div>
-                        <span class="action-label">Analytics</span>
-                    </div>
-                </div>
-
-                <!-- Featured Revenue Analytics & KPIs -->
+                <!-- Charts Row 1 -->
                 <div class="row g-4 mb-4">
-                    <!-- Sparkline KPI Cards -->
                     <div class="col-xl-8">
-                        <div class="row g-3">
-                            <div class="col-md-4 col-sm-6">
-                                <div class="kpi-spark-card">
-                                    <div class="kpi-header">
-                                        <div class="kpi-icon-sm bg-primary-gradient"><i class="fa fa-line-chart"></i></div>
-                                        <div t-attf-class="trend-badge #{state.kpi.mrr_trend &gt;= 0 ? 'positive' : 'negative'}">
-                                            <i t-attf-class="fa #{state.kpi.mrr_trend &gt;= 0 ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> <t t-esc="Math.abs(state.kpi.mrr_trend)"/>%
-                                        </div>
-                                    </div>
-                                    <div class="kpi-body">
-                                        <span class="kpi-title">Monthly Recurring Revenue</span>
-                                        <h3 class="kpi-value">$<t t-esc="state.kpi.mrr"/></h3>
-                                    </div>
-                                    <div class="kpi-sparkline"><canvas t-ref="sparkMrr"></canvas></div>
+                        <div class="cadence-chart-card">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="chart-header-muted">RECURRING REVENUE</div>
+                                    <h5 class="chart-title">Revenue breakdown — last 6 months</h5>
+                                </div>
+                                <div class="chart-filters d-flex gap-2">
+                                    <button type="button" class="btn btn-sm filter-btn active">6M</button>
+                                    <button type="button" class="btn btn-sm filter-btn">YTD</button>
+                                    <button type="button" class="btn btn-sm filter-btn">All</button>
                                 </div>
                             </div>
-                            <div class="col-md-4 col-sm-6">
-                                <div class="kpi-spark-card">
-                                    <div class="kpi-header">
-                                        <div class="kpi-icon-sm bg-success-gradient"><i class="fa fa-bar-chart"></i></div>
-                                        <div t-attf-class="trend-badge #{state.kpi.arr_trend &gt;= 0 ? 'positive' : 'negative'}">
-                                            <i t-attf-class="fa #{state.kpi.arr_trend &gt;= 0 ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> <t t-esc="Math.abs(state.kpi.arr_trend)"/>%
-                                        </div>
-                                    </div>
-                                    <div class="kpi-body">
-                                        <span class="kpi-title">Annual Recurring Revenue</span>
-                                        <h3 class="kpi-value">$<t t-esc="state.kpi.arr"/></h3>
-                                    </div>
-                                    <div class="kpi-sparkline"><canvas t-ref="sparkArr"></canvas></div>
-                                </div>
-                            </div>
-                            <div class="col-md-4 col-sm-6">
-                                <div class="kpi-spark-card" t-on-click="openSubscriptions" style="cursor: pointer;">
-                                    <div class="kpi-header">
-                                        <div class="kpi-icon-sm bg-info-gradient"><i class="fa fa-users"></i></div>
-                                        <div t-attf-class="trend-badge #{state.kpi.active_trend &gt;= 0 ? 'positive' : 'negative'}">
-                                            <i t-attf-class="fa #{state.kpi.active_trend &gt;= 0 ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> <t t-esc="Math.abs(state.kpi.active_trend)"/>%
-                                        </div>
-                                    </div>
-                                    <div class="kpi-body">
-                                        <span class="kpi-title">Active Subscriptions</span>
-                                        <h3 class="kpi-value"><t t-esc="state.kpi.active_subscriptions"/></h3>
-                                    </div>
-                                    <div class="kpi-sparkline"><canvas t-ref="sparkActive"></canvas></div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="kpi-spark-card">
-                                    <div class="kpi-header">
-                                        <div class="kpi-icon-sm bg-danger-gradient"><i class="fa fa-level-down"></i></div>
-                                        <div t-attf-class="trend-badge #{state.kpi.churn_trend &lt;= 0 ? 'positive' : 'negative'}">
-                                            <i t-attf-class="fa #{state.kpi.churn_trend &gt; 0 ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> <t t-esc="Math.abs(state.kpi.churn_trend)"/>%
-                                        </div>
-                                    </div>
-                                    <div class="kpi-body">
-                                        <span class="kpi-title">30-Day Churn Rate</span>
-                                        <h3 class="kpi-value"><t t-esc="state.kpi.churn_rate"/>%</h3>
-                                    </div>
-                                    <div class="kpi-sparkline"><canvas t-ref="sparkChurn"></canvas></div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="kpi-spark-card">
-                                    <div class="kpi-header">
-                                        <div class="kpi-icon-sm bg-warning-gradient"><i class="fa fa-user-plus"></i></div>
-                                        <div t-attf-class="trend-badge #{state.kpi.arpu_trend &gt;= 0 ? 'positive' : 'negative'}">
-                                            <i t-attf-class="fa #{state.kpi.arpu_trend &gt;= 0 ? 'fa-arrow-up' : 'fa-arrow-down'}"></i> <t t-esc="Math.abs(state.kpi.arpu_trend)"/>%
-                                        </div>
-                                    </div>
-                                    <div class="kpi-body">
-                                        <span class="kpi-title">Average Revenue Per User</span>
-                                        <h3 class="kpi-value">$<t t-esc="state.kpi.arpu"/></h3>
-                                    </div>
-                                    <div class="kpi-sparkline"><canvas t-ref="sparkArpu"></canvas></div>
-                                </div>
+                            <div class="chart-container mt-4" style="position: relative; height:250px; width: 65%;">
+                                <canvas t-ref="revenueBreakdownChart"></canvas>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Featured Revenue Analytics -->
                     <div class="col-xl-4">
-                        <div class="featured-revenue-card">
-                            <div class="revenue-overlay"></div>
-                            <h4 class="revenue-title">Revenue Forecast</h4>
-                            <div class="revenue-amount">
-                                <h1>$<t t-esc="state.kpi.forecast_revenue"/></h1>
-                                <span class="badge bg-white text-dark rounded-pill shadow-sm"><i class="fa fa-line-chart text-success me-1"></i> Projected Next Month</span>
-                            </div>
-                            
-                            <div class="revenue-stats mt-4">
-                                <div class="d-flex justify-content-between mb-3">
-                                    <span class="text-light text-opacity-75">Current MRR</span>
-                                    <strong class="text-white">$<t t-esc="state.kpi.mrr"/></strong>
-                                </div>
-                                <div class="d-flex justify-content-between mb-3">
-                                    <span class="text-light text-opacity-75">Target Forecast</span>
-                                    <strong class="text-white">$<t t-esc="Math.round(state.kpi.mrr * 1.1)"/></strong>
-                                </div>
-                                <div class="progress" style="height: 6px; background: rgba(255,255,255,0.2);">
-                                    <div class="progress-bar bg-white rounded" role="progressbar" style="width: 85%"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Deep Analytics Row -->
-                <div class="row g-4 mb-4">
-                    <div class="col-lg-8">
-                        <div class="chart-card">
-                            <h4 class="chart-title">Revenue Growth</h4>
-                            <div class="chart-container" style="position: relative; height:320px;">
-                                <canvas t-ref="mrrChart"></canvas>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-lg-4">
-                        <div class="chart-card">
-                            <h4 class="chart-title">Plan Distribution</h4>
-                            <div class="plan-distribution-list mt-3">
-                                <t t-set="total_plans" t-value="state.charts.plan_distribution.reduce((acc, p) =&gt; acc + p.value, 0)"/>
-                                <t t-if="total_plans == 0">
-                                    <div class="text-center text-muted mt-5">No active plans found.</div>
-                                </t>
-                                <t t-foreach="state.charts.plan_distribution" t-as="plan" t-key="plan.label">
-                                    <div class="plan-item mb-4">
-                                        <div class="d-flex justify-content-between mb-1">
-                                            <span class="fw-bold text-dark"><t t-esc="plan.label"/></span>
-                                            <span class="text-muted fw-bold"><t t-esc="plan.value"/> Subs (<t t-esc="Math.round((plan.value / total_plans) * 100)"/>%)</span>
+                        <div class="cadence-chart-card">
+                            <div class="chart-header-muted">BY PLAN</div>
+                            <h5 class="chart-title">MRR distribution</h5>
+                            <div class="row mt-4">
+                                <div class="col-6">
+                                    <div class="chart-container" style="position: relative; height:200px;">
+                                        <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: center;">
+                                            <canvas t-ref="mrrDistributionChart"></canvas>
                                         </div>
-                                        <div class="progress" style="height: 8px; background: #F1F5F9; border-radius: 4px;">
-                                            <div class="progress-bar bg-primary-gradient rounded" role="progressbar" t-attf-style="width: #{Math.round((plan.value / total_plans) * 100)}%"></div>
+                                        <!-- Content positioned over doughnut center -->
+                                        <div class="doughnut-center-label text-center" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;">
+                                            <div class="h5 mb-0 fw-bold text-dark">$<t t-esc="(state.kpi.mrr / 1000).toFixed(1)"/>K</div>
+                                            <div class="text-muted" style="font-size: 0.65rem; letter-spacing: 0.1em; font-weight: bold;">TOTAL</div>
                                         </div>
                                     </div>
-                                </t>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Bottom 2x2 Widgets Grid -->
-                <div class="row g-4">
-                    <!-- Upcoming Renewals -->
-                    <div class="col-xl-6">
-                        <div class="widget-card">
-                            <div class="widget-header">
-                                <h4 class="widget-title"><i class="fa fa-calendar-o text-primary me-2"></i> Upcoming Renewals</h4>
-                                <button class="btn btn-sm btn-light rounded-pill px-3" t-on-click="openSubscriptions">View All</button>
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table widget-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Subscription</th>
-                                            <th>Customer</th>
-                                            <th>Date</th>
-                                            <th class="text-end">Amount</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <t t-if="!state.widgets.upcoming_renewals.length">
-                                            <tr><td colspan="4" class="text-center text-muted py-4">No upcoming renewals found.</td></tr>
-                                        </t>
-                                        <t t-foreach="state.widgets.upcoming_renewals" t-as="renewal" t-key="renewal.id">
-                                            <tr>
-                                                <td class="fw-bold"><t t-esc="renewal.name"/></td>
-                                                <td><t t-esc="renewal.customer"/></td>
-                                                <td><span class="badge bg-light text-dark rounded-pill"><t t-esc="renewal.date"/></span></td>
-                                                <td class="text-end fw-bold text-success">$<t t-esc="renewal.amount"/></td>
-                                            </tr>
-                                        </t>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Top Customers -->
-                    <div class="col-xl-6">
-                        <div class="widget-card">
-                            <div class="widget-header">
-                                <h4 class="widget-title"><i class="fa fa-star text-warning me-2"></i> Top Customers</h4>
-                                <button class="btn btn-sm btn-light rounded-pill px-3" t-on-click="actionViewCustomers">View All</button>
-                            </div>
-                            <div class="table-responsive">
-                                <table class="table widget-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Customer</th>
-                                            <th>Plan</th>
-                                            <th class="text-end">Total MRR</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <t t-if="!state.widgets.top_customers.length">
-                                            <tr><td colspan="3" class="text-center text-muted py-4">No top customers found.</td></tr>
-                                        </t>
-                                        <t t-foreach="state.widgets.top_customers" t-as="cust" t-key="cust.id">
-                                            <tr>
-                                                <td class="fw-bold">
-                                                    <div class="d-flex align-items-center">
-                                                        <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 24px; height: 24px; font-size: 10px;">
-                                                            <t t-esc="cust.name.substring(0,2).toUpperCase()"/>
-                                                        </div>
-                                                        <t t-esc="cust.name"/>
-                                                    </div>
-                                                </td>
-                                                <td><span class="badge bg-light text-dark rounded-pill border"><t t-esc="cust.plan"/></span></td>
-                                                <td class="text-end fw-bold text-dark">$<t t-esc="cust.amount"/></td>
-                                            </tr>
-                                        </t>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Recent Activity -->
-                    <div class="col-xl-6">
-                        <div class="widget-card">
-                            <div class="widget-header">
-                                <h4 class="widget-title"><i class="fa fa-bolt text-warning me-2"></i> Recent Activity</h4>
-                            </div>
-                            <div class="activity-feed">
-                                <t t-if="!state.widgets.recent_activity.length">
-                                    <div class="text-center text-muted py-4">No recent activity found.</div>
-                                </t>
-                                <t t-foreach="state.widgets.recent_activity" t-as="activity" t-key="activity.id">
-                                    <div class="activity-item">
-                                        <div t-attf-class="activity-icon #{activity.raw_state}">
-                                            <i t-attf-class="fa #{activity.raw_state == '3_progress' ? 'fa-play' : activity.raw_state == '6_churn' ? 'fa-times' : activity.raw_state == '5_renewed' ? 'fa-refresh' : activity.raw_state == '7_upsell' ? 'fa-arrow-up' : 'fa-pause'}"></i>
-                                        </div>
-                                        <div class="activity-content">
-                                            <div class="d-flex justify-content-between">
-                                                <strong class="text-dark"><t t-esc="activity.customer"/></strong>
-                                                <small class="text-muted"><t t-esc="activity.date"/></small>
+                                </div>
+                                <div class="col-6 custom-legend-container d-flex flex-column justify-content-center">
+                                    <t t-foreach="state.charts.plan_distribution" t-as="plan" t-key="plan.label">
+                                        <div class="custom-legend-item mb-3 d-flex align-items-start">
+                                            <div class="legend-color-box mt-1 me-2" t-attf-style="background-color: {{ plan.color }};"></div>
+                                            <div>
+                                                <div class="legend-label fw-bold text-dark" style="font-size: 0.85rem;"><t t-esc="plan.label"/></div>
+                                                <div class="legend-value text-muted" style="font-size: 0.8rem;">$<t t-esc="(plan.value).toLocaleString('en-US')"/></div>
                                             </div>
-                                            <p class="mb-0 text-muted">
-                                                Subscription <span class="fw-bold"><t t-esc="activity.name"/></span> was marked as 
-                                                <span t-attf-class="badge-state #{activity.raw_state}"><t t-esc="activity.state"/></span>
-                                            </p>
+                                        </div>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row 2 -->
+                <div class="row g-4 mb-4">
+                    <div class="col-xl-4">
+                        <div class="cadence-chart-card">
+                            <div class="chart-header-muted">THIS WEEK</div>
+                            <h5 class="chart-title">New vs. churned</h5>
+                            <div class="chart-container mt-4" style="position: relative; height:250px;">
+                                <canvas t-ref="newVsChurnedChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-4">
+                        <div class="cadence-chart-card">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <div>
+                                    <div class="chart-header-muted">TOP CUSTOMERS</div>
+                                    <h5 class="chart-title mb-0">By MRR · this month</h5>
+                                </div>
+                                <button class="btn btn-sm btn-link text-muted p-0 text-decoration-none" style="font-size: 0.8rem;" t-on-click="actionViewCustomers">View all <i class="fa fa-arrow-right ms-1"></i></button>
+                            </div>
+                            <div class="top-customers-list mt-4">
+                                <t t-if="!state.widgets.top_customers.length">
+                                    <div class="text-center text-muted py-4">No top customers found.</div>
+                                </t>
+                                <t t-foreach="state.widgets.top_customers" t-as="cust" t-key="cust.id">
+                                    <div class="customer-row mb-4">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <div class="customer-name text-dark fw-bold" style="font-size: 0.9rem;"><t t-esc="cust.name"/></div>
+                                            <div class="customer-mrr fw-bold text-dark" style="font-size: 0.9rem;">
+                                                $<t t-esc="cust.amount.toLocaleString('en-US')"/>
+                                            </div>
+                                        </div>
+                                        <div class="customer-bar-container">
+                                            <div class="customer-bar" t-attf-style="width: {{ cust.percent }}%; background-color: {{ cust.color }};"></div>
                                         </div>
                                     </div>
                                 </t>
                             </div>
                         </div>
                     </div>
-
-                    <!-- Recent Payments -->
-                    <div class="col-xl-6">
-                        <div class="widget-card">
-                            <div class="widget-header">
-                                <h4 class="widget-title"><i class="fa fa-credit-card text-success me-2"></i> Recent Payments</h4>
+                    <div class="col-xl-4">
+                        <div class="cadence-chart-card">
+                            <div class="chart-header-muted fw-bold" style="color: #A37B3C; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 4px;">DUNNING - 30D</div>
+                            <h5 class="chart-title text-dark fw-bold mb-4" style="font-size: 1.1rem;">Recovery rate</h5>
+                            <div class="chart-container" style="position: relative; height:160px; display: flex; justify-content: center; align-items: center; flex-direction: column;">
+                                <div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; justify-content: center; align-items: center;">
+                                    <canvas t-ref="recoveryRateChart"></canvas>
+                                </div>
+                                <div class="recovery-label text-center" style="position: absolute; top: 75%; left: 50%; transform: translate(-50%, -50%); pointer-events: none;">
+                                    <div class="h3 mb-0" style="font-family: 'Playfair Display', Georgia, serif; color: #1a1a1a; font-size: 2.8rem; letter-spacing: -0.02em;"><t t-esc="state.widgets.recovery_details.rate"/>%</div>
+                                    <div class="text-muted fw-bold" style="font-size: 0.65rem; letter-spacing: 0.15em; margin-top: -5px;">RECOVERED</div>
+                                </div>
                             </div>
-                            <div class="table-responsive">
-                                <table class="table widget-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Customer</th>
-                                            <th>Date</th>
-                                            <th class="text-end">Amount</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <t t-if="!state.widgets.recent_payments.length">
-                                            <tr><td colspan="3" class="text-center text-muted py-4">No recent payments found.</td></tr>
-                                        </t>
-                                        <t t-foreach="state.widgets.recent_payments" t-as="payment" t-key="payment.id">
-                                            <tr>
-                                                <td class="fw-bold"><t t-esc="payment.customer"/></td>
-                                                <td><span class="text-muted"><t t-esc="payment.date"/></span></td>
-                                                <td class="text-end fw-bold text-success"><t t-esc="payment.currency"/><t t-esc="payment.amount"/></td>
-                                            </tr>
-                                        </t>
-                                    </tbody>
-                                </table>
+                            <div class="d-flex justify-content-between align-items-end mt-4 pt-3" style="border-top: 1px solid rgba(0,0,0,0.05);">
+                                <div>
+                                    <div class="text-muted fw-bold mb-1" style="font-size: 0.65rem; letter-spacing: 0.1em;">AT RISK</div>
+                                    <div class="fw-normal" style="font-size: 1.3rem; color: #C24A2A;">$<t t-esc="state.widgets.recovery_details.at_risk.toLocaleString('en-US')"/></div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="text-muted fw-bold mb-1" style="font-size: 0.65rem; letter-spacing: 0.1em;">RECOVERED</div>
+                                    <div class="text-muted fw-normal" style="font-size: 1.3rem;">$<t t-esc="state.widgets.recovery_details.recovered.toLocaleString('en-US')"/></div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
+                <!-- Charts Row 3 -->
+                <div class="row g-4 mb-4">
+                    <div class="col-xl-8">
+                        <div class="cadence-chart-card recent-activity-card" style="padding: 28px 32px; border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 4px 12px rgba(0,0,0,0.02);">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <div>
+                                    <div class="chart-header-primary" style="color: #27675C; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; margin-bottom: 4px;">LIVE</div>
+                                    <h5 class="chart-title mb-0" style="font-size: 1.25rem;">Recent activity</h5>
+                                </div>
+                                <button class="btn btn-sm btn-link p-0 text-decoration-none view-all-btn" style="font-size: 0.8rem; color: #444; border-bottom: 1px solid transparent; border-radius: 0; padding-bottom: 2px !important;" t-on-click="openRecentActivity">View all <span style="margin-left: 2px;">→</span></button>
+                            </div>
+                            <div class="recent-activity-list mt-3 pt-1">
+                                <t t-foreach="state.widgets.recent_activity" t-as="activity" t-key="activity.id">
+                                    <div class="activity-row d-flex align-items-start py-3" style="border-bottom: 1px solid #EAE6DF;">
+                                        <div class="activity-dot me-3 mt-2" t-attf-style="background-color: {{ activity.color }}; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;"></div>
+                                        <div class="flex-grow-1" style="line-height: 1.4;">
+                                            <div class="text-dark" style="font-size: 0.9rem;">
+                                                <span class="fw-bold"><t t-esc="activity.customer"/></span> <span style="color: #444;"><t t-esc="activity.message"/></span>
+                                            </div>
+                                            <div class="text-muted mt-1" style="font-size: 0.8rem; color: #888 !important;">
+                                                <t t-esc="activity.time_ago"/> <t t-if="activity.subtitle">· <t t-esc="activity.subtitle"/></t>
+                                            </div>
+                                        </div>
+                                        <div class="activity-amount fw-bold text-dark text-end" style="font-size: 0.9rem; line-height: 1.4;">
+                                            $<t t-esc="activity.amount.toLocaleString('en-US', {minimumFractionDigits: 2})"/>
+                                        </div>
+                                    </div>
+                                </t>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-xl-4">
+                        <div class="cadence-chart-card bg-red-dunning position-relative overflow-hidden h-100" style="padding: 24px 28px;">
+                            <div class="dunning-circle-bg"></div>
+                            <div class="position-relative z-1 d-flex flex-column h-100 justify-content-between">
+                                <div>
+                                    <div class="chart-header-light" style="color: rgba(255,255,255,0.85); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; margin-bottom: 6px;">AT RISK</div>
+                                    <h5 class="chart-title text-white" style="font-size: 1.1rem; font-weight: 600; margin-bottom: 4px;">Dunning queue</h5>
+                                    <div class="dunning-value text-white" style="font-family: 'Playfair Display', Georgia, serif; font-size: 3.4rem; font-weight: 400; line-height: 1.1; margin-bottom: 8px; letter-spacing: -0.01em;">
+                                        $<t t-esc="state.widgets.dunning_queue.at_risk_amount.toLocaleString('en-US')"/>
+                                    </div>
+                                    <div style="color: rgba(255,255,255,0.9); font-size: 0.75rem;">
+                                        <t t-esc="state.widgets.dunning_queue.failed_payments"/> failed payments · next retry <t t-esc="state.widgets.dunning_queue.next_retry"/>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2 mt-4 pt-2">
+                                    <button class="btn bg-white fw-bold flex-grow-1" style="border-radius: 6px; color: #B24629 !important; font-size: 0.9rem; padding: 8px 16px;" t-on-click="openDunningQueue">Open queue</button>
+                                    <button class="btn text-white px-3" style="border-radius: 6px; border: 1px solid rgba(255,255,255,0.4); font-size: 0.9rem; padding: 8px 16px;" t-on-click="openDunningSettings">Settings</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </t>
         </div>
     </t>

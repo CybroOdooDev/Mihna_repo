@@ -11,9 +11,17 @@ class ProductTemplate(models.Model):
         string='Subscription Product', default=False,
         help='Check if this product is a recurring subscription plan.'
     )
-    subscription_plan_id = fields.Many2one(
-        'subscription.plan', string='Subscription Plan',
-        help='Plan used when selling this product.'
+    subscription_pricing_ids = fields.One2many(
+        'subscription.plan.pricing', 'product_template_id',
+        string='Recurring Prices'
+    )
+    accept_one_time = fields.Boolean(
+        string='Accept One-Time',
+        help='Allow customers to bypass subscription and buy this product as a one-time purchase.'
+    )
+    prorated_price = fields.Boolean(
+        string='Prorated Price', default=True,
+        help='If checked, the first invoice will be prorated based on the billing cycle date.'
     )
 
     def write(self, vals):

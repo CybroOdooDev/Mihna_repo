@@ -48,11 +48,16 @@
                     <group>
                         <group string="DETAILS">
                             <field name="active" invisible="1"/>
-                            <field name="product_id" string="Linked Product"/>
+                            <field name="product_id" string="Website Linked Product" required="1"/>
                             <label for="billing_period_value" string="Billing Period"/>
                             <div class="o_row">
                                 <field name="billing_period_value" class="oe_inline"/>
                                 <field name="billing_period_unit" class="oe_inline"/>
+                            </div>
+                            <label for="trial_period_days" string="Trial Period"/>
+                            <div class="o_row">
+                                <field name="trial_period_days" class="oe_inline"/>
+                                <span class="oe_grey">Days</span>
                             </div>
                             <field name="align_to_period_start" string="Align to Period Start"/>
                             <label for="automatic_closing_days" string="Automatic Closing"/>
@@ -70,7 +75,6 @@
                             <field name="is_add_products" string="Add Products"/>
                             <field name="is_renew" string="Renew"/>
                             <field name="is_popular" string="Most Popular"/>
-                            <field name="supports_teams" string="Supports Team Members"/>
                             <field name="optional_plan_ids" string="Optional Plans" widget="many2many_tags" placeholder="Select plans..."/>
                         </group>
                     </group>
@@ -80,7 +84,7 @@
                         <page string="Pricing" name="pricing">
                             <field name="pricing_ids">
                                 <list editable="bottom">
-                                    <field name="product_id" string="Product"/>
+                                    <field name="product_template_id" string="Product Template"/>
                                     <field name="variant_id" string="Variant"/>
                                     <field name="pricelist_id" string="Pricelist"/>
                                     <field name="price" string="Unit Price" widget="monetary"/>

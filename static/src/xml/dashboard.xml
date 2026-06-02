@@ -17,8 +17,8 @@
             </t>
             <t t-else="">
                 <!-- Cadence Top Navigation -->
-                <div class="cadence-top-nav d-flex justify-content-between align-items-center pb-3 border-bottom" style="margin: -30px -30px 10px -30px; padding: 16px 30px; background: #ffffff;">
-                    <div class="d-flex align-items-center gap-4" style="font-size: 0.9rem;">
+                <div class="cadence-top-nav d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center pb-3 border-bottom gap-3" style="margin: -30px -30px 10px -30px; padding: 16px 30px; background: #ffffff;">
+                    <div class="d-flex align-items-center gap-3 gap-md-4 flex-wrap" style="font-size: 0.9rem;">
                         <button class="btn btn-dark fw-bold px-3 py-1" style="border-radius: 6px; font-size: 0.9rem;">Overview</button>
                         <div class="nav-item cursor-pointer" t-on-click="openSubscriptions" style="cursor: pointer;">
                             <span class="text-dark fw-bold">Subscriptions</span> <span class="text-muted ms-1" style="font-size: 0.8rem;"><t t-esc="state.nav_counts.subscriptions.toLocaleString('en-US')"/></span>
@@ -36,29 +36,18 @@
                             Plans
                         </div>
                     </div>
-                    <div class="d-flex align-items-center">
+                    <div class="d-flex align-items-center gap-2 flex-wrap mt-2 mt-md-0">
+                        <button type="button" class="btn btn-light border text-dark fw-bold px-3 py-1 shadow-sm" style="border-radius: 6px; font-size: 0.9rem;" t-on-click="exportDashboard">
+                            <i class="fa fa-download me-1"></i> Export
+                        </button>
                         <button class="btn fw-bold text-white px-3 py-1 shadow-sm" style="background-color: #C24A2A; border-radius: 6px; font-size: 0.9rem;" t-on-click="actionNewSubscription">
                             + New subscription
                         </button>
                     </div>
                 </div>
 
-                <!-- Cadence Header -->
                 <div class="cadence-header mb-4">
                     <h1 class="cadence-title mt-0">Overview</h1>
-                    
-                    <div class="cadence-filters d-flex gap-3 mt-4">
-                        <div class="btn-group" role="group">
-                            <button type="button" t-att-class="'btn cadence-filter-btn ' + (state.activeFilter === 'Today' ? 'btn-dark active' : 'btn-outline-secondary')" t-on-click="() => this.setFilter('Today')">Today</button>
-                            <button type="button" t-att-class="'btn cadence-filter-btn ' + (state.activeFilter === '7d' ? 'btn-dark active' : 'btn-outline-secondary')" t-on-click="() => this.setFilter('7d')">7d</button>
-                            <button type="button" t-att-class="'btn cadence-filter-btn ' + (state.activeFilter === '30d' ? 'btn-dark active' : 'btn-outline-secondary')" t-on-click="() => this.setFilter('30d')">30d</button>
-                            <button type="button" t-att-class="'btn cadence-filter-btn ' + (state.activeFilter === '90d' ? 'btn-dark active' : 'btn-outline-secondary')" t-on-click="() => this.setFilter('90d')">90d</button>
-                            <button type="button" t-att-class="'btn cadence-filter-btn ' + (state.activeFilter === 'YTD' ? 'btn-dark active' : 'btn-outline-secondary')" t-on-click="() => this.setFilter('YTD')">YTD</button>
-                            <button type="button" t-att-class="'btn cadence-filter-btn ' + (state.activeFilter === 'All' ? 'btn-dark active' : 'btn-outline-secondary')" t-on-click="() => this.setFilter('All')">All</button>
-                        </div>
-                        <button type="button" class="btn btn-outline-secondary cadence-action-btn" t-on-click="openGlobalFilters"><i class="fa fa-sliders me-1"></i> Filters</button>
-                        <button type="button" class="btn btn-outline-secondary cadence-action-btn" t-on-click="exportDashboard"><i class="fa fa-download me-1"></i> Export</button>
-                    </div>
                 </div>
 
                 <!-- 4 KPI Cards Row -->
@@ -93,7 +82,7 @@
                                     </svg>
                                 </span>
                             </div>
-                            <div class="kpi-card__figure">$<t t-esc="(state.kpi.arr / 1000000).toFixed(1)"/>M</div>
+                            <div class="kpi-card__figure">$<t t-esc="state.kpi.arr.toLocaleString('en-US')"/></div>
                             <div class="kpi-card__bottom">
                                 <span class="kpi-card__delta"><span class="arrow"><t t-esc="state.kpi.arr_trend &gt; 0 ? '↗' : '↘'"/></span><t t-esc="state.kpi.arr_trend &gt; 0 ? '+' : ''"/><t t-esc="state.kpi.arr_trend"/>% annualized</span>
                                 <svg width="80" height="28">
@@ -156,12 +145,20 @@
                             <div class="d-flex justify-content-between align-items-start">
                                 <div>
                                     <div class="chart-header-muted">RECURRING REVENUE</div>
-                                    <h5 class="chart-title">Revenue breakdown — last 6 months</h5>
+                                    <h5 class="chart-title">Revenue breakdown — 
+                                        <t t-if="state.activeFilter === 'YTD'">year to date</t>
+                                        <t t-elif="state.activeFilter === 'All'">all time</t>
+                                        <t t-elif="state.activeFilter === '90d'">last 3 months</t>
+                                        <t t-elif="state.activeFilter === '30d'">last 30 days</t>
+                                        <t t-elif="state.activeFilter === '7d'">last 7 days</t>
+                                        <t t-elif="state.activeFilter === 'Today'">today</t>
+                                        <t t-else="">last 6 months</t>
+                                    </h5>
                                 </div>
                                 <div class="chart-filters d-flex gap-2">
-                                    <button type="button" class="btn btn-sm filter-btn active">6M</button>
-                                    <button type="button" class="btn btn-sm filter-btn">YTD</button>
-                                    <button type="button" class="btn btn-sm filter-btn">All</button>
+                                    <button type="button" t-att-class="'btn btn-sm filter-btn ' + (!['YTD', 'All'].includes(state.activeFilter) ? 'active' : '')" t-on-click="() => this.setFilter('6M')">6M</button>
+                                    <button type="button" t-att-class="'btn btn-sm filter-btn ' + (state.activeFilter === 'YTD' ? 'active' : '')" t-on-click="() => this.setFilter('YTD')">YTD</button>
+                                    <button type="button" t-att-class="'btn btn-sm filter-btn ' + (state.activeFilter === 'All' ? 'active' : '')" t-on-click="() => this.setFilter('All')">All</button>
                                 </div>
                             </div>
                             <div class="chart-container mt-4" style="position: relative; height:250px; width: 65%;">
@@ -187,7 +184,7 @@
                                     </div>
                                 </div>
                                 <div class="col-6 custom-legend-container d-flex flex-column justify-content-center">
-                                    <t t-foreach="state.charts.plan_distribution" t-as="plan" t-key="plan.label">
+                                    <t t-foreach="state.charts.plan_distribution" t-as="plan" t-key="plan_index">
                                         <div class="custom-legend-item mb-3 d-flex align-items-start">
                                             <div class="legend-color-box mt-1 me-2" t-attf-style="background-color: {{ plan.color }};"></div>
                                             <div>
@@ -226,7 +223,7 @@
                                 <t t-if="!state.widgets.top_customers.length">
                                     <div class="text-center text-muted py-4">No top customers found.</div>
                                 </t>
-                                <t t-foreach="state.widgets.top_customers" t-as="cust" t-key="cust.id">
+                                <t t-foreach="state.widgets.top_customers" t-as="cust" t-key="cust_index">
                                     <div class="customer-row mb-4">
                                         <div class="d-flex justify-content-between align-items-center mb-2">
                                             <div class="customer-name text-dark fw-bold" style="font-size: 0.9rem;"><t t-esc="cust.name"/></div>
@@ -280,7 +277,7 @@
                                 <button class="btn btn-sm btn-link p-0 text-decoration-none view-all-btn" style="font-size: 0.8rem; color: #444; border-bottom: 1px solid transparent; border-radius: 0; padding-bottom: 2px !important;" t-on-click="openRecentActivity">View all <span style="margin-left: 2px;">→</span></button>
                             </div>
                             <div class="recent-activity-list mt-3 pt-1">
-                                <t t-foreach="state.widgets.recent_activity" t-as="activity" t-key="activity.id">
+                                <t t-foreach="state.widgets.recent_activity" t-as="activity" t-key="activity_index">
                                     <div class="activity-row d-flex align-items-start py-3" style="border-bottom: 1px solid #EAE6DF;">
                                         <div class="activity-dot me-3 mt-2" t-attf-style="background-color: {{ activity.color }}; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;"></div>
                                         <div class="flex-grow-1" style="line-height: 1.4;">

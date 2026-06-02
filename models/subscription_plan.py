@@ -29,8 +29,8 @@ class SubscriptionPlan(models.Model):
                 ) % plan.name)
 
     product_id = fields.Many2one(
-        'product.product', string='Linked Product',
-        help='The core product representing this subscription plan.'
+        'product.product', string='Website Linked Product', required=True,
+        help='The core product representing this subscription plan on the website.'
     )
 
     company_id = fields.Many2one(
@@ -85,7 +85,6 @@ class SubscriptionPlan(models.Model):
     is_add_products = fields.Boolean(string='Add Products')
     is_renew = fields.Boolean(string='Renew')
     is_popular = fields.Boolean(string='Most Popular')
-    supports_teams = fields.Boolean(string='Supports Team Members', help='Check this if the plan allows users to invite team members.')
 
     optional_plan_ids = fields.Many2many(
         'subscription.plan',
@@ -215,9 +214,13 @@ class SubscriptionPlanPricing(models.Model):
         'subscription.plan', string='Subscription Plan',
         ondelete='cascade', required=True
     )
-    product_id = fields.Many2one('product.product', string='Product', required=True)
+    product_template_id = fields.Many2one(
+        'product.template', string='Product Template', 
+        required=True, domain="[('recurring_ok', '=', True)]"
+    )
     variant_id = fields.Many2one('product.attribute.value', string='Variant')
     pricelist_id = fields.Many2one('product.pricelist', string='Pricelist')
+    currency_id = fields.Many2one('res.currency', related='pricelist_id.currency_id', store=True)
     price = fields.Float(string='Unit Price', required=True)
 
     @api.model_create_multi
@@ -251,9 +254,9 @@ class SubscriptionPlanPricing(models.Model):
         PriceLog = self.env['subscription.price.change.log']
         new_price = self.price
         plan = self.plan_id
-        product = self.product_id
+        template = self.product_template_id
 
-        if not plan or not product:
+        if not plan or not template:
             return
 
         # Find all active subscriptions (sale.order) using this plan
@@ -264,7 +267,7 @@ class SubscriptionPlanPricing(models.Model):
 
         for order in affected_orders:
             # Find matching order line(s) for the priced product
-            matching_lines = order.order_line.filtered(lambda l: l.product_id == product)
+            matching_lines = order.order_line.filtered(lambda l: l.product_template_id == template)
             for line in matching_lines:
                 is_protected = order.is_price_locked
                 current_price = line.price_unit
@@ -275,7 +278,7 @@ class SubscriptionPlanPricing(models.Model):
 
                 PriceLog.create({
                     'sale_order_id': order.id,
-                    'product_id': product.id,
+                    'product_id': matching_lines[0].product_id.id if matching_lines else template.product_variant_id.id,
                     'old_price': current_price,
                     'new_price': new_price,
                     'changed_by': self.env.user.id,
@@ -291,7 +294,7 @@ class SubscriptionPlanPricing(models.Model):
                         '<b>⚑ Price Change Blocked (Grandfathered)</b><br/>'
                         'Plan pricing for <b>%s</b> was modified from <b>%.2f</b> → <b>%.2f</b>.<br/>'
                         'This subscription is price-locked. The old price has been retained.'
-                    )) % (product.display_name, current_price, new_price))
+                    )) % (template.display_name, current_price, new_price))
                 else:
                     line.with_context(_price_lock_bypass=True).write({
                         'price_unit': new_price
@@ -300,7 +303,7 @@ class SubscriptionPlanPricing(models.Model):
                         '<b>Price Updated</b><br/>'
                         'Plan pricing for <b>%s</b> changed from <b>%.2f</b> → <b>%.2f</b>.<br/>'
                         'Subscription line has been updated automatically.'
-                    )) % (product.display_name, current_price, new_price))
+                    )) % (template.display_name, current_price, new_price))
 
 
 class SubscriptionPlanRamp(models.Model):

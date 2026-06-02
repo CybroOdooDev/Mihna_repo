@@ -17,3 +17,4 @@ from . import subscription_proration
 from . import subscription_dunning
 from . import res_config_settings
 from . import payment_transaction
+from . import product_pricelist

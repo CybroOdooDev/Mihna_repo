@@ -52,8 +52,8 @@
 
             <!-- Inject custom Subscription lifecycle buttons -->
             <xpath expr="//header" position="inside">
-                <button name="action_upsell" string="Upsell" type="object" class="btn-secondary" invisible="not plan_id or state not in ('sale', 'done')"/>
-                <button name="action_renew" string="Renew" type="object" class="btn-secondary" invisible="not plan_id or state not in ('sale', 'done')"/>
+                <button name="action_upsell" string="Upsell" type="object" class="btn-secondary" invisible="not plan_id or not plan_is_add_products or state not in ('sale', 'done')"/>
+                <button name="action_renew" string="Renew" type="object" class="btn-secondary" invisible="not plan_id or not plan_is_renew or state not in ('sale', 'done')"/>
                 <button name="action_close" string="Close" type="object" class="btn-secondary" invisible="not plan_id or state not in ('sale', 'done')"/>
             </xpath>
 
@@ -87,6 +87,8 @@
                 <label for="plan_id" string="Recurring Plan"/>
                 <div class="o_row">
                     <field name="plan_id" placeholder="Monthly"/>
+                    <field name="plan_is_add_products" invisible="1"/>
+                    <field name="plan_is_renew" invisible="1"/>
                     <span class="oe_grey fw-bold">Until</span>
                     <field name="subscription_end_date" placeholder="May 16, 2032"/>
                 </div>

@@ -24,10 +24,13 @@ class SaleOrder(models.Model):
         return plan.id if plan else False
 
     plan_id = fields.Many2one(
-        'subscription.plan', string='Recurring Plan',
+        'subscription.plan',
+        string='Subscription Plan',
         default=_default_plan_id,
-        help="Select the recurring billing plan for this quotation."
+        tracking=True
     )
+    plan_is_add_products = fields.Boolean(related='plan_id.is_add_products', string='Plan Allows Add Products')
+    plan_is_renew = fields.Boolean(related='plan_id.is_renew', string='Plan Allows Renew')
     subscription_end_date = fields.Date(
         string='Until', help="End date of the subscription."
     )
@@ -95,8 +98,7 @@ class SaleOrder(models.Model):
 
     @api.depends(
         'order_line.price_subtotal', 'plan_id',
-        'order_line.product_id.recurring_ok',
-        'order_line.product_id.subscription_plan_id'
+        'order_line.product_id.recurring_ok'
     )
     def _compute_mrr_totals(self):
         """Compute the Monthly Recurring Revenue (MRR) and non-recurring revenue
@@ -106,7 +108,7 @@ class SaleOrder(models.Model):
             non_recurring_total = 0.0
             for line in order.order_line:
                 if line.product_template_id.recurring_ok or line.product_id.recurring_ok:
-                    plan = line.product_template_id.subscription_plan_id or order.plan_id
+                    plan = order.plan_id
                     subtotal = line.price_subtotal
                     if plan:
                         period = plan.billing_period
@@ -589,8 +591,15 @@ class SaleOrder(models.Model):
             except Exception as e:
                 self.message_post(body=Markup(_("Payment attempt failed: %s")) % str(e))
 
-        delta = self._get_billing_delta()
-        next_date = (self.next_invoice_date or fields.Date.today()) + delta
+        if self.subscription_cycle == 1 and self.plan_id.trial_period_days > 0:
+            next_date = (self.next_invoice_date or fields.Date.today()) + relativedelta(days=self.plan_id.trial_period_days)
+            for line in self.order_line:
+                if line.discount == 100.0:
+                    line.with_context(_price_lock_bypass=True).write({'discount': 0.0})
+            self.message_post(body=Markup(_("Free trial invoice generated. Next billing date set to %s after %s trial days. Full price will apply on next cycle.")) % (next_date, self.plan_id.trial_period_days))
+        else:
+            delta = self._get_billing_delta()
+            next_date = (self.next_invoice_date or fields.Date.today()) + delta
         
         vals = {
             'next_invoice_date': next_date,
@@ -787,6 +796,13 @@ class SaleOrder(models.Model):
         """Fallback for older databases where the cron job was registered with the previous method name."""
         return self._cron_generate_invoices()
 
+    @api.onchange('plan_id')
+    def _onchange_plan_id(self):
+        """Recompute prices when the subscription plan is changed."""
+        if self.plan_id:
+            self._recompute_prices()
+
+
 
 class SaleOrderLine(models.Model):
     """Inherited Sale Order Line to track specific physical or human resources
@@ -798,6 +814,22 @@ class SaleOrderLine(models.Model):
         'res.partner', string='Resource',
         help="Select resource associated with this line."
     )
+
+    @api.depends('order_id.plan_id', 'order_id.pricelist_id')
+    def _compute_price_unit(self):
+        """Override to pull the recurring price from the subscription pricing matrix."""
+        super()._compute_price_unit()
+        for line in self:
+            if not line.display_type and line.order_id.plan_id and line.product_template_id.recurring_ok:
+                pricing = self.env['subscription.plan.pricing'].search([
+                    ('product_template_id', '=', line.product_template_id.id),
+                    ('plan_id', '=', line.order_id.plan_id.id),
+                    '|', ('pricelist_id', '=', line.order_id.pricelist_id.id),
+                         ('pricelist_id', '=', False)
+                ], order='pricelist_id desc', limit=1)
+                
+                if pricing:
+                    line.price_unit = pricing.price
 
     def write(self, vals):
         # Block price_unit changes on lines belonging to a price-locked subscription.

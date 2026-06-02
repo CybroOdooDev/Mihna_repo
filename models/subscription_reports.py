@@ -62,7 +62,7 @@ class SubscriptionMrrBreakdown(models.Model):
                 JOIN sale_order so ON so.id = l.order_id
                 JOIN product_product pp ON pp.id = l.product_id
                 JOIN product_template t ON t.id = pp.product_tmpl_id
-                JOIN subscription_plan p ON p.id = COALESCE(t.subscription_plan_id, so.plan_id)
+                JOIN subscription_plan p ON p.id = so.plan_id
                 WHERE so.date_order IS NOT NULL
                   AND t.recurring_ok = true
                   AND so.subscription_state NOT IN ('1_draft')
@@ -85,7 +85,7 @@ class SubscriptionMrrBreakdown(models.Model):
                 JOIN sale_order so ON so.id = l.order_id
                 JOIN product_product pp ON pp.id = l.product_id
                 JOIN product_template t ON t.id = pp.product_tmpl_id
-                JOIN subscription_plan p ON p.id = COALESCE(t.subscription_plan_id, so.plan_id)
+                JOIN subscription_plan p ON p.id = so.plan_id
                 WHERE so.subscription_state = '6_churn'
                   AND t.recurring_ok = true
             )
@@ -122,7 +122,7 @@ class SubscriptionMrrAnalysis(models.Model):
                     JOIN sale_order so ON so.id = l.order_id
                     JOIN product_product pp ON pp.id = l.product_id
                     JOIN product_template t ON t.id = pp.product_tmpl_id
-                    JOIN subscription_plan p ON p.id = COALESCE(t.subscription_plan_id, so.plan_id)
+                    JOIN subscription_plan p ON p.id = so.plan_id
                     WHERE so.date_order IS NOT NULL
                       AND t.recurring_ok = true
                       AND so.subscription_state NOT IN ('1_draft')
@@ -171,7 +171,7 @@ class SubscriptionAnalysisReport(models.Model):
                     so.name             AS name,
                     so.partner_id       AS partner_id,
                     t.categ_id          AS categ_id,
-                    COALESCE(t.subscription_plan_id, so.plan_id) AS plan_id,
+                    so.plan_id          AS plan_id,
                     so.user_id          AS user_id,
                     so.team_id          AS team_id,
                     so.company_id       AS company_id,
@@ -183,7 +183,7 @@ class SubscriptionAnalysisReport(models.Model):
                 JOIN sale_order so ON so.id = l.order_id
                 JOIN product_product pp ON pp.id = l.product_id
                 JOIN product_template t ON t.id = pp.product_tmpl_id
-                JOIN subscription_plan p ON p.id = COALESCE(t.subscription_plan_id, so.plan_id)
+                JOIN subscription_plan p ON p.id = so.plan_id
                 WHERE t.recurring_ok = true
                   AND so.subscription_state NOT IN ('1_draft', '6_churn')
             )

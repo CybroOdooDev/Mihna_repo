@@ -68,6 +68,7 @@ class SubscriptionController(http.Controller):
                 'name': f"Subscription: {plan.name}",
                 'product_uom_qty': 1.0,
                 'price_unit': price,
+                'discount': 100.0 if sudo_plan.trial_period_days > 0 else 0.0,
             })
 
         if order.state == 'draft':
@@ -153,7 +154,8 @@ class SubscriptionController(http.Controller):
                     'product_id': product.id,
                     'name': f"Subscription: {plan.name}",
                     'product_uom_qty': 1.0,
-                    'price_unit': plan.total_price,
+                    'price_unit': product.list_price if plan.product_id else plan.total_price,
+                    'discount': 100.0 if plan.trial_period_days > 0 else 0.0,
                 })
                 request.session[session_key] = order.id
 
@@ -444,13 +446,14 @@ class SubscriptionController(http.Controller):
 
         if product:
             sudo_plan = request.env['subscription.plan'].sudo().browse(plan.id)
-            price = sudo_plan.total_price
+            price = sudo_plan.product_id.list_price if sudo_plan.product_id else sudo_plan.total_price
             line = request.env['sale.order.line'].sudo().create({
                 'order_id': order.id,
                 'product_id': product.id,
                 'name': f"Subscription: {plan.name}",
                 'product_uom_qty': 1.0,
                 'price_unit': price,
+                'discount': 100.0 if sudo_plan.trial_period_days > 0 else 0.0,
             })
             
         coupon_code = kw.get('coupon_code')
@@ -585,15 +588,18 @@ class SubscriptionController(http.Controller):
         from datetime import date
         from dateutil.relativedelta import relativedelta
         today = date.today()
-        period = order_sudo.plan_id.billing_period if order_sudo.plan_id else 'month'
-        if period == 'month':
-            next_billing = today + relativedelta(months=1)
-        elif period == 'year':
-            next_billing = today + relativedelta(years=1)
-        elif period == 'week':
-            next_billing = today + relativedelta(weeks=1)
-        else:
-            next_billing = today + relativedelta(months=1)
+        next_billing = order_sudo.next_invoice_date
+        
+        if not next_billing:
+            period = order_sudo.plan_id.billing_period if order_sudo.plan_id else 'month'
+            if period == 'month':
+                next_billing = today + relativedelta(months=1)
+            elif period == 'year':
+                next_billing = today + relativedelta(years=1)
+            elif period == 'week':
+                next_billing = today + relativedelta(weeks=1)
+            else:
+                next_billing = today + relativedelta(months=1)
 
         return request.render('subscription_management.subscription_success_page', {
             'plan': order_sudo.plan_id,

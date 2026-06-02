@@ -12,11 +12,25 @@
                     <label for="recurring_ok"/>
                 </span>
             </xpath>
-            <!-- Add Subscription Plan dropdown in General Info tab -->
-            <xpath expr="//page[@name='general_information']/group" position="inside">
-                <group string="Subscription Settings" invisible="not recurring_ok">
-                    <field name="subscription_plan_id" required="recurring_ok"/>
-                </group>
+            
+            <!-- Add Recurring Prices Notebook Page -->
+            <xpath expr="//notebook/page[@name='sales']" position="after">
+                <page name="recurring_prices" string="Recurring prices" invisible="not recurring_ok">
+                    <field name="subscription_pricing_ids">
+                        <list editable="bottom">
+                            <field name="plan_id" string="Recurring Plan"/>
+                            <field name="pricelist_id" string="Pricelist"/>
+                            <field name="price" string="Price" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                            <field name="currency_id" column_invisible="True"/>
+                        </list>
+                    </field>
+                    <group string="OPTIONS">
+                        <group>
+                            <field name="accept_one_time"/>
+                            <field name="prorated_price"/>
+                        </group>
+                    </group>
+                </page>
             </xpath>
         </field>
     </record>

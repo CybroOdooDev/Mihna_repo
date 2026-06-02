@@ -207,6 +207,7 @@ class SubscriptionDashboard(models.AbstractModel):
                 months_to_show = 12
 
             # Simulating historical breakdown based on current MRR to ensure the dashboard looks fully populated
+            print(months_to_show,"months_to_show")
             revenue_breakdown = []
             for i in range(months_to_show - 1, -1, -1):
                 month_date = date.today() - relativedelta(months=i)
@@ -214,7 +215,6 @@ class SubscriptionDashboard(models.AbstractModel):
                 
                 # Base MRR
                 base_mrr = mrr * (1 - (i * 0.04))
-                
                 # Simulated realistic distribution
                 existing_mrr = round(base_mrr * 0.75, 2)
                 new_mrr = round(base_mrr * 0.15, 2)
@@ -226,7 +226,7 @@ class SubscriptionDashboard(models.AbstractModel):
                     'new': new_mrr,
                     'expansion': expansion_mrr
                 })
-
+            print(revenue_breakdown,"revenue_breakdown")
             # 2. New vs Churned
             new_vs_churned = []
             for i in range(months_to_show - 1, -1, -1):

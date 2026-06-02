@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="product_pricelist_view_inherit_subscription" model="ir.ui.view">
+        <field name="name">product.pricelist.form.inherit.subscription</field>
+        <field name="model">product.pricelist</field>
+        <field name="inherit_id" ref="product.product_pricelist_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook/page[@name='pricelist_rules']" position="after">
+                <page name="recurring_prices" string="Recurring Prices">
+                    <field name="subscription_pricing_ids">
+                        <list editable="bottom">
+                            <field name="product_template_id"/>
+                            <field name="variant_id"/>
+                            <field name="plan_id" string="Recurring Plan"/>
+                            <field name="price" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                            <field name="currency_id" column_invisible="True"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

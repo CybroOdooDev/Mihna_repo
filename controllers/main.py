@@ -74,8 +74,10 @@ class SubscriptionController(http.Controller):
         if order.state == 'draft':
             try:
                 order.action_confirm()
-            except Exception:
-                pass  # Order may already be confirmed via payment flow
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error("Failed to confirm 1-click subscription order %s: %s", order.name, e)
+                # We do not pass silently anymore in logs
 
         return request.render('subscription_management.subscription_success_page', {
             'plan': plan,
@@ -159,6 +161,42 @@ class SubscriptionController(http.Controller):
                 })
                 request.session[session_key] = order.id
 
+        if kw.get('clear') and order.exists() and order.state == 'draft':
+            for line in order.order_line:
+                if line.product_id.recurring_ok:
+                    line.write({'product_uom_qty': 1.0, 'discount': 100.0 if plan.trial_period_days > 0 else 0.0})
+            if 'is_reward_line' in order.order_line._fields:
+                order.order_line.filtered(lambda l: l.is_reward_line).unlink()
+            if 'code_enabled_rule_ids' in order._fields:
+                order.code_enabled_rule_ids = [(5, 0, 0)]
+            if 'applied_coupon_ids' in order._fields:
+                order.applied_coupon_ids = [(5, 0, 0)]
+            if 'coupon_point_ids' in order._fields:
+                order.coupon_point_ids = [(5, 0, 0)]
+
+
+        # Force recomputing fiscal position, taxes, and prices to ensure backend/frontend synchronization
+        order._compute_fiscal_position_id()
+        order.order_line._compute_tax_ids()
+        order._recompute_prices()
+        order._update_programs_and_rewards()
+
+        # Calculate discount amount safely by looking at price_unit vs price_subtotal
+        seat_qty = sum(line.product_uom_qty for line in order.order_line if line.product_id == (plan.product_id or line.product_id))
+        base_amount = sum((line.price_unit * line.product_uom_qty) for line in order.order_line if line.price_subtotal >= 0)
+        discount_amount = base_amount - order.amount_untaxed
+        if discount_amount < 0:
+            discount_amount = 0.0
+
+        applied_coupon_code = ""
+        if hasattr(order, 'code_enabled_rule_ids') and order.code_enabled_rule_ids:
+            applied_coupon_code = order.code_enabled_rule_ids[0].code
+        elif 'reward_id' in order.order_line._fields:
+            reward_lines = order.order_line.filtered(lambda l: l.is_reward_line and l.reward_id)
+            if reward_lines:
+                # Fallback to the description or program name if code is missing
+                applied_coupon_code = reward_lines[0].name
+
         countries = request.env['res.country'].sudo().search([])
         states = request.env['res.country.state'].sudo().search([])
         
@@ -199,14 +237,17 @@ class SubscriptionController(http.Controller):
             'partner': partner if partner.name != 'Guest Customer' else request.env['res.partner'],
             'countries': countries,
             'states': states,
-            'kw': kw
+            'kw': kw,
+            'discount_amount': discount_amount,
+            'base_amount': base_amount,
+            'applied_coupon_code': applied_coupon_code,
         }
         render_values.update(payment_context)
 
         return request.render('subscription_management.subscription_checkout_page', render_values)
 
     @http.route(['/subscriptions/checkout/save_address'], type='json', auth="public", methods=['POST'], website=True, csrf=False)
-    def save_address(self, name, email, street, city, zip_code, country_id, state_id, **kw):
+    def save_address(self, name, email, street, city, zip_code, country_id, state_id, plan_id=None, **kw):
         """AJAX endpoint to save the billing address of the current user or guest
         during the subscription checkout process."""
         partner = request.env.user.partner_id if not request.env.user._is_public() else False
@@ -216,7 +257,7 @@ class SubscriptionController(http.Controller):
                 partner = request.env['res.partner'].sudo().browse(partner_id)
                 
         if partner:
-            partner.sudo().write({
+            partner_vals = {
                 'name': name or partner.name,
                 'email': email or partner.email,
                 'street': street or partner.street,
@@ -224,7 +265,66 @@ class SubscriptionController(http.Controller):
                 'zip': zip_code or partner.zip,
                 'country_id': int(country_id) if country_id else partner.country_id.id,
                 'state_id': int(state_id) if state_id else partner.state_id.id,
-            })
+            }
+            if kw.get('vat'):
+                partner_vals['vat'] = kw.get('vat')
+            partner.sudo().write(partner_vals)
+            
+        session_key = f'subscription_order_{plan_id}' if plan_id else None
+        order_id = request.session.get(session_key) if session_key else None
+        
+        # Fallback to search all keys starting with subscription_order_ if no plan_id is provided
+        if not order_id:
+            for key in list(request.session.keys()):
+                if key.startswith('subscription_order_'):
+                    order_id = request.session.get(key)
+                    if order_id:
+                        break
+                        
+        if order_id:
+            order = request.env['sale.order'].sudo().browse(order_id)
+            if order.exists() and order.state == 'draft':
+                # Force recomputing fiscal position, taxes, and prices to ensure backend/frontend synchronization
+                order._compute_fiscal_position_id()
+                order.order_line._compute_tax_ids()
+                order._recompute_prices()
+                order._update_programs_and_rewards()
+                
+                # Fetch plan
+                plan = order.plan_id
+                
+                # Calculate discount amount
+                base_unit_price = plan.product_id.list_price if plan.product_id else plan.total_price
+                seat_qty = sum(line.product_uom_qty for line in order.order_line if line.product_id == (plan.product_id or line.product_id))
+                original_total = base_unit_price * seat_qty
+                discount_amount = original_total - order.amount_untaxed
+                if discount_amount < 0:
+                    discount_amount = 0.0
+                
+                currency = plan.currency_id
+                formatted_discount = f"{currency.symbol or ''}{discount_amount:.2f}" if currency else f"${discount_amount:.2f}"
+                formatted_total = f"{currency.symbol or ''}{order.amount_total:.2f}" if currency else f"${order.amount_total:.2f}"
+                formatted_tax = f"{currency.symbol or ''}{order.amount_tax:.2f}" if currency else f"${order.amount_tax:.2f}"
+                
+                applied_coupon_code = ""
+                for line in order.order_line:
+                    if line.coupon_id:
+                        applied_coupon_code = line.coupon_id.code
+                        break
+                if not applied_coupon_code:
+                    rules = order.code_enabled_rule_ids
+                    if rules:
+                        applied_coupon_code = rules[0].code
+                
+                return {
+                    'success': True,
+                    'new_total': formatted_total,
+                    'new_tax': formatted_tax,
+                    'has_tax': order.amount_tax > 0,
+                    'discount_amount': formatted_discount,
+                    'discount_amount_raw': discount_amount,
+                    'code': applied_coupon_code,
+                }
         return {'success': True}
 
     @http.route(['/subscriptions/checkout/update_config'], type='json', auth="public", methods=['POST'], website=True, csrf=False)
@@ -245,6 +345,11 @@ class SubscriptionController(http.Controller):
         if seats is not None:
             for line in order.order_line:
                 line.product_uom_qty = max(1.0, float(seats))
+            # Force recomputing fiscal position, taxes, and prices to ensure backend/frontend synchronization
+            order._compute_fiscal_position_id()
+            order.order_line._compute_tax_ids()
+            order._recompute_prices()
+            order._update_programs_and_rewards()
                 
         # Handle billing cycle switch
         if cycle:
@@ -336,33 +441,57 @@ class SubscriptionController(http.Controller):
                         return {'valid': False, 'message': 'You have reached the usage limit for this promotion.'}
 
             sudo_plan = request.env['subscription.plan'].sudo().browse(plan.id)
-            subtotal = sudo_plan.total_price or 0.0
             
-            # Approximate discount for UI preview (Odoo native will calculate exactly on SO creation)
-            discount_amount = 0.0
-            reward = program.reward_ids[0] if program.reward_ids else False
-            if reward:
-                if reward.discount_mode == 'percent':
-                    discount_amount = subtotal * (reward.discount / 100.0)
-                elif reward.discount_mode == 'per_order':
-                    discount_amount = min(reward.discount, subtotal)
+            # Fetch the active draft order from session
+            session_key = f'subscription_order_{plan.id}'
+            order_id = request.session.get(session_key)
+            if order_id:
+                order = request.env['sale.order'].sudo().browse(order_id)
+                if order.exists() and order.state == 'draft':
+                    status = order._try_apply_code(clean_code)
+                    if 'error' in status:
+                        return {'valid': False, 'message': status['error']}
+                    
+                    # Natively apply the reward to the order
+                    if len(status) == 1:
+                        coupon, rewards = next(iter(status.items()))
+                        if len(rewards) == 1:
+                            order._apply_program_reward(rewards, coupon)
+                    
+                    # Force Odoo to generate the reward lines for the enabled code
+                    order._update_programs_and_rewards()
+                    
+                    # Totals are now exactly correct based on order lines
+                    new_total = order.amount_total
+                    
+                    # Foolproof discount calculation: (Base price of positive lines) - (Final untaxed amount)
+                    base_amount = sum((line.price_unit * line.product_uom_qty) for line in order.order_line if line.price_subtotal >= 0)
+                    discount_amount = base_amount - order.amount_untaxed
+                    
+                    # Fallback just in case of weird tax inclusions making discount negative
+                    if discount_amount < 0:
+                        discount_amount = abs(sum(line.price_subtotal for line in order.order_line if line.price_subtotal < 0))
+                else:
+                    return {'valid': False, 'message': 'Session expired. Please refresh the page.'}
+            else:
+                return {'valid': False, 'message': 'Session expired. Please refresh the page.'}
 
-            new_total = max(0.0, subtotal - discount_amount)
             currency = plan.currency_id
             formatted_discount = f"{currency.symbol or ''}{discount_amount:.2f}" if currency else f"${discount_amount:.2f}"
             formatted_total = f"{currency.symbol or ''}{new_total:.2f}" if currency else f"${new_total:.2f}"
+            formatted_tax = f"{currency.symbol or ''}{order.amount_tax:.2f}" if currency else f"${order.amount_tax:.2f}"
 
             return {
                 'valid': True,
                 'coupon_id': program.id,
                 'name': program.name,
                 'code': clean_code,
-                'discount_type': reward.discount_mode if reward else 'percent',
-                'discount_value': reward.discount if reward else 0.0,
                 'discount_amount': formatted_discount,
                 'discount_amount_raw': discount_amount,
                 'new_total': formatted_total,
                 'new_total_raw': new_total,
+                'new_tax': formatted_tax,
+                'has_tax': order.amount_tax > 0,
                 'message': 'Coupon applied successfully!'
             }
         except Exception as e:
@@ -410,7 +539,8 @@ class SubscriptionController(http.Controller):
         existing = request.env['sale.order'].sudo().search([
             ('partner_id', '=', partner.id),
             ('plan_id', '=', plan.id),
-            ('subscription_state', 'in', ['1_draft', '3_progress', '4_paused', '8_blocked'])
+            ('subscription_state', 'in', ['3_progress', '4_paused', '8_blocked']),
+            ('state', 'in', ['sale', 'done'])
         ], limit=1)
 
         if existing:
@@ -420,41 +550,59 @@ class SubscriptionController(http.Controller):
                 'message': 'You already have an active or pending subscription for this plan.'
             })
 
-        order = request.env['sale.order'].sudo().create({
+        session_key = f'subscription_order_{plan.id}'
+        order_id = request.session.get(session_key)
+        order = request.env['sale.order'].sudo().browse(order_id) if order_id else request.env['sale.order']
+
+        if not order.exists() or order.state != 'draft':
+            existing_draft = request.env['sale.order'].sudo().search([
+                ('partner_id', '=', partner.id),
+                ('plan_id', '=', plan.id),
+                ('state', '=', 'draft'),
+                ('subscription_state', '=', '1_draft'),
+            ], order='id desc', limit=1)
+            
+            if existing_draft:
+                order = existing_draft
+            else:
+                order = request.env['sale.order'].sudo().create({
+                    'partner_id': partner.id,
+                    'partner_invoice_id': partner.id,
+                    'partner_shipping_id': partner.id,
+                    'plan_id': plan.id,
+                    'state': 'draft',
+                    'is_price_locked': True,
+                })
+                product = plan.product_id or request.env['product.product'].sudo().search(
+                    [('recurring_ok', '=', True), ('subscription_plan_id', '=', plan.id)], limit=1
+                )
+                if not product:
+                    product = request.env['product.product'].sudo().search([('recurring_ok', '=', True)], limit=1)
+                if not product:
+                    product = request.env['product.product'].sudo().create({
+                        'name': f"{plan.name} Subscription",
+                        'type': 'service',
+                        'recurring_ok': True,
+                        'list_price': 0.0,
+                    })
+
+                if product:
+                    sudo_plan = request.env['subscription.plan'].sudo().browse(plan.id)
+                    price = sudo_plan.product_id.list_price if sudo_plan.product_id else sudo_plan.total_price
+                    request.env['sale.order.line'].sudo().create({
+                        'order_id': order.id,
+                        'product_id': product.id,
+                        'name': f"Subscription: {plan.name}",
+                        'product_uom_qty': 1.0,
+                        'price_unit': price,
+                        'discount': 100.0 if sudo_plan.trial_period_days > 0 else 0.0,
+                    })
+
+        order.sudo().write({
             'partner_id': partner.id,
             'partner_invoice_id': partner.id,
             'partner_shipping_id': partner.id,
-            'plan_id': plan.id,
-            'state': 'draft',
-            'is_price_locked': True,
         })
-
-        product = plan.product_id or request.env['product.product'].sudo().search(
-            [('recurring_ok', '=', True), ('subscription_plan_id', '=', plan.id)], limit=1
-        )
-        if not product:
-            product = request.env['product.product'].sudo().search(
-                [('recurring_ok', '=', True)], limit=1
-            )
-        if not product:
-            product = request.env['product.product'].sudo().create({
-                'name': f"{plan.name} Subscription",
-                'type': 'service',
-                'recurring_ok': True,
-                'list_price': 0.0,
-            })
-
-        if product:
-            sudo_plan = request.env['subscription.plan'].sudo().browse(plan.id)
-            price = sudo_plan.product_id.list_price if sudo_plan.product_id else sudo_plan.total_price
-            line = request.env['sale.order.line'].sudo().create({
-                'order_id': order.id,
-                'product_id': product.id,
-                'name': f"Subscription: {plan.name}",
-                'product_uom_qty': 1.0,
-                'price_unit': price,
-                'discount': 100.0 if sudo_plan.trial_period_days > 0 else 0.0,
-            })
             
         coupon_code = kw.get('coupon_code')
         if coupon_code:
@@ -566,11 +714,14 @@ class SubscriptionController(http.Controller):
         if not order_sudo.exists():
             return request.redirect('/subscriptions')
 
+        confirm_error = False
         if order_sudo.state == 'draft':
             try:
                 order_sudo.action_confirm()
-            except Exception:
-                pass  # Already confirmed or payment gateway handled it
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error("Failed to confirm subscription order %s: %s", order_sudo.name, e)
+                confirm_error = str(e)
                 
         # Instantly generate the first invoice if it hasn't been generated yet
         # (This catches orders confirmed by the payment gateway before reaching this page)
@@ -606,6 +757,7 @@ class SubscriptionController(http.Controller):
             'subscription': order_sudo,
             'invoice': invoice,
             'next_billing': next_billing,
+            'confirm_error': confirm_error,
             'partner': order_sudo.partner_id,
             'message': 'Your transaction was successful, and your subscription is now active!',
         })
@@ -740,15 +892,23 @@ class CustomPortalAccount(PortalAccount):
         filters = super()._get_account_searchbar_filters()
         
         from odoo import fields
+        from odoo.http import request
+        
+        partner = request.env.user.partner_id.commercial_partner_id.id
         
         filters.update({
-            'paid': {'label': 'Paid', 'domain': [('payment_state', 'in', ('paid', 'in_payment', 'reversed'))]},
+            'paid': {'label': 'Paid', 'domain': [
+                ('commercial_partner_id', '=', partner),
+                ('payment_state', 'in', ('paid', 'in_payment', 'reversed'))
+            ]},
             'awaiting': {'label': 'Awaiting Payment', 'domain': [
+                ('commercial_partner_id', '=', partner),
                 ('state', 'not in', ('cancel', 'draft')),
                 ('payment_state', 'in', ('not_paid', 'partial')),
                 '|', ('invoice_date_due', '>=', fields.Date.today()), ('invoice_date_due', '=', False)
             ]},
             'overdue_invoices': {'label': 'Overdue', 'domain': [
+                ('commercial_partner_id', '=', partner),
                 ('state', 'not in', ('cancel', 'draft')),
                 ('payment_state', 'in', ('not_paid', 'partial')),
                 ('invoice_date_due', '<', fields.Date.today())
@@ -944,6 +1104,47 @@ class CustomPortalAccount(PortalAccount):
             subscription._action_close_confirm(
                 close_reason_id=int(close_reason_id) if close_reason_id else None,
             )
+        return request.redirect('/my/subscription/%s' % subscription_id)
+
+    @http.route(['/my/subscription/<int:subscription_id>/upsell'], type='http', auth="user", methods=['POST'], website=True, csrf=True)
+    def portal_my_subscription_upsell(self, subscription_id, **kw):
+        """Handle customer-initiated upsell from the portal."""
+        subscription = request.env['sale.order'].sudo().browse(subscription_id)
+        if (
+            subscription.exists()
+            and subscription.partner_id == request.env.user.partner_id
+            and subscription.subscription_state == '3_progress'
+            and subscription.plan_id.is_add_products
+        ):
+            # Check for an existing open upsell quote first
+            existing_upsell = request.env['sale.order'].sudo().search([
+                ('subscription_id', '=', subscription.id),
+                ('subscription_state', '=', '7_upsell'),
+                ('state', 'in', ['draft', 'sent', 'sale'])
+            ], limit=1, order='id desc')
+            
+            if existing_upsell:
+                return request.redirect(existing_upsell.get_portal_url())
+
+            # Create new upsell order if none exists
+            upsell = subscription.copy({
+                'origin': _("Upsell of %s") % subscription.name,
+                'state': 'draft',
+                'client_order_ref': False,
+                'subscription_state': '7_upsell',
+                'subscription_id': subscription.id,
+            })
+            for line in upsell.order_line.filtered(lambda l: l.product_id.recurring_ok):
+                line.with_context(_price_lock_bypass=True).write({'product_uom_qty': 0})
+                
+            # Attempt to send quotation email, fallback to just marking it sent
+            try:
+                upsell.action_quotation_send()
+                upsell.write({'state': 'sent'})
+            except Exception:
+                upsell.write({'state': 'sent'})
+                
+            return request.redirect(upsell.get_portal_url())
         return request.redirect('/my/subscription/%s' % subscription_id)
 
 class SubscriptionPaymentPostProcessing(PaymentPostProcessing):

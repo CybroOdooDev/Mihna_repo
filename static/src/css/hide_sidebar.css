@@ -1,18 +1,2 @@
-/** 
- * Hide the Odoo Customer Portal sidebar globally.
- * The user requested the sidebar to be removed from all portal pages.
- */
-#o_my_sidebar,
-.o_portal_sidebar {
-    display: none !important;
-}
-
-/* Force the main content area to take full width */
-.o_portal_wrap > .container > .row > .col-lg-8,
-.o_portal_wrap > .container > .row > .col-lg-9,
-.o_portal_wrap > .container > .row > .col-md-8,
-.o_portal_wrap > .container > .row > .col-md-9 {
-    flex: 0 0 100% !important;
-    max-width: 100% !important;
-    width: 100% !important;
-}
+/* This file was intentionally left blank to restore the Odoo standard sidebar layout.
+   It forces Odoo to rebuild the asset bundle and bust the browser cache. */

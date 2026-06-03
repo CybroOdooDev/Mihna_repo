@@ -94,6 +94,8 @@ class SubscriptionPlan(models.Model):
         string='Optional Plans'
     )
 
+    remark_ids = fields.One2many('subscription.plan.remark', 'plan_id', string='Remarks')
+
     pricing_ids = fields.One2many('subscription.plan.pricing', 'plan_id', string='Pricing')
     ramp_ids = fields.One2many('subscription.plan.ramp', 'plan_id', string='Ramp Pricing Rules')
 
@@ -339,3 +341,18 @@ class SubscriptionPlanRamp(models.Model):
                 rec.name = f"Cycle {rec.start_cycle} to {rec.end_cycle}"
             else:
                 rec.name = "New Ramp Rule"
+
+class SubscriptionPlanRemark(models.Model):
+    """Subscription Plan Remark model for defining bullet points on the pricing card."""
+
+    _name = 'subscription.plan.remark'
+    _description = 'Subscription Plan Remark'
+    _order = 'sequence, id'
+
+    plan_id = fields.Many2one(
+        'subscription.plan', string='Subscription Plan',
+        ondelete='cascade', required=True
+    )
+    sequence = fields.Integer(string='Sequence', default=10)
+    name = fields.Char(string='Remark', required=True, translate=True)
+

@@ -14,8 +14,10 @@ class SaleOrder(models.Model):
     _inherit = 'sale.order'
 
     def _default_plan_id(self):
-        """Return the default monthly billing plan for new Sales Orders,
-        falling back to any available plan if no monthly plan exists."""
+        """Return the default monthly billing plan for new Sales Orders only if created from subscription app."""
+        if not self.env.context.get('default_plan_id'):
+            return False
+            
         plan = self.env['subscription.plan'].search(
             [('billing_period', '=', 'monthly')], limit=1
         )
@@ -80,6 +82,66 @@ class SaleOrder(models.Model):
         ('7_upsell', 'Upsell'),
         ('8_blocked', 'Blocked'),
     ], string='Subscription Status', default='1_draft', copy=False, tracking=True)
+    
+    subscription_id = fields.Many2one(
+        'sale.order', string="Parent Subscription",
+        help="Links this upsell/renewal back to the original subscription.",
+        check_company=True, copy=False
+    )
+    subscription_child_ids = fields.One2many(
+        'sale.order', 'subscription_id', string="Upsells/Renewals"
+    )
+    upsell_count = fields.Integer(string='Upsell Count', compute='_compute_upsell_count')
+    history_count = fields.Integer(string='History Count', compute='_compute_history_count')
+
+    @api.depends('subscription_child_ids.subscription_state')
+    def _compute_upsell_count(self):
+        for order in self:
+            order.upsell_count = self.env['sale.order'].search_count([
+                ('subscription_id', '=', order.id),
+                ('subscription_state', '=', '7_upsell'),
+                ('state', 'in', ['draft', 'sent'])
+            ])
+
+    @api.depends('subscription_id', 'subscription_child_ids')
+    def _compute_history_count(self):
+        for order in self:
+            parent_id = order.subscription_id.id if order.subscription_id else order.id
+            order.history_count = self.env['sale.order'].search_count([
+                '|', ('id', '=', parent_id), ('subscription_id', '=', parent_id),
+                ('state', 'not in', ['cancel', 'draft'])
+            ])
+
+    def action_view_upsells(self):
+        self.ensure_one()
+        action = self.env["ir.actions.actions"]._for_xml_id("sale.action_quotations_with_onboarding")
+        action['name'] = _("Upsell Quotes")
+        action['domain'] = [
+            ('subscription_id', '=', self.id),
+            ('subscription_state', '=', '7_upsell'),
+            ('state', 'in', ['draft', 'sent'])
+        ]
+        action['context'] = {'default_subscription_id': self.id, 'default_subscription_state': '7_upsell'}
+        return action
+
+    def open_subscription_history(self):
+        self.ensure_one()
+        parent_id = self.subscription_id.id if self.subscription_id else self.id
+        action = {
+            "type": "ir.actions.act_window",
+            "res_model": "sale.order",
+            "name": _("Sales History"),
+            "views": [
+                [self.env.ref('subscription_management.view_subscription_order_tree').id, "list"],
+                [self.env.ref('subscription_management.view_subscription_order_form').id, "form"]
+            ],
+            "domain": [
+                '|', ('id', '=', parent_id), ('subscription_id', '=', parent_id),
+                ('state', 'not in', ['cancel', 'draft'])
+            ],
+            "context": {'create': False}
+        }
+        return action
 
     dunning_plan_id = fields.Many2one(
         'subscription.dunning.plan', string='Dunning Plan',
@@ -144,6 +206,18 @@ class SaleOrder(models.Model):
                 order.subscription_state = '6_churn'
         return res
 
+    def action_quotation_send(self):
+        """Override standard action_quotation_send to validate subscription products."""
+        for order in self:
+            if order.plan_id:
+                has_recurring = any(
+                    line.product_template_id.recurring_ok or getattr(line.product_id, 'recurring_ok', False)
+                    for line in order.order_line
+                )
+                if not has_recurring:
+                    raise UserError(_("Please remove the recurring plan on the subscription before sending the email."))
+        return super().action_quotation_send()
+
     def action_confirm(self):
         """Override standard action_confirm to auto-activate and set next invoice date."""
         for order in self:
@@ -157,7 +231,9 @@ class SaleOrder(models.Model):
 
         res = super().action_confirm()
         for order in self:
-            if order.plan_id:
+            if order.subscription_state == '7_upsell' and order.subscription_id:
+                order._confirm_upsell()
+            elif order.plan_id:
                 vals = {
                     'subscription_state': '3_progress',
                 }
@@ -170,12 +246,22 @@ class SaleOrder(models.Model):
         """Create a new draft Sales Order quotation pre-filled with existing
         subscription lines for upselling additional items."""
         self.ensure_one()
+        
+        valid_invoices = self.invoice_ids.filtered(lambda inv: inv.state != 'cancel')
+        if not valid_invoices:
+            raise UserError(_("You can not upsell or renew a subscription that has not been invoiced yet. Please, update directly the %s contract or invoice it first.") % self.name)
+            
         upsell_order = self.copy({
             'origin': _("Upsell of %s") % self.name,
             'state': 'draft',
             'client_order_ref': False,
             'subscription_state': '7_upsell',
+            'subscription_id': self.id,
+            'plan_id': self.plan_id.id,
         })
+        # Clear out all order lines so the salesperson can manually add the upsell products
+        upsell_order.order_line.unlink()
+        
         return {
             'name': _('Upsell Quotation'),
             'type': 'ir.actions.act_window',
@@ -186,15 +272,55 @@ class SaleOrder(models.Model):
             'target': 'current',
         }
 
+    def _confirm_upsell(self):
+        """Copies added quantities from an upsell quotation back into the parent subscription as new lines."""
+        self.ensure_one()
+        parent = self.subscription_id
+        if not parent:
+            return
+            
+        # Add lines back to parent as new lines without merging
+        added_lines = False
+        for line in self.order_line.filtered(lambda l: l.product_id.recurring_ok):
+            if line.product_uom_qty > 0:
+                added_lines = True
+                # Copy line to parent
+                line.copy({
+                    'order_id': parent.id,
+                    'state': 'sale'
+                })
+        
+        if added_lines:
+            self.message_post(body=_("Upsell confirmed and new lines added to parent subscription %s.") % parent.name)
+            parent.message_post(body=_("Upsell %s confirmed. New lines added.") % self.name)
+
+    def action_view_upsells(self):
+        """Returns the window action to display all upsell quotes linked to this subscription."""
+        self.ensure_one()
+        upsells = self.subscription_child_ids.filtered(lambda o: o.subscription_state == '7_upsell')
+        action = self.env["ir.actions.actions"]._for_xml_id("subscription_management.action_subscription_upsells")
+        if len(upsells) == 1:
+            action['views'] = [(self.env.ref('subscription_management.view_subscription_order_form').id, 'form')]
+            action['res_id'] = upsells.id
+        else:
+            action['domain'] = [('id', 'in', upsells.ids)]
+        return action
+
     def action_renew(self):
         """Create a new draft Sales Order copying all lines from this order
         to initiate a subscription renewal."""
         self.ensure_one()
+        
+        valid_invoices = self.invoice_ids.filtered(lambda inv: inv.state != 'cancel')
+        if not valid_invoices:
+            raise UserError(_("You can not upsell or renew a subscription that has not been invoiced yet. Please, update directly the %s contract or invoice it first.") % self.name)
+            
         renew_order = self.copy({
             'origin': _("Renewal of %s") % self.name,
             'state': 'draft',
             'client_order_ref': False,
             'subscription_state': '2_renewal',
+            'plan_id': self.plan_id.id,
         })
 
         return {
@@ -599,7 +725,13 @@ class SaleOrder(models.Model):
             self.message_post(body=Markup(_("Free trial invoice generated. Next billing date set to %s after %s trial days. Full price will apply on next cycle.")) % (next_date, self.plan_id.trial_period_days))
         else:
             delta = self._get_billing_delta()
-            next_date = (self.next_invoice_date or fields.Date.today()) + delta
+            current_date = self.next_invoice_date or fields.Date.today()
+            if self.plan_id.align_to_period_start and self.plan_id.billing_period_unit == 'months':
+                next_date = (current_date + delta).replace(day=1)
+            elif self.plan_id.align_to_period_start and self.plan_id.billing_period_unit == 'years':
+                next_date = (current_date + delta).replace(month=1, day=1)
+            else:
+                next_date = current_date + delta
         
         vals = {
             'next_invoice_date': next_date,
@@ -612,6 +744,14 @@ class SaleOrder(models.Model):
                 self.message_post(body=Markup(_("Invoice %s generated, but no payment token is on file. Subscription placed in Dunning." % invoice.name)))
             
         self.write(vals)
+        
+        if self.plan_id.invoice_mail_template_id:
+            try:
+                self.plan_id.invoice_mail_template_id.send_mail(invoice.id, force_send=True)
+                self.message_post(body=Markup(_("Automated invoice email sent for %s.")) % invoice.name)
+            except Exception as e:
+                self.message_post(body=Markup(_("Failed to send automated invoice email: %s")) % str(e))
+                
         return invoice
 
     @api.model
@@ -650,6 +790,18 @@ class SaleOrder(models.Model):
             
             # Determine stage
             days_overdue = (today - (invoice.invoice_date_due or invoice.date or today)).days
+            
+            # Check Automatic Closing limit from Plan
+            if sub.plan_id.automatic_closing_days > 0 and days_overdue >= sub.plan_id.automatic_closing_days:
+                sub.write({
+                    'subscription_state': '6_churn',
+                    'is_in_dunning': False,
+                    'dunning_stage_id': False,
+                    'close_reason_id': False # Optional, could create a system reason
+                })
+                sub.message_post(body=_("Subscription automatically closed due to unpaid invoice exceeding %s days.") % sub.plan_id.automatic_closing_days)
+                continue
+                
             stages = sub.dunning_plan_id.line_ids.filtered(lambda s: s.delay_days <= days_overdue).sorted('delay_days')
             current_stage = stages[-1] if stages else False
             
@@ -815,16 +967,29 @@ class SaleOrderLine(models.Model):
         help="Select resource associated with this line."
     )
 
-    @api.depends('order_id.plan_id', 'order_id.pricelist_id')
+    @api.onchange('product_id', 'product_uom_qty')
+    def _onchange_product_id_subscription(self):
+        """Force price recomputation in the UI when product or quantity changes."""
+        if self.order_id.plan_id:
+            self._compute_price_unit()
+
+    @api.depends('order_id.plan_id', 'order_id.pricelist_id', 'product_id', 'product_uom_qty')
     def _compute_price_unit(self):
         """Override to pull the recurring price from the subscription pricing matrix."""
         super()._compute_price_unit()
         for line in self:
-            if not line.display_type and line.order_id.plan_id and line.product_template_id.recurring_ok:
+            tmpl = line.product_id.product_tmpl_id or line.product_template_id
+            
+            # Safely extract integer IDs to prevent NewId search failures in the UI
+            tmpl_id = tmpl._origin.id if hasattr(tmpl, '_origin') else tmpl.id
+            plan_id = line.order_id.plan_id._origin.id if hasattr(line.order_id.plan_id, '_origin') else line.order_id.plan_id.id
+            pricelist_id = line.order_id.pricelist_id._origin.id if hasattr(line.order_id.pricelist_id, '_origin') else line.order_id.pricelist_id.id
+            
+            if not line.display_type and plan_id and tmpl.recurring_ok:
                 pricing = self.env['subscription.plan.pricing'].search([
-                    ('product_template_id', '=', line.product_template_id.id),
-                    ('plan_id', '=', line.order_id.plan_id.id),
-                    '|', ('pricelist_id', '=', line.order_id.pricelist_id.id),
+                    ('product_template_id', '=', tmpl_id),
+                    ('plan_id', '=', plan_id),
+                    '|', ('pricelist_id', '=', pricelist_id),
                          ('pricelist_id', '=', False)
                 ], order='pricelist_id desc', limit=1)
                 

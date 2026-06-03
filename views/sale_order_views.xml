@@ -40,6 +40,18 @@
                         <span class="o_stat_value"><field name="mrr_total" widget="monetary" options="{'currency_field': 'currency_id'}"/></span>
                     </div>
                 </button>
+                <button class="oe_stat_button" icon="fa-clock-o" type="object" name="open_subscription_history" invisible="history_count &lt; 2">
+                    <div class="o_field_widget o_stat_info">
+                        <span class="o_stat_value"><field name="history_count"/></span>
+                        <span class="o_stat_text">Sales History</span>
+                    </div>
+                </button>
+                <button class="oe_stat_button" icon="fa-arrow-circle-up" type="object" name="action_view_upsells" invisible="upsell_count == 0">
+                    <div class="o_field_widget o_stat_info">
+                        <span class="o_stat_value"><field name="upsell_count"/></span>
+                        <span class="o_stat_text">Upsell Quote</span>
+                    </div>
+                </button>
             </xpath>
 
             <!-- 2. Customize header buttons to match exact mockup labels and sequence -->
@@ -52,20 +64,21 @@
 
             <!-- Inject custom Subscription lifecycle buttons -->
             <xpath expr="//header" position="inside">
-                <button name="action_upsell" string="Upsell" type="object" class="btn-secondary" invisible="not plan_id or not plan_is_add_products or state not in ('sale', 'done')"/>
-                <button name="action_renew" string="Renew" type="object" class="btn-secondary" invisible="not plan_id or not plan_is_renew or state not in ('sale', 'done')"/>
-                <button name="action_close" string="Close" type="object" class="btn-secondary" invisible="not plan_id or state not in ('sale', 'done')"/>
+                <button name="action_upsell" string="Upsell" type="object" class="btn-secondary" invisible="not plan_id or state not in ('sale', 'done') or subscription_state in ('7_upsell', '2_renewal')"/>
+                <button name="action_renew" string="Renew" type="object" class="btn-secondary" invisible="not plan_id or state not in ('sale', 'done') or subscription_state in ('7_upsell', '2_renewal')"/>
+                <button name="action_close" string="Close" type="object" class="btn-secondary" invisible="not plan_id or state not in ('sale', 'done') or subscription_state in ('7_upsell', '2_renewal')"/>
             </xpath>
 
             <!-- 3. Inject premium state and status badges next to the Sheet Title -->
             <xpath expr="//div[hasclass('oe_title')]" position="replace">
                 <div class="oe_title" style="max-width: 100% !important; width: 100% !important;">
                     <div class="d-flex justify-content-between align-items-center w-100" style="width: 100% !important; display: flex !important; min-width: 0; margin-bottom: 1rem;">
+                        <field name="subscription_state" invisible="1"/>
                         <h1 class="m-0">
                              <field name="name" readonly="1"/>
                         </h1>
                         <div class="d-flex gap-2 ms-auto" style="overflow: visible !important; min-width: max-content !important; flex-shrink: 0 !important; margin-right: 10px;">
-                            <span class="badge rounded-pill text-bg-primary px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #4f46e5 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '1_draft'">Subscription Quotation</span>
+                            <span class="badge rounded-pill text-bg-primary px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #4f46e5 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not plan_id or subscription_state != '1_draft'">Subscription Quotation</span>
                             <span class="badge rounded-pill text-bg-secondary px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #6c757d !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '2_renewal'">Renewal</span>
                             <span class="badge rounded-pill text-bg-success px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #4caf50 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '3_progress'">In Progress</span>
                             <span class="badge rounded-pill text-bg-info px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #17a2b8 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '4_paused'">Paused</span>
@@ -92,10 +105,10 @@
                     <span class="oe_grey fw-bold">Until</span>
                     <field name="subscription_end_date" placeholder="May 16, 2032"/>
                 </div>
-                <field name="next_invoice_date" string="Next Invoice"/>
-                <field name="payment_token_id" options="{'no_create': True}" invisible="not plan_id"/>
-                <field name="dunning_plan_id" invisible="not plan_id"/>
-                <field name="next_dunning_date" invisible="not is_in_dunning"/>
+                <field name="next_invoice_date" string="Next Invoice" invisible="subscription_state in ('1_draft', '7_upsell', '2_renewal')"/>
+                <field name="payment_token_id" options="{'no_create': True}" invisible="not plan_id or subscription_state in ('1_draft', '7_upsell', '2_renewal')"/>
+                <field name="dunning_plan_id" invisible="not plan_id or subscription_state in ('1_draft', '7_upsell', '2_renewal')"/>
+                <field name="next_dunning_date" invisible="not is_in_dunning or subscription_state in ('1_draft', '7_upsell', '2_renewal')"/>
                 <field name="commitment_date" string="Promised Delivery"/>
             </xpath>
 

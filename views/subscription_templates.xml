@@ -1,18 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <!-- Hide Portal Sidebar Globally -->
-    <template id="hide_portal_sidebar_global" inherit_id="portal.portal_layout" priority="99">
-        <xpath expr="//div[hasclass('o_portal_wrap')]" position="before">
-            <style>
-                .o_my_sidebar, .o_portal_sidebar { display: none !important; }
-                .o_portal_wrap .col-md-9, .o_portal_wrap .col-lg-9, .o_portal_wrap .col-lg-8, .o_portal_wrap .col-md-8 {
-                    flex: 0 0 100% !important;
-                    max-width: 100% !important;
-                    width: 100% !important;
-                }
-            </style>
-        </xpath>
-    </template>
 
     <!-- Add Subscriptions to Customer Portal Home -->
     <template id="portal_my_home_menu_subscription" name="Portal layout : Subscription menu entries" inherit_id="portal.portal_my_home" priority="20">
@@ -26,7 +13,6 @@
                 <t t-set="url" t-value="'/my/subscriptions'"/>
                 <t t-set="text">View and manage your subscriptions</t>
                 <t t-set="placeholder_count" t-value="'subscription_count'"/>
-                <t t-set="show_count" t-value="True"/>
             </t>
         </xpath>
     </template>
@@ -123,6 +109,41 @@
                     </div>
                 </div>
             </section>
+        </xpath>
+    </template>
+
+    <template id="sale_order_portal_content_inherit_upsell_ui" name="Portal layout: Upsell UI" inherit_id="sale.sale_order_portal_content">
+        <!-- Back to Subscription Banner -->
+        <xpath expr="//div[@id='introduction']" position="before">
+            <t t-if="sale_order.subscription_id">
+                <a t-att-href="sale_order.subscription_id.get_portal_url()" 
+                   class="btn w-100 mb-4 d-flex align-items-center justify-content-center fw-bold"
+                   style="background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; padding: 12px; border-radius: 4px;">
+                    <i class="fa fa-arrow-right me-2"/> Back to your subscription
+                </a>
+            </t>
+        </xpath>
+        
+        <!-- Upsell/Renew Badge -->
+        <xpath expr="//div[@id='intro_row']/h2" position="inside">
+            <span t-if="sale_order.subscription_state == '7_upsell'" class="badge rounded-pill bg-light text-dark border border-secondary align-text-top ms-2" style="font-size: 0.5em; vertical-align: middle;"><i class="fa fa-check text-success"/> Upsell</span>
+            <span t-if="sale_order.subscription_state == '2_renewal'" class="badge rounded-pill bg-light text-dark border border-secondary align-text-top ms-2" style="font-size: 0.5em; vertical-align: middle;"><i class="fa fa-check text-success"/> Renewal</span>
+        </xpath>
+        
+        <!-- Sale Information Links -->
+        <xpath expr="//tbody[@id='sale_info_table']" position="inside">
+            <tr t-if="sale_order.subscription_id">
+                <th class="ps-0 pb-0">Subscription:</th>
+                <td class="w-100 pb-0 text-wrap">
+                    <a t-att-href="sale_order.subscription_id.get_portal_url()"><span t-field="sale_order.subscription_id.name"/></a>
+                </td>
+            </tr>
+            <tr t-if="sale_order.plan_id">
+                <th class="ps-0 pb-0">Recurring Plan:</th>
+                <td class="w-100 pb-0 text-wrap">
+                    <span t-field="sale_order.plan_id.name"/>
+                </td>
+            </tr>
         </xpath>
     </template>
 
@@ -362,8 +383,12 @@
                         </div>
                     </div>
                     <div class="d-flex gap-2">
-                        <!-- We map Update Payment to a placeholder for now -->
-                        <a href="#" class="btn btn-light" style="border: 1px solid #e2e8f0; color: #475569; font-weight: 500; font-size: 14px; border-radius: 6px;">Update Payment</a>
+                        <t t-if="subscription.subscription_state == '3_progress' and subscription.plan_id.is_add_products and subscription.upsell_count &gt; 0">
+                            <form t-attf-action="/my/subscription/#{subscription.id}/upsell" method="POST" class="d-inline">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <button type="submit" class="btn" style="background-color: #83527a; color: white; font-weight: 500; font-size: 14px; border-radius: 6px; border: none;">Upsell</button>
+                            </form>
+                        </t>
                         <t t-if="subscription.subscription_state == '3_progress' and subscription.plan_id.is_pausable">
                             <form t-attf-action="/my/subscription/#{subscription.id}/pause" method="POST" class="d-inline">
                                 <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
@@ -376,7 +401,7 @@
                                 <button type="submit" class="btn" style="background-color: #83527a; color: white; font-weight: 500; font-size: 14px; border-radius: 6px; border: none;">Resume</button>
                             </form>
                         </t>
-                        <t t-else="">
+                        <t t-elif="subscription.subscription_state not in ['1_draft', '7_upsell']">
                             <a href="#" class="btn" style="background-color: #83527a; color: white; font-weight: 500; font-size: 14px; border-radius: 6px;">Renew</a>
                         </t>
                     </div>
@@ -718,6 +743,31 @@
                     </div>
                 </div>
 
+                <!-- Optional Plans Section -->
+                <t t-if="subscription.plan_id.optional_plan_ids and subscription.subscription_state in ('3_progress', '4_paused')">
+                    <div class="mt-5 mb-4 px-3 px-md-0">
+                        <h4 class="font-weight-bold" style="color: #111827; margin-bottom: 20px;"><i class="fa fa-level-up me-2 text-primary"/>Looking to Upgrade?</h4>
+                        <div class="row">
+                            <t t-foreach="subscription.plan_id.optional_plan_ids" t-as="opt_plan">
+                                <div class="col-md-6 col-lg-4 mb-4">
+                                    <div class="card h-100 shadow-sm border" style="border-radius: 12px; border-color: #e2e8f0;">
+                                        <div class="card-body d-flex flex-column">
+                                            <h5 class="card-title font-weight-bold" style="color: #1f2937;"><t t-esc="opt_plan.name"/></h5>
+                                            <p class="text-muted small mb-4 flex-grow-1">
+                                                <t t-if="opt_plan.product_id">
+                                                    Starting from <span t-field="opt_plan.product_id.list_price" t-options="{'widget': 'monetary', 'display_currency': subscription.currency_id}"/> / <t t-esc="opt_plan.billing_period_value"/> <t t-esc="opt_plan.billing_period_unit"/>
+                                                </t>
+                                            </p>
+                                            <a t-attf-href="/subscriptions/checkout/#{opt_plan.id}?clear=1" class="btn w-100 mt-auto" style="background-color: #f1f5f9; color: #334155; border-radius: 6px; font-weight: 500; border: 1px solid #cbd5e1;">
+                                                View Plan Details
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                </t>
 
             </div> <!-- End Wrap -->
         </t>
@@ -916,7 +966,7 @@
                     list-style: none; padding: 0; margin: 0 0 1rem;
                 }
                 .plan-features-2 li {
-                    display: flex; align-items: center; gap: 10px; margin-bottom: 0.75rem;
+                    display: flex; align-items: flex-start; gap: 10px; margin-bottom: 0.75rem;
                     font-size: 14px; color: #334155; font-weight: 500;
                 }
                 .check-circle {
@@ -924,6 +974,7 @@
                     background: #00A09D; color: white;
                     display: flex; align-items: center; justify-content: center;
                     font-size: 9px; flex-shrink: 0;
+                    margin-top: 2px;
                 }
                 
                 .plan-btn-2 {
@@ -962,10 +1013,21 @@
 
             <div id="wrap" class="oe_structure oe_empty pricing-page-new">
                 <div class="container">
-                    <div class="pricing-header">
+                    <div class="pricing-header position-relative">
+                        <div class="position-absolute d-none d-md-block" style="top: 0; right: 0;" t-if="not request.env.user._is_public()">
+                            <a href="/my/subscriptions" style="color: #714B67; font-size: 14px; font-weight: 600; text-decoration: none; border-bottom: 1px solid #714B67; padding-bottom: 1px; transition: all 0.2s;">
+                                Manage My Subscriptions <i class="fa fa-angle-right ms-1"></i>
+                            </a>
+                        </div>
                         <div class="pricing-pill-top">PLANS &amp; PRICING</div>
                         <h1>Choose Your Perfect Plan</h1>
                         <p>Unlock robust scaling and premium workflows. Switch or cancel anytime.</p>
+                        <!-- Mobile version of the link -->
+                        <div class="d-block d-md-none mt-3" t-if="not request.env.user._is_public()">
+                            <a href="/my/subscriptions" style="color: #714B67; font-size: 14px; font-weight: 600; text-decoration: none;">
+                                Manage My Subscriptions <i class="fa fa-angle-right ms-1"></i>
+                            </a>
+                        </div>
                     </div>
                     
                     <div class="plan-grid-2">
@@ -998,10 +1060,10 @@
                                     </div>
                                     
                                     <ul class="plan-features-2">
-                                        <t t-foreach="plan.pricing_ids" t-as="pricing_line">
+                                        <t t-foreach="plan.remark_ids" t-as="rem">
                                             <li>
                                                 <div class="check-circle"><i class="fa fa-check"></i></div>
-                                                <span><t t-esc="pricing_line.product_template_id.name"/></span>
+                                                <span><t t-esc="rem.name"/></span>
                                             </li>
                                         </t>
                                         <li t-if="plan.trial_period_days > 0">
@@ -1010,7 +1072,7 @@
                                         </li>
                                     </ul>
                                     
-                                    <a t-attf-href="/subscriptions/checkout/#{plan.id}" t-attf-class="plan-btn-2 #{'btn-solid' if is_popular else 'btn-outline'}">
+                                    <a t-attf-href="/subscriptions/checkout/#{plan.id}?clear=1" t-attf-class="plan-btn-2 #{'btn-solid' if is_popular else 'btn-outline'}">
                                         Choose <t t-esc="plan.billing_period"/> &#8594;
                                     </a>
                                 </div>
@@ -1128,30 +1190,16 @@
                                         </div>
                                         
                                         <div class="row">
-                                            <div class="col-sm-5 mb-3 mb-sm-0">
-                                                <label class="form-label" style="font-size: 15px; color: #334155; font-weight: 500; margin-bottom: 8px;">Seats</label>
-                                                <div style="display: inline-flex; border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; height: 42px; background: white;">
-                                                    <button type="button" id="seat-minus" style="background: transparent; border: none; width: 42px; color: #94a3b8; font-size: 20px; outline: none; cursor: pointer;">-</button>
-                                                    <input type="text" t-att-value="int(order.order_line[0].product_uom_qty) if order.order_line else 1" id="seat-input" readonly="1" style="border: none; border-left: 1px solid #cbd5e1; border-right: 1px solid #cbd5e1; width: 60px; text-align: center; font-size: 15px; font-weight: 600; color: #0f172a; outline: none;"/>
+                                            <div class="col-sm-12">
+                                                <div class="d-flex align-items-center gap-3">
+                                                    <span style="font-size: 15px; color: #334155; font-weight: 500;">Seats</span>
+                                                    <button type="button" id="seat-minus" style="background: transparent; border: none; width: 42px; color: #334155; font-size: 20px; outline: none; cursor: pointer;">-</button>
+                                                    <input type="number" id="seat-count" name="quantity" t-att-value="int(order.order_line[0].product_uom_qty) if order.order_line else 1" min="1" style="width: 70px; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; padding: 6px; color: #0f172a; font-weight: 500; font-size: 15px;" readonly="1"/>
                                                     <button type="button" id="seat-plus" style="background: transparent; border: none; width: 42px; color: #334155; font-size: 20px; outline: none; cursor: pointer;">+</button>
                                                 </div>
-                                                <t t-set="website_price" t-value="plan.product_id.list_price if plan.product_id else plan.total_price"/>
+                                                <t t-set="seat_qty_calc" t-value="int(order.order_line[0].product_uom_qty) if order.order_line else 1"/>
+                                                <t t-set="website_price" t-value="base_amount / seat_qty_calc if seat_qty_calc > 0 else (plan.product_id.list_price if plan.product_id else plan.total_price)"/>
                                                 <div class="mt-2" style="font-size: 13px; color: #64748b;"><span t-esc="website_price" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/> per seat per <t t-esc="plan.billing_period"/></div>
-                                            </div>
-                                            <div class="col-sm-7">
-                                                <div class="d-flex align-items-center gap-3 mb-2">
-                                                    <span style="font-size: 15px; color: #334155; font-weight: 400;">Billing Cycle</span>
-                                                    <div style="display: inline-flex; background: #f8fafc; padding: 4px; border-radius: 8px; border: 1px solid #f1f5f9;">
-                                                        <div id="cycle-monthly" class="cycle-btn" t-attf-style="cursor: pointer; transition: 0.2s; background: #{'white' if plan.billing_period == 'monthly' else 'transparent'}; color: #{'#0f172a' if plan.billing_period == 'monthly' else '#475569'}; padding: 6px 14px; border-radius: 6px; font-size: 14px; font-weight: #{'500' if plan.billing_period == 'monthly' else '400'}; box-shadow: #{'0 1px 3px rgba(0,0,0,0.05)' if plan.billing_period == 'monthly' else 'none'}; display: flex; align-items: center;">
-                                                            Monthly
-                                                        </div>
-                                                        <div id="cycle-yearly" class="cycle-btn" t-attf-style="cursor: pointer; transition: 0.2s; background: #{'white' if plan.billing_period == 'yearly' else 'transparent'}; color: #{'#0f172a' if plan.billing_period == 'yearly' else '#475569'}; padding: 6px 14px; border-radius: 6px; font-size: 14px; font-weight: #{'500' if plan.billing_period == 'yearly' else '400'}; box-shadow: #{'0 1px 3px rgba(0,0,0,0.05)' if plan.billing_period == 'yearly' else 'none'}; display: flex; align-items: center;">
-                                                            Yearly 
-                                                            <span style="background: #dcfce7; color: #065f46; font-size: 11px; font-weight: 500; padding: 2px 6px; border-radius: 12px; margin-left: 6px;">-17%</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div style="font-size: 13px; color: #64748b; margin-top: 8px;">Billed every <t t-esc="plan.billing_period"/>. Cancel anytime.</div>
                                             </div>
                                         </div>
                                     </div>
@@ -1269,8 +1317,8 @@
                                     
                                     <div class="p-4">
                                         <t t-set="seat_qty" t-value="int(order.order_line[0].product_uom_qty) if order.order_line else 1"/>
-                                        <t t-set="website_price" t-value="plan.product_id.list_price if plan.product_id else plan.total_price"/>
-                                        <t t-set="subtotal" t-value="website_price * seat_qty"/>
+                                        <t t-set="subtotal" t-value="base_amount"/>
+                                        <t t-set="website_price" t-value="base_amount / seat_qty if seat_qty > 0 else 0"/>
                                         <div class="d-flex justify-content-between align-items-start mb-1">
                                             <div>
                                                 <div class="font-weight-bold" style="color: #212529; font-size: 15px;"><t t-esc="plan.name"/></div>
@@ -1283,10 +1331,37 @@
                                         
                                         <hr style="border-color: #E9ECEF; margin: 1.5rem 0;"/>
                                         
+                                        <!-- Promo Code Toggle -->
+                                        <div class="mb-3">
+                                            <a href="#" id="toggle_promo_code" style="color: #875A7B; font-size: 14px; font-weight: 500; text-decoration: none;">
+                                                <i class="fa fa-tag me-1"></i> Have a promo code?
+                                            </a>
+                                            <div id="promo_code_container" class="mt-2" style="display: none;">
+                                                <div class="d-flex">
+                                                    <input type="text" class="form-control" id="promo_code_input" placeholder="Enter code" style="border: 1px solid #cbd5e1; border-radius: 6px 0 0 6px; box-shadow: none; font-size: 14px;"/>
+                                                    <button type="button" id="apply_promo_btn" class="btn" style="background: #334155; color: white; border-radius: 0 6px 6px 0; font-size: 14px; font-weight: 500; border: 1px solid #334155;">Apply</button>
+                                                </div>
+                                                <div id="promo_message" style="font-size: 13px; margin-top: 5px;"></div>
+                                            </div>
+                                        </div>
+
                                         <div class="d-flex justify-content-between mb-3" style="font-size: 14px; color: #495057;">
                                             <span>Subtotal</span>
                                             <span class="font-weight-bold" style="color: #212529;"><span t-esc="subtotal" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/></span>
                                         </div>
+                                        
+                                        <!-- Dynamic Discount Row -->
+                                        <div id="discount_row" class="d-flex justify-content-between mb-3 text-success" style="font-size: 14px;" t-attf-style="{{ 'display: none !important;' if not discount_amount else '' }}">
+                                            <span id="discount_label">Discount</span>
+                                            <span class="font-weight-bold">-<span id="discount_amount"><t t-esc="discount_amount" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/></span></span>
+                                        </div>
+
+                                        <!-- Taxes Row -->
+                                        <div id="taxes_row" class="d-flex justify-content-between mb-3 text-muted" style="font-size: 14px;" t-attf-style="{{ 'display: none !important;' if order.amount_tax == 0 else '' }}">
+                                            <span>Taxes</span>
+                                            <span class="font-weight-bold" id="taxes_amount"><span t-esc="order.amount_tax" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/></span>
+                                        </div>
+
                                         <t t-if="plan.trial_period_days &gt; 0">
                                             <div class="d-flex justify-content-between mb-3 text-success" style="font-size: 14px;">
                                                 <span><t t-esc="plan.trial_period_days"/>-Day Free Trial</span>
@@ -1299,8 +1374,8 @@
                                         
                                         <div class="d-flex justify-content-between align-items-end mb-1">
                                             <div class="font-weight-bold" style="color: #212529; font-size: 16px;">Total</div>
-                                            <div class="font-weight-bold" style="color: #212529; font-size: 24px; line-height: 1;">
-                                                <t t-set="grand_total" t-value="subtotal"/>
+                                            <div class="font-weight-bold" style="color: #212529; font-size: 20px;" id="total_amount">
+                                                <t t-set="grand_total" t-value="order.amount_total"/>
                                                 <span t-esc="grand_total" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/>
                                             </div>
                                         </div>
@@ -1324,7 +1399,7 @@
                                             <i class="fa fa-lock"></i>
                                             Pay
                                             <span>
-                                                <t t-set="grand_total_btn" t-value="subtotal"/>
+                                                <t t-set="grand_total_btn" t-value="order.amount_total"/>
                                                 <t t-esc="grand_total_btn" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/>
                                             </span>
                                         </button>
@@ -1359,7 +1434,7 @@
                             // Configuration handlers (Seats and Cycle)
                             function updateConfig(seats, cycle) {
                                 // Disable interactions and show loading state
-                                document.getElementById('seat-input').style.opacity = '0.5';
+                                document.getElementById('seat-count').style.opacity = '0.5';
                                 
                                 fetch('/subscriptions/checkout/update_config', {
                                     method: 'POST',
@@ -1376,24 +1451,24 @@
                                         if (data.result.redirect) {
                                             window.location.href = data.result.redirect;
                                         } else {
-                                            window.location.reload();
+                                            window.location.href = window.location.pathname;
                                         }
                                     } else if (data.result &amp;&amp; data.result.error) {
                                         alert(data.result.error);
-                                        document.getElementById('seat-input').style.opacity = '1';
+                                        document.getElementById('seat-count').style.opacity = '1';
                                     }
                                 }).catch(() => {
-                                    document.getElementById('seat-input').style.opacity = '1';
+                                    document.getElementById('seat-count').style.opacity = '1';
                                 });
                             }
 
                             document.getElementById('seat-minus')?.addEventListener('click', () => {
-                                let val = parseInt(document.getElementById('seat-input').value);
+                                let val = parseInt(document.getElementById('seat-count').value);
                                 if(val > 1) updateConfig(val - 1, null);
                             });
                             
                             document.getElementById('seat-plus')?.addEventListener('click', () => {
-                                let val = parseInt(document.getElementById('seat-input').value);
+                                let val = parseInt(document.getElementById('seat-count').value);
                                 updateConfig(val + 1, null);
                             });
                             
@@ -1443,31 +1518,147 @@
                                 });
                             }
                             
+                            // Helper to update the summary UI dynamically
+                            function updateSummaryUI(res) {
+                                if (res &amp;&amp; res.success !== false) {
+                                    // Update Discount
+                                    const discountRow = document.getElementById('discount_row');
+                                    const discountAmount = document.getElementById('discount_amount');
+                                    const discountLabel = document.getElementById('discount_label');
+                                    if (discountRow) {
+                                        const hasDiscount = res.discount_amount_raw ? (res.discount_amount_raw &gt; 0) : (res.discount_amount &amp;&amp; res.discount_amount !== '$0.00' &amp;&amp; res.discount_amount !== '0.00');
+                                        if (hasDiscount) {
+                                            discountRow.style.setProperty('display', 'flex', 'important');
+                                            if (discountAmount) discountAmount.textContent = res.discount_amount;
+                                            if (discountLabel) {
+                                                discountLabel.textContent = 'Discount';
+                                            }
+                                        } else {
+                                            discountRow.style.setProperty('display', 'none', 'important');
+                                        }
+                                    }
+
+                                    // Update Taxes
+                                    const taxesRow = document.getElementById('taxes_row');
+                                    const taxesAmount = document.getElementById('taxes_amount');
+                                    if (taxesRow) {
+                                        if (res.has_tax) {
+                                            taxesRow.style.setProperty('display', 'flex', 'important');
+                                            if (taxesAmount) {
+                                                taxesAmount.innerHTML = '<span>' + res.new_tax + '</span>';
+                                            }
+                                        } else {
+                                            taxesRow.style.setProperty('display', 'none', 'important');
+                                        }
+                                    }
+
+                                    // Update Total
+                                    const totalAmt = document.querySelector('#total_amount span');
+                                    if (totalAmt) totalAmt.textContent = res.new_total;
+
+                                    const payBtnAmt = document.querySelector('#summary_pay_btn span');
+                                    if (payBtnAmt) payBtnAmt.textContent = res.new_total;
+                                }
+                            }
+
                             // Auto-save address on input (debounced)
                             let timeout = null;
-                            const inputs = document.querySelectorAll('#name, #email, #street, #city, #zip, #country_id, #state_id');
+                            const inputs = document.querySelectorAll('#name, #email, #street, #city, #zip, #country_id, #state_id, #vat');
                             
                             inputs.forEach(input => {
-                                input.addEventListener('input', function() {
-                                    clearTimeout(timeout);
-                                    timeout = setTimeout(() => {
-                                        const data = {
-                                            name: document.getElementById('name') ? document.getElementById('name').value : '',
-                                            email: document.getElementById('email') ? document.getElementById('email').value : '',
-                                            street: document.getElementById('street') ? document.getElementById('street').value : '',
-                                            city: document.getElementById('city') ? document.getElementById('city').value : '',
-                                            zip_code: document.getElementById('zip') ? document.getElementById('zip').value : '',
-                                            country_id: document.getElementById('country_id') ? document.getElementById('country_id').value : '',
-                                            state_id: document.getElementById('state_id') ? document.getElementById('state_id').value : '',
-                                        };
-                                        fetch('/subscriptions/checkout/save_address', {
-                                            method: 'POST',
-                                            headers: {'Content-Type': 'application/json'},
-                                            body: JSON.stringify({params: data})
-                                        });
-                                    }, 500);
+                                ['input', 'change'].forEach(evt => {
+                                    input.addEventListener(evt, function() {
+                                        clearTimeout(timeout);
+                                        timeout = setTimeout(() => {
+                                            const data = {
+                                                name: document.getElementById('name') ? document.getElementById('name').value : '',
+                                                email: document.getElementById('email') ? document.getElementById('email').value : '',
+                                                street: document.getElementById('street') ? document.getElementById('street').value : '',
+                                                city: document.getElementById('city') ? document.getElementById('city').value : '',
+                                                zip_code: document.getElementById('zip') ? document.getElementById('zip').value : '',
+                                                country_id: document.getElementById('country_id') ? document.getElementById('country_id').value : '',
+                                                state_id: document.getElementById('state_id') ? document.getElementById('state_id').value : '',
+                                                vat: document.getElementById('vat') ? document.getElementById('vat').value : '',
+                                                plan_id: parseInt('<t t-esc="plan.id"/>'),
+                                            };
+                                            fetch('/subscriptions/checkout/save_address', {
+                                                method: 'POST',
+                                                headers: {'Content-Type': 'application/json'},
+                                                body: JSON.stringify({params: data})
+                                            }).then(res => res.json()).then(data => {
+                                                if (data.result) {
+                                                    updateSummaryUI(data.result);
+                                                }
+                                            });
+                                        }, 500);
+                                    });
                                 });
                             });
+                            
+                            // Coupon Logic
+                            const applyPromoBtn = document.getElementById('apply_promo_btn');
+                            if (applyPromoBtn) {
+                                applyPromoBtn.addEventListener('click', function() {
+                                    const code = document.getElementById('promo_code_input').value.trim();
+                                    const msgDiv = document.getElementById('promo_message');
+                                    
+                                    if(!code) {
+                                        msgDiv.textContent = 'Please enter a code.';
+                                        msgDiv.className = 'text-danger';
+                                        return;
+                                    }
+                                    
+                                    // Disable button and show loading
+                                    const originalText = this.textContent;
+                                    this.textContent = '...';
+                                    this.disabled = true;
+                                    
+                                    fetch('/subscriptions/checkout/validate_coupon', {
+                                        method: 'POST',
+                                        headers: {'Content-Type': 'application/json'},
+                                        body: JSON.stringify({
+                                            params: {
+                                                plan_id: parseInt('<t t-esc="plan.id"/>'),
+                                                coupon_code: code
+                                            }
+                                        })
+                                        }).then(res => res.json()).then(data => {
+                                        const res = data.result;
+                                        if(res &amp;&amp; res.valid) {
+                                            msgDiv.textContent = res.message;
+                                            msgDiv.className = 'text-success mt-2 font-weight-bold';
+                                            
+                                            // Update UI using helper
+                                            updateSummaryUI(res);
+                                            
+                                        } else {
+                                            msgDiv.textContent = (res &amp;&amp; res.message) ? res.message : 'Invalid code.';
+                                            msgDiv.className = 'text-danger mt-2';
+                                        }
+                                    }).catch(err => {
+                                        msgDiv.textContent = 'An error occurred. Please try again.';
+                                        msgDiv.className = 'text-danger mt-2';
+                                    }).finally(() => {
+                                        this.textContent = originalText;
+                                        this.disabled = false;
+                                    });
+                                });
+                            }
+                            
+                            // Toggle promo code input
+                            const togglePromoBtn = document.getElementById('toggle_promo_code');
+                            if(togglePromoBtn) {
+                                togglePromoBtn.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    const container = document.getElementById('promo_code_container');
+                                    if(container.style.display === 'none') {
+                                        container.style.display = 'block';
+                                        document.getElementById('promo_code_input').focus();
+                                    } else {
+                                        container.style.display = 'none';
+                                    }
+                                });
+                            }
                         });
                     </script>
 
@@ -1518,7 +1709,7 @@
 
                             <div class="d-flex justify-content-between align-items-center mb-1">
                         <h2 class="font-weight-bold mb-0" style="color: #212529; font-size: 28px;">Checkout</h2>
-                        <a t-attf-href="/subscriptions/checkout/#{plan.id}" class="btn btn-light shadow-sm text-muted rounded-pill px-4 py-2" style="border: 1px solid rgba(0,0,0,0.05); transition: all 0.2s ease;">
+                        <a t-attf-href="/subscriptions/checkout/#{plan.id}?clear=1" class="btn btn-light shadow-sm text-muted rounded-pill px-4 py-2" style="border: 1px solid rgba(0,0,0,0.05); transition: all 0.2s ease;">
                             <i class="fa fa-arrow-left me-2"></i> Back to Details
                         </a>
                     </div>
@@ -1575,10 +1766,15 @@
                                         <div class="d-flex justify-content-between align-items-start mb-1">
                                             <div>
                                                 <div class="font-weight-bold" style="color: #212529; font-size: 15px;"><t t-esc="plan.name"/></div>
-                                                <div class="text-muted" style="font-size: 12px;">1 seat × <span t-field="order.amount_untaxed" t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/> / <t t-esc="plan.billing_period"/></div>
+                                                <t t-set="seats_qty" t-value="sum(line.product_uom_qty for line in order.order_line if line.product_id == (plan.product_id or line.product_id))"/>
+                                                <t t-set="base_unit_price" t-value="plan.product_id.list_price if plan.product_id else plan.total_price"/>
+                                                <div class="text-muted" style="font-size: 12px;">
+                                                    <t t-esc="int(seats_qty)"/> seat(s) × <span t-esc="base_unit_price" t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/> / <t t-esc="plan.billing_period"/>
+                                                </div>
                                             </div>
                                             <div class="font-weight-bold" style="color: #212529; font-size: 15px;">
-                                                <span t-field="order.amount_untaxed" t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/>
+                                                <t t-set="receipt_subtotal" t-value="base_unit_price * seats_qty"/>
+                                                <span t-esc="receipt_subtotal" t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/>
                                             </div>
                                         </div>
                                         
@@ -1586,12 +1782,30 @@
                                         
                                         <div class="d-flex justify-content-between mb-3" style="font-size: 14px; color: #495057;">
                                             <span>Subtotal</span>
-                                            <span class="font-weight-bold" style="color: #212529;"><span t-field="order.amount_untaxed" t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/></span>
+                                            <span class="font-weight-bold" style="color: #212529;"><span t-esc="receipt_subtotal" t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/></span>
                                         </div>
+
+                                        <!-- Discount Row on Success/Confirmation Page -->
+                                        <t t-set="success_discount_amount" t-value="receipt_subtotal - order.amount_untaxed"/>
+                                        <t t-if="success_discount_amount &gt; 0">
+                                            <div class="d-flex justify-content-between mb-3 text-success" style="font-size: 14px;">
+                                                <span>Discount</span>
+                                                <span class="font-weight-bold">-<span t-esc="success_discount_amount" t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/></span>
+                                            </div>
+                                        </t>
+
+                                        <!-- Taxes Row on Success/Confirmation Page -->
+                                        <t t-if="order.amount_tax &gt; 0">
+                                            <div class="d-flex justify-content-between mb-3 text-muted" style="font-size: 14px;">
+                                                <span>Taxes</span>
+                                                <span class="font-weight-bold"><span t-esc="order.amount_tax" t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/></span>
+                                            </div>
+                                        </t>
+                                        
                                         <t t-if="plan.trial_period_days &gt; 0">
                                             <div class="d-flex justify-content-between mb-3 text-success" style="font-size: 14px;">
                                                 <span><t t-esc="plan.trial_period_days"/>-Day Free Trial</span>
-                                                <span class="font-weight-bold">-<span t-field="order.amount_untaxed" t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/></span>
+                                                <span class="font-weight-bold">-<span t-esc="receipt_subtotal - success_discount_amount" t-options="{'widget': 'monetary', 'display_currency': order.currency_id}"/></span>
                                             </div>
                                         </t>
                                         
@@ -1708,6 +1922,14 @@
                                 Thanks for subscribing to <strong style="color: #0f172a;" t-esc="plan.name if plan else 'your plan'"/>. We've sent a receipt to
                                 <strong style="color: #0f172a;" t-esc="partner.email if partner and partner.email else 'your email'"/>. Your subscription is active right now.
                             </p>
+                            
+                            <t t-if="confirm_error">
+                                <div class="alert alert-danger mx-auto mb-4" style="max-width: 500px; text-align: left; font-size: 13px;">
+                                    <strong>Warning:</strong> The payment was successful, but your subscription could not be automatically confirmed due to an internal error: <br/>
+                                    <em t-esc="confirm_error"/>
+                                </div>
+                            </t>
+                            
                             <div class="d-flex justify-content-center gap-3 flex-wrap">
                                 <a href="/my/subscriptions" class="btn-manage">Manage Subscription <i class="fa fa-arrow-right"></i></a>
                                 <a href="/" class="btn-home">Back to Home</a>

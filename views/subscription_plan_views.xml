@@ -67,6 +67,8 @@
                             </div>
                             <field name="company_id" string="Company" groups="base.group_multi_company"/>
                             <field name="invoice_mail_template_id" string="Invoice Email Template"/>
+                            <field name="is_popular" string="Most Popular"/>
+                            <field name="optional_plan_ids" string="Optional Plans" widget="many2many_tags" placeholder="Select plans..."/>
                         </group>
 
                         <group string="SELF-SERVICE">
@@ -74,8 +76,6 @@
                             <field name="is_pausable" string="Pausable"/>
                             <field name="is_add_products" string="Add Products"/>
                             <field name="is_renew" string="Renew"/>
-                            <field name="is_popular" string="Most Popular"/>
-                            <field name="optional_plan_ids" string="Optional Plans" widget="many2many_tags" placeholder="Select plans..."/>
                         </group>
                     </group>
 
@@ -98,6 +98,14 @@
                                     <field name="start_cycle"/>
                                     <field name="end_cycle"/>
                                     <field name="price_unit" string="Ramp Unit Price"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Remarks" name="remarks">
+                            <field name="remark_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="name"/>
                                 </list>
                             </field>
                         </page>

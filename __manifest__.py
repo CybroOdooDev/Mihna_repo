@@ -5,25 +5,27 @@
     'category': 'Sales/Subscriptions',
     'summary': 'Manage recurring billing, subscriptions, and customer lifecycle.',
     'description': """
-Subscription Management System
-==============================
-A commercial-grade Subscription Management application that provides feature parity with Odoo Enterprise Subscriptions.
-Features include:
-- Subscription plans and pricing tiers
-- Recurring invoicing
-- Dunning management
-- Customer self-service portal
-- MRR, Churn, and KPI dashboards
+                Subscription Management System
+                ==============================
+                A commercial-grade Subscription Management application that provides feature parity with Odoo Enterprise Subscriptions.
+                Features include:
+                - Subscription plans and pricing tiers
+                - Recurring invoicing
+                - Dunning management
+                - Customer self-service portal
+                - MRR, Churn, and KPI dashboards
     """,
     'author': 'Cybrosys Technologies',
     'company': 'Cybrosys Technologies',
     'maintainer': 'Cybrosys Technologies',
     'website': 'https://www.cybrosys.com',
-    'depends': ['sale_management', 'account', 'mail', 'portal', 'website', 'website_sale', 'payment', 'stock', 'delivery', 'sale_project', 'sale_timesheet', 'loyalty', 'sale_loyalty'],
+    'depends': ['sale_management', 'account', 'mail', 'portal', 'website', 'website_sale', 'payment', 'stock',
+                'delivery', 'sale_project', 'sale_timesheet', 'loyalty', 'sale_loyalty'],
     'data': [
         'security/subscription_security.xml',
         'security/ir.model.access.csv',
         'views/subscription_menu_roots.xml',
+        'data/subscription_close_reason_data.xml',
         'data/subscription_sequence.xml',
         'data/subscription_cron.xml',
         'data/dunning_cron.xml',

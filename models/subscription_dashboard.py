@@ -29,7 +29,7 @@ class SubscriptionDashboard(models.AbstractModel):
             start_date = None
         # Active subscriptions are sale.orders in progress or paused state
         active_orders = self.env['sale.order'].search(
-            [('subscription_state', 'in', ['3_progress', '4_paused'])]
+            [('is_subscription', '=', True), ('subscription_state', 'in', ['3_progress', '4_paused'])]
         )
 
         mrr = sum(active_orders.mapped('mrr_total'))
@@ -37,7 +37,7 @@ class SubscriptionDashboard(models.AbstractModel):
         active_count = len(active_orders)
         arpu = mrr / active_count if active_count else 0.0
 
-        churn_domain = [('subscription_state', '=', '6_churn')]
+        churn_domain = [('is_subscription', '=', True), ('subscription_state', '=', '6_churn')]
         if start_date:
             churn_domain.append(('write_date', '>=', start_date))
         churned_count = self.env['sale.order'].search_count(churn_domain)
@@ -49,6 +49,7 @@ class SubscriptionDashboard(models.AbstractModel):
         plan_distribution = []
         for plan in plans:
             orders = self.env['sale.order'].search([
+                ('is_subscription', '=', True),
                 ('subscription_state', 'in', ['3_progress', '4_paused']),
                 ('plan_id', '=', plan.id),
             ])
@@ -89,6 +90,7 @@ class SubscriptionDashboard(models.AbstractModel):
 
         # Upcoming Renewals
         upcoming = self.env['sale.order'].search([
+            ('is_subscription', '=', True),
             ('subscription_state', 'in', ['3_progress', '4_paused']),
             ('next_invoice_date', '>=', fields.Date.today())
         ], order='next_invoice_date asc', limit=5)
@@ -104,7 +106,7 @@ class SubscriptionDashboard(models.AbstractModel):
             })
 
         # Recent Activity (Matching Cadence Style)
-        recent_domain = [('subscription_state', 'in', ['3_progress', '6_churn', '5_renewed'])]
+        recent_domain = [('is_subscription', '=', True), ('subscription_state', 'in', ['3_progress', '6_churn', '5_renewed'])]
         if start_date:
             recent_domain.append(('write_date', '>=', start_date))
             
@@ -147,6 +149,7 @@ class SubscriptionDashboard(models.AbstractModel):
         try:
             # Top Customers
             top_orders = self.env['sale.order'].search([
+                ('is_subscription', '=', True),
                 ('subscription_state', 'in', ['3_progress', '4_paused'])
             ])
             top_orders = sorted(top_orders, key=lambda x: float(x.mrr_total or 0.0), reverse=True)[:5]
@@ -235,6 +238,7 @@ class SubscriptionDashboard(models.AbstractModel):
                 
                 # Count actual new subscriptions in that month
                 new_count = self.env['sale.order'].search_count([
+                    ('is_subscription', '=', True),
                     ('subscription_state', 'in', ['3_progress', '4_paused', '6_churn', '5_renewed']),
                     ('date_order', '>=', month_date.replace(day=1)),
                     ('date_order', '<', (month_date + relativedelta(months=1)).replace(day=1))
@@ -242,6 +246,7 @@ class SubscriptionDashboard(models.AbstractModel):
                 
                 # Count actual churned subscriptions in that month
                 churn_count = self.env['sale.order'].search_count([
+                    ('is_subscription', '=', True),
                     ('subscription_state', '=', '6_churn'),
                     ('write_date', '>=', month_date.replace(day=1)),
                     ('write_date', '<', (month_date + relativedelta(months=1)).replace(day=1))
@@ -260,6 +265,7 @@ class SubscriptionDashboard(models.AbstractModel):
                 
             # 3. Dunning Recovery Rate & Queue
             dunning_subs = self.env['sale.order'].search([
+                ('is_subscription', '=', True),
                 ('is_in_dunning', '=', True),
                 ('subscription_state', 'in', ['3_progress', '4_paused'])
             ])
@@ -275,11 +281,12 @@ class SubscriptionDashboard(models.AbstractModel):
                     failed_payments += len(unpaid_invoices)
                     dunning_at_risk += sum(unpaid_invoices.mapped('amount_residual'))
                     
-            total_dunned = self.env['sale.order'].search_count([('dunning_plan_id', '!=', False)])
-            recovered = self.env['sale.order'].search_count([('dunning_plan_id', '!=', False), ('is_in_dunning', '=', False)])
+            total_dunned = self.env['sale.order'].search_count([('is_subscription', '=', True), ('dunning_plan_id', '!=', False)])
+            recovered = self.env['sale.order'].search_count([('is_subscription', '=', True), ('dunning_plan_id', '!=', False), ('is_in_dunning', '=', False)])
             recovery_rate = round((recovered / total_dunned * 100), 1) if total_dunned > 0 else 0.0
             
             dunning_recovered = sum(self.env['sale.order'].search([
+                ('is_subscription', '=', True),
                 ('dunning_plan_id', '!=', False), 
                 ('is_in_dunning', '=', False)
             ]).mapped('mrr_total'))
@@ -310,10 +317,11 @@ class SubscriptionDashboard(models.AbstractModel):
             forecast_revenue = round(mrr * 1.05, 2) # Assume 5% growth for forecast
             
             # Nav Counts
-            subs_count = self.env['sale.order'].search_count([('subscription_state', 'in', ['3_progress', '4_paused'])])
+            subs_count = self.env['sale.order'].search_count([('is_subscription', '=', True), ('subscription_state', 'in', ['3_progress', '4_paused'])])
             customers_count = self.env['res.partner'].search_count([('customer_rank', '>', 0)])
             invoices_count = self.env['account.move'].search_count([('move_type', 'in', ('out_invoice', 'out_refund', 'out_receipt'))])
             dunning_count = len(dunning_subs)
+            plans_count = self.env['subscription.plan'].search_count([])
             
             return {
                 'user_name': self.env.user.name,
@@ -321,7 +329,8 @@ class SubscriptionDashboard(models.AbstractModel):
                     'subscriptions': subs_count,
                     'customers': customers_count,
                     'invoices': invoices_count,
-                    'dunning': dunning_count
+                    'dunning': dunning_count,
+                    'plans': plans_count
                 },
                 'kpi': {
                     'total_customers': total_customers,

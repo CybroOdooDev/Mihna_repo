@@ -200,7 +200,7 @@ class SubscriptionRetentionAnalysis(models.Model):
     first_contract_date = fields.Date(string='First Contract Date', readonly=True)
     count = fields.Integer(string='Total Subscribers', readonly=True)
     active_count = fields.Integer(string='Still Active', readonly=True)
-    retention_rate = fields.Float(string='Retention Rate (%)', readonly=True)
+    retention_rate = fields.Float(string='Retention Rate (%)', readonly=True, group_operator='avg')
     end_date_month = fields.Char(string='Cohort Month Offset', readonly=True)
 
     def init(self):

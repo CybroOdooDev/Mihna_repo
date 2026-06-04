@@ -29,7 +29,3 @@ class LoyaltyProgram(models.Model):
         help="If true, this promotion will only apply if the customer has no previous active subscriptions."
     )
     
-    max_uses_per_customer = fields.Integer(
-        string='Max Uses Per Customer', default=1,
-        help="Maximum number of times a single customer can use this program."
-    )

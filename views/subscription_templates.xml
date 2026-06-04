@@ -383,7 +383,7 @@
                         </div>
                     </div>
                     <div class="d-flex gap-2">
-                        <t t-if="subscription.subscription_state == '3_progress' and subscription.plan_id.is_add_products and subscription.upsell_count &gt; 0">
+                        <t t-if="subscription.subscription_state == '3_progress' and subscription.plan_id.is_add_products and subscription.upsell_count &gt; 0 and any(inv.state != 'cancel' for inv in subscription.invoice_ids)">
                             <form t-attf-action="/my/subscription/#{subscription.id}/upsell" method="POST" class="d-inline">
                                 <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                                 <button type="submit" class="btn" style="background-color: #83527a; color: white; font-weight: 500; font-size: 14px; border-radius: 6px; border: none;">Upsell</button>
@@ -395,14 +395,17 @@
                                 <button type="submit" class="btn" style="background-color: #83527a; color: white; font-weight: 500; font-size: 14px; border-radius: 6px; border: none;">Pause</button>
                             </form>
                         </t>
-                        <t t-elif="subscription.subscription_state == '4_paused' and subscription.plan_id.is_pausable">
+                        <t t-if="subscription.subscription_state == '4_paused' and subscription.plan_id.is_pausable">
                             <form t-attf-action="/my/subscription/#{subscription.id}/resume" method="POST" class="d-inline">
                                 <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                                 <button type="submit" class="btn" style="background-color: #83527a; color: white; font-weight: 500; font-size: 14px; border-radius: 6px; border: none;">Resume</button>
                             </form>
                         </t>
-                        <t t-elif="subscription.subscription_state not in ['1_draft', '7_upsell']">
-                            <a href="#" class="btn" style="background-color: #83527a; color: white; font-weight: 500; font-size: 14px; border-radius: 6px;">Renew</a>
+                        <t t-if="subscription.subscription_state not in ['1_draft', '7_upsell', '5_renewed', '6_churn'] and subscription.plan_id.is_renew and any(inv.state != 'cancel' for inv in subscription.invoice_ids)">
+                            <form t-attf-action="/my/subscription/#{subscription.id}/renew" method="POST" class="d-inline">
+                                <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                                <button type="submit" class="btn" style="background-color: #83527a; color: white; font-weight: 500; font-size: 14px; border-radius: 6px; border: none;">Renew</button>
+                            </form>
                         </t>
                     </div>
                 </div>
@@ -479,15 +482,14 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <t t-foreach="subscription.order_line.filtered(lambda x: x.product_id.recurring_ok)" t-as="line">
+                                        <t t-foreach="active_lines" t-as="line">
                                             <tr>
                                                 <td class="ps-4">
-                                                    <t t-esc="line.product_id.name"/>
-                                                    <small class="d-block text-muted" t-if="line.name != line.product_id.name"><t t-esc="line.name"/></small>
+                                                    <t t-esc="line.name or line.product_id.name"/>
                                                 </td>
                                                 <td>
                                                     <span t-esc="int(line.product_uom_qty)"/>
-                                                    <t t-if="subscription.subscription_state == '3_progress'">
+                                                    <t t-if="subscription.subscription_state == '3_progress' and line.product_id.recurring_ok">
                                                         <button class="btn btn-sm btn-link py-0 px-1 ms-1 text-muted" data-bs-toggle="modal" t-attf-data-bs-target="#changeSeatsModal_#{line.id}" title="Change Seats">
                                                             <i class="fa fa-pencil"/>
                                                         </button>
@@ -530,14 +532,14 @@
                                                 <div class="d-flex justify-content-end mb-2">
                                                     <div style="width: 120px; color: #64748b; font-size: 14px; text-align: right; padding-right: 24px;">Subtotal</div>
                                                     <div style="width: 80px; color: #0f172a; font-size: 14px; text-align: right;">
-                                                        <t t-set="subtotal" t-value="sum(l.price_subtotal for l in subscription.order_line.filtered(lambda x: x.product_id.recurring_ok))"/>
+                                                        <t t-set="subtotal" t-value="sum(l.price_subtotal for l in active_lines)"/>
                                                         <span t-esc="subtotal" t-options="{'widget': 'monetary', 'display_currency': subscription.currency_id}"/>
                                                     </div>
                                                 </div>
                                                 <div class="d-flex justify-content-end mb-3">
                                                     <div style="width: 120px; color: #64748b; font-size: 14px; text-align: right; padding-right: 24px;">Tax</div>
                                                     <div style="width: 80px; color: #0f172a; font-size: 14px; text-align: right;">
-                                                        <t t-set="tax" t-value="sum(l.price_tax for l in subscription.order_line.filtered(lambda x: x.product_id.recurring_ok))"/>
+                                                        <t t-set="tax" t-value="sum(l.price_tax for l in active_lines)"/>
                                                         <span t-esc="tax" t-options="{'widget': 'monetary', 'display_currency': subscription.currency_id}"/>
                                                     </div>
                                                 </div>
@@ -1008,27 +1010,40 @@
                     background: #5F3F57;
                     color: white;
                     text-decoration: none;
+                .seat-input-no-spin::-webkit-outer-spin-button,
+                .seat-input-no-spin::-webkit-inner-spin-button {
+                    -webkit-appearance: none !important;
+                    margin: 0 !important;
+                }
+                .seat-input-no-spin {
+                    -moz-appearance: textfield !important;
                 }
             </style>
 
             <div id="wrap" class="oe_structure oe_empty pricing-page-new">
                 <div class="container">
                     <div class="pricing-header position-relative">
-                        <div class="position-absolute d-none d-md-block" style="top: 0; right: 0;" t-if="not request.env.user._is_public()">
-                            <a href="/my/subscriptions" style="color: #714B67; font-size: 14px; font-weight: 600; text-decoration: none; border-bottom: 1px solid #714B67; padding-bottom: 1px; transition: all 0.2s;">
-                                Manage My Subscriptions <i class="fa fa-angle-right ms-1"></i>
-                            </a>
-                        </div>
                         <div class="pricing-pill-top">PLANS &amp; PRICING</div>
                         <h1>Choose Your Perfect Plan</h1>
                         <p>Unlock robust scaling and premium workflows. Switch or cancel anytime.</p>
-                        <!-- Mobile version of the link -->
-                        <div class="d-block d-md-none mt-3" t-if="not request.env.user._is_public()">
-                            <a href="/my/subscriptions" style="color: #714B67; font-size: 14px; font-weight: 600; text-decoration: none;">
-                                Manage My Subscriptions <i class="fa fa-angle-right ms-1"></i>
+                    </div>
+                    
+                    <t t-if="not request.env.user._is_public()">
+                        <div class="d-flex align-items-center justify-content-between mb-5 p-3 rounded shadow-sm mx-auto flex-column flex-md-row text-center text-md-start" style="background-color: #f8f3f6; max-width: 800px; border: 1px solid rgba(113, 75, 103, 0.1);">
+                            <div class="d-flex align-items-center mb-3 mb-md-0 flex-column flex-md-row">
+                                <div class="me-0 me-md-3 mb-2 mb-md-0 d-flex align-items-center justify-content-center text-white rounded-circle shadow-sm" style="background-color: #714B67; width: 45px; height: 45px; min-width: 45px;">
+                                    <i class="fa fa-refresh fs-5"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-1 fw-bold text-dark" style="font-size: 17px;">Manage My Subscriptions</h5>
+                                    <p class="mb-0 text-muted" style="font-size: 14px;">View, update, or cancel your current subscriptions.</p>
+                                </div>
+                            </div>
+                            <a href="/my/subscriptions" class="btn text-white px-4 py-2" style="background-color: #714B67; font-size: 14px; border-radius: 6px; font-weight: 500; white-space: nowrap; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                                Go to My Subscriptions <i class="fa fa-arrow-right ms-1"></i>
                             </a>
                         </div>
-                    </div>
+                    </t>
                     
                     <div class="plan-grid-2">
                         <t t-foreach="plans" t-as="plan">
@@ -1191,15 +1206,17 @@
                                         
                                         <div class="row">
                                             <div class="col-sm-12">
-                                                <div class="d-flex align-items-center gap-3">
-                                                    <span style="font-size: 15px; color: #334155; font-weight: 500;">Seats</span>
-                                                    <button type="button" id="seat-minus" style="background: transparent; border: none; width: 42px; color: #334155; font-size: 20px; outline: none; cursor: pointer;">-</button>
-                                                    <input type="number" id="seat-count" name="quantity" t-att-value="int(order.order_line[0].product_uom_qty) if order.order_line else 1" min="1" style="width: 70px; border: 1px solid #cbd5e1; border-radius: 6px; text-align: center; padding: 6px; color: #0f172a; font-weight: 500; font-size: 15px;" readonly="1"/>
-                                                    <button type="button" id="seat-plus" style="background: transparent; border: none; width: 42px; color: #334155; font-size: 20px; outline: none; cursor: pointer;">+</button>
+                                                <div class="d-flex align-items-center mb-2">
+                                                    <span style="font-size: 15px; color: #334155; font-weight: 500; margin-right: 12px;">Seats</span>
+                                                    <div class="d-flex align-items-center" style="border: 1px solid #cbd5e1; border-radius: 6px; overflow: hidden; background: white; height: 42px;">
+                                                        <button type="button" id="seat-minus" style="background: transparent; border: none; border-right: 1px solid #cbd5e1; width: 44px; height: 100%; color: #64748b; font-size: 22px; font-weight: 300; outline: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; padding-bottom: 3px;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">-</button>
+                                                        <input type="text" class="seat-input-no-spin" id="seat-count" name="quantity" t-att-value="int(order.order_line[0].product_uom_qty) if order.order_line else 1" min="1" style="width: 54px; height: 100%; border: none; text-align: center; padding: 0; color: #0f172a; font-weight: 700; font-size: 18px; outline: none;" readonly="1"/>
+                                                        <button type="button" id="seat-plus" style="background: transparent; border: none; border-left: 1px solid #cbd5e1; width: 44px; height: 100%; color: #64748b; font-size: 20px; font-weight: 400; outline: none; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; padding-bottom: 2px;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">+</button>
+                                                    </div>
                                                 </div>
                                                 <t t-set="seat_qty_calc" t-value="int(order.order_line[0].product_uom_qty) if order.order_line else 1"/>
                                                 <t t-set="website_price" t-value="base_amount / seat_qty_calc if seat_qty_calc > 0 else (plan.product_id.list_price if plan.product_id else plan.total_price)"/>
-                                                <div class="mt-2" style="font-size: 13px; color: #64748b;"><span t-esc="website_price" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/> per seat per <t t-esc="plan.billing_period"/></div>
+                                                <div style="font-size: 13px; color: #64748b;"><span style="color: #549ED6;"><span t-esc="website_price" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/></span> per seat per <span style="color: #549ED6;"><t t-esc="plan.billing_period"/></span></div>
                                             </div>
                                         </div>
                                     </div>
@@ -2213,15 +2230,6 @@
                     <div>
                         <h2 class="mb-1" style="font-family: 'Inter', sans-serif; font-weight: 600; color: #1f2937;">Invoices</h2>
                         <p class="text-muted" style="font-family: 'Inter', sans-serif; font-size: 14px;">Every invoice issued on your account.</p>
-                    </div>
-                    <div>
-                        <!-- Calculate total outstanding -->
-                        <t t-set="total_outstanding" t-value="sum(inv_data['invoice'].amount_residual for inv_data in invoices if inv_data['invoice'].state == 'posted' and inv_data['invoice'].payment_state in ('not_paid', 'partial'))"/>
-                        <t t-if="total_outstanding &gt; 0">
-                            <a href="/my/invoices?filterby=awaiting" class="btn" style="background-color: #835275; color: white; border-radius: 4px; font-family: 'Inter', sans-serif;">
-                                <i class="fa fa-credit-card me-2"></i> Pay <span t-out="total_outstanding" t-options='{"widget": "monetary", "display_currency": request.env.company.currency_id}'/> Outstanding
-                            </a>
-                        </t>
                     </div>
                 </div>
                 

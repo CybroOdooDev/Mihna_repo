@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="close_reason_renew" model="subscription.close.reason">
+            <field name="name">Renewed</field>
+            <field name="sequence">1</field>
+            <field name="visible_in_portal">False</field>
+            <field name="retention_message">This subscription was closed because it has been renewed.</field>
+        </record>
+    </data>
+</odoo>

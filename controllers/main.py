@@ -10,6 +10,17 @@ class SubscriptionController(http.Controller):
     subscribe routes, checkouts, coupon validation, and payment endpoints."""
 
 
+    @http.route(['/subscriptions/debug_fields'], type='http', auth="public")
+    def debug_fields(self, **kw):
+        import json
+        order_fields = request.env['sale.order'].fields_get(attributes=['type'])
+        line_fields = request.env['sale.order.line'].fields_get(attributes=['type'])
+        res = {
+            'order_fields': [k for k in order_fields.keys() if 'reward' in k or 'coupon' in k or 'loyalty' in k or 'code' in k or 'promo' in k],
+            'line_fields': [k for k in line_fields.keys() if 'reward' in k or 'coupon' in k or 'loyalty' in k or 'code' in k or 'promo' in k]
+        }
+        return request.make_response(json.dumps(res))
+
     @http.route(['/subscriptions'], type='http', auth="public", website=True)
     def subscription_plans(self, **kw):
         """Render the public subscription plans landing page listing all active plans."""
@@ -162,24 +173,53 @@ class SubscriptionController(http.Controller):
                 request.session[session_key] = order.id
 
         if kw.get('clear') and order.exists() and order.state == 'draft':
-            for line in order.order_line:
-                if line.product_id.recurring_ok:
-                    line.write({'product_uom_qty': 1.0, 'discount': 100.0 if plan.trial_period_days > 0 else 0.0})
-            if 'is_reward_line' in order.order_line._fields:
-                order.order_line.filtered(lambda l: l.is_reward_line).unlink()
-            if 'code_enabled_rule_ids' in order._fields:
-                order.code_enabled_rule_ids = [(5, 0, 0)]
-            if 'applied_coupon_ids' in order._fields:
-                order.applied_coupon_ids = [(5, 0, 0)]
-            if 'coupon_point_ids' in order._fields:
-                order.coupon_point_ids = [(5, 0, 0)]
+            # Ultimate bulletproof clear: entirely delete the existing draft and recreate it
+            order.sudo().unlink()
+            order = request.env['sale.order'].sudo().create({
+                'partner_id': partner.id,
+                'plan_id': plan.id,
+                'state': 'draft',
+            })
+            product = plan.product_id or request.env['product.product'].sudo().search(
+                [('recurring_ok', '=', True), ('subscription_plan_id', '=', plan.id)], limit=1
+            )
+            if product:
+                request.env['sale.order.line'].sudo().create({
+                    'order_id': order.id,
+                    'product_id': product.id,
+                    'name': f"Subscription: {plan.name}",
+                    'product_uom_qty': 1.0,
+                    'price_unit': product.list_price if plan.product_id else plan.total_price,
+                    'discount': 100.0 if plan.trial_period_days > 0 else 0.0,
+                })
+            request.session[session_key] = order.id
 
 
         # Force recomputing fiscal position, taxes, and prices to ensure backend/frontend synchronization
         order._compute_fiscal_position_id()
         order.order_line._compute_tax_ids()
         order._recompute_prices()
-        order._update_programs_and_rewards()
+        if hasattr(order, '_update_programs_and_rewards'):
+            order._update_programs_and_rewards()
+
+        # AGGRESSIVE CLEAR: If clear=1, forcefully strip any auto-applied rewards (but KEEP pricelist discounts!)
+        if kw.get('clear'):
+            reward_lines = order.order_line.filtered(lambda l: getattr(l, 'is_reward_line', False) or getattr(l, 'reward_id', False))
+            if reward_lines:
+                reward_lines.unlink()
+            
+            for f in ['applied_coupon_ids', 'code_enabled_rule_ids', 'coupon_point_ids', 'no_code_promo_program_ids']:
+                if f in order._fields:
+                    try:
+                        order.write({f: [(5, 0, 0)]})
+                    except Exception:
+                        pass
+            
+            # Need to recompute totals after forceful stripping
+            if hasattr(order, '_compute_tax_totals'):
+                order._compute_tax_totals()
+            elif hasattr(order, '_amount_all'):
+                order._amount_all()
 
         # Calculate discount amount safely by looking at price_unit vs price_subtotal
         seat_qty = sum(line.product_uom_qty for line in order.order_line if line.product_id == (plan.product_id or line.product_id))
@@ -344,7 +384,8 @@ class SubscriptionController(http.Controller):
         # Update seats
         if seats is not None:
             for line in order.order_line:
-                line.product_uom_qty = max(1.0, float(seats))
+                if line.product_id.recurring_ok:
+                    line.product_uom_qty = max(1.0, float(seats))
             # Force recomputing fiscal position, taxes, and prices to ensure backend/frontend synchronization
             order._compute_fiscal_position_id()
             order.order_line._compute_tax_ids()
@@ -430,15 +471,6 @@ class SubscriptionController(http.Controller):
                     ])
                     if past_subs > 0:
                         return {'valid': False, 'message': 'This promotion is only valid for first-time customers.'}
-                        
-                if program.max_uses_per_customer > 0:
-                    customer_uses = request.env['sale.order'].sudo().search_count([
-                        ('partner_id', '=', partner.id),
-                        ('state', 'in', ['sale', 'done']),
-                        ('order_line.reward_id.program_id', '=', program.id)
-                    ])
-                    if customer_uses >= program.max_uses_per_customer:
-                        return {'valid': False, 'message': 'You have reached the usage limit for this promotion.'}
 
             sudo_plan = request.env['subscription.plan'].sudo().browse(plan.id)
             
@@ -624,14 +656,7 @@ class SubscriptionController(http.Controller):
                     ])
                     if past_subs > 0:
                         coupon_error = 'This promotion is only valid for first-time customers.'
-                elif program.max_uses_per_customer > 0:
-                    customer_uses = request.env['sale.order'].sudo().search_count([
-                        ('partner_id', '=', partner.id),
-                        ('state', 'in', ['sale', 'done']),
-                        ('order_line.reward_id.program_id', '=', program.id)
-                    ])
-                    if customer_uses >= program.max_uses_per_customer:
-                        coupon_error = 'You have reached the usage limit for this promotion.'
+
 
             if not coupon_error:
                 status = order.sudo()._try_apply_code(coupon_code.strip())
@@ -898,17 +923,14 @@ class CustomPortalAccount(PortalAccount):
         
         filters.update({
             'paid': {'label': 'Paid', 'domain': [
-                ('commercial_partner_id', '=', partner),
                 ('payment_state', 'in', ('paid', 'in_payment', 'reversed'))
             ]},
             'awaiting': {'label': 'Awaiting Payment', 'domain': [
-                ('commercial_partner_id', '=', partner),
                 ('state', 'not in', ('cancel', 'draft')),
                 ('payment_state', 'in', ('not_paid', 'partial')),
                 '|', ('invoice_date_due', '>=', fields.Date.today()), ('invoice_date_due', '=', False)
             ]},
             'overdue_invoices': {'label': 'Overdue', 'domain': [
-                ('commercial_partner_id', '=', partner),
                 ('state', 'not in', ('cancel', 'draft')),
                 ('payment_state', 'in', ('not_paid', 'partial')),
                 ('invoice_date_due', '<', fields.Date.today())
@@ -920,12 +942,13 @@ class CustomPortalAccount(PortalAccount):
         """Inject the active subscription count into the customer portal home values."""
         values = super()._prepare_home_portal_values(counters)
         partner = request.env.user.partner_id
-        subscription_count = request.env['sale.order'].sudo().search_count([
-            ('partner_id', '=', partner.id),
-            ('plan_id', '!=', False),
-            ('state', 'in', ['sale', 'done'])
-        ])
-        values['subscription_count'] = subscription_count
+        if 'subscription_count' in counters:
+            subscription_count = request.env['sale.order'].sudo().search_count([
+                ('partner_id', '=', partner.id),
+                ('plan_id', '!=', False),
+                ('state', 'in', ['sale', 'done'])
+            ])
+            values['subscription_count'] = subscription_count
 
         # Override native Odoo limit=1 optimization so the sidebar badges show exact counts
         if 'invoice_count' in counters:
@@ -1040,10 +1063,17 @@ class CustomPortalAccount(PortalAccount):
         close_reasons = request.env['subscription.close.reason'].sudo().search([])
         preview = subscription.sudo()._preview_next_invoice()
 
+        # Calculate active lines for "Included Products" table safely in Python
+        active_lines = request.env['sale.order.line']
+        for line in subscription.order_line:
+            if line.product_id.recurring_ok or getattr(line, 'is_reward_line', False) or getattr(line, 'reward_id', False):
+                active_lines |= line
+
         return request.render("subscription_management.portal_my_subscription_detail", {
             'subscription': subscription,
             'close_reasons': close_reasons,
             'preview': preview,
+            'active_lines': active_lines,
             'page_name': 'subscription_detail',
         })
 
@@ -1145,6 +1175,43 @@ class CustomPortalAccount(PortalAccount):
                 upsell.write({'state': 'sent'})
                 
             return request.redirect(upsell.get_portal_url())
+        return request.redirect('/my/subscription/%s' % subscription_id)
+
+    @http.route(['/my/subscription/<int:subscription_id>/renew'], type='http', auth="user", methods=['POST'], website=True, csrf=True)
+    def portal_my_subscription_renew(self, subscription_id, **kw):
+        """Handle customer-initiated renewal from the portal."""
+        subscription = request.env['sale.order'].sudo().browse(subscription_id)
+        if (
+            subscription.exists()
+            and subscription.partner_id == request.env.user.partner_id
+            and subscription.subscription_state not in ['1_draft', '7_upsell', '6_churn', '5_renewed']
+            and getattr(subscription.plan_id, 'is_renew', True)
+        ):
+            # Check for an existing open renewal quote first
+            existing_renewal = request.env['sale.order'].sudo().search([
+                ('subscription_id', '=', subscription.id),
+                ('subscription_state', '=', '2_renewal'),
+                ('state', 'in', ['draft', 'sent', 'sale'])
+            ], limit=1, order='id desc')
+            
+            if existing_renewal:
+                return request.redirect(existing_renewal.get_portal_url())
+
+            try:
+                action = subscription.action_renew()
+                if action and action.get('res_id'):
+                    renew_order = request.env['sale.order'].sudo().browse(action['res_id'])
+                    # Automatically send quotation to customer
+                    try:
+                        renew_order.action_quotation_send()
+                        renew_order.write({'state': 'sent'})
+                    except Exception:
+                        renew_order.write({'state': 'sent'})
+                        
+                    return request.redirect(renew_order.get_portal_url())
+            except Exception:
+                pass # E.g., UserError if not invoiced yet
+
         return request.redirect('/my/subscription/%s' % subscription_id)
 
 class SubscriptionPaymentPostProcessing(PaymentPostProcessing):

@@ -34,7 +34,8 @@
                 </button>
                 <button class="oe_stat_button" 
                         icon="fa-line-chart"
-                        style="pointer-events: none; cursor: default;">
+                        name="action_view_mrr"
+                        type="object">
                     <div class="o_stat_info">
                         <span class="o_stat_text">MRR</span>
                         <span class="o_stat_value"><field name="mrr_total" widget="monetary" options="{'currency_field': 'currency_id'}"/></span>
@@ -52,6 +53,18 @@
                         <span class="o_stat_text">Upsell Quote</span>
                     </div>
                 </button>
+                <button class="oe_stat_button" icon="fa-refresh" type="object" name="action_view_renewals" invisible="renewal_count == 0">
+                    <div class="o_field_widget o_stat_info">
+                        <span class="o_stat_value"><field name="renewal_count"/></span>
+                        <span class="o_stat_text">Renewal Quote</span>
+                    </div>
+                </button>
+                <button class="oe_stat_button" icon="fa-arrow-circle-up" type="object" name="action_view_parent" invisible="not subscription_id">
+                    <div class="o_field_widget o_stat_info">
+                        <span class="o_stat_text">Parent</span>
+                        <span class="o_stat_text">Subscription</span>
+                    </div>
+                </button>
             </xpath>
 
             <!-- 2. Customize header buttons to match exact mockup labels and sequence -->
@@ -66,7 +79,8 @@
             <xpath expr="//header" position="inside">
                 <button name="action_upsell" string="Upsell" type="object" class="btn-secondary" invisible="not plan_id or state not in ('sale', 'done') or subscription_state in ('7_upsell', '2_renewal')"/>
                 <button name="action_renew" string="Renew" type="object" class="btn-secondary" invisible="not plan_id or state not in ('sale', 'done') or subscription_state in ('7_upsell', '2_renewal')"/>
-                <button name="action_close" string="Close" type="object" class="btn-secondary" invisible="not plan_id or state not in ('sale', 'done') or subscription_state in ('7_upsell', '2_renewal')"/>
+                <button name="action_close" string="Close" type="object" class="btn-secondary" invisible="not plan_id or state not in ('sale', 'done') or subscription_state in ('7_upsell', '2_renewal', '6_churn')"/>
+                <button name="action_reopen" string="Reopen" type="object" class="btn-secondary" invisible="not plan_id or subscription_state != '6_churn'"/>
             </xpath>
 
             <!-- 3. Inject premium state and status badges next to the Sheet Title -->
@@ -74,17 +88,19 @@
                 <div class="oe_title" style="max-width: 100% !important; width: 100% !important;">
                     <div class="d-flex justify-content-between align-items-center w-100" style="width: 100% !important; display: flex !important; min-width: 0; margin-bottom: 1rem;">
                         <field name="subscription_state" invisible="1"/>
+                        <field name="subscription_id" invisible="1"/>
+                        <field name="is_subscription" invisible="1"/>
                         <h1 class="m-0">
                              <field name="name" readonly="1"/>
                         </h1>
                         <div class="d-flex gap-2 ms-auto" style="overflow: visible !important; min-width: max-content !important; flex-shrink: 0 !important; margin-right: 10px;">
                             <span class="badge rounded-pill text-bg-primary px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #4f46e5 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not plan_id or subscription_state != '1_draft'">Subscription Quotation</span>
-                            <span class="badge rounded-pill text-bg-secondary px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #6c757d !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '2_renewal'">Renewal</span>
-                            <span class="badge rounded-pill text-bg-success px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #4caf50 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '3_progress'">In Progress</span>
-                            <span class="badge rounded-pill text-bg-info px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #17a2b8 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '4_paused'">Paused</span>
-                            <span class="badge rounded-pill text-bg-success px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #28a745 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '5_renewed'">Renewed</span>
-                            <span class="badge rounded-pill text-bg-danger px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #dc3545 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '6_churn'">Churned</span>
-                            <span class="badge rounded-pill text-bg-primary px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #007bff !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="not id or not plan_id or subscription_state != '7_upsell'">Upsell</span>
+                            <span class="badge rounded-pill text-bg-secondary px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #6c757d !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="subscription_state != '2_renewal'">Renewal</span>
+                            <span class="badge rounded-pill text-bg-success px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #4caf50 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="subscription_state != '3_progress'">In Progress</span>
+                            <span class="badge rounded-pill text-bg-info px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #17a2b8 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="subscription_state != '4_paused'">Paused</span>
+                            <span class="badge rounded-pill text-bg-secondary px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #6c757d !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="subscription_state != '5_renewed'">Renewed</span>
+                            <span class="badge rounded-pill text-bg-danger px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #dc3545 !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="subscription_state != '6_churn'">Churned</span>
+                            <span class="badge rounded-pill text-bg-primary px-3 py-2 fw-bold text-white shadow-sm" style="font-size: 12px; background-color: #007bff !important; white-space: nowrap !important; max-width: none !important; width: auto !important; overflow: visible !important; display: inline-block !important;" invisible="subscription_state != '7_upsell'">Upsell</span>
                         </div>
                     </div>
                 </div>
@@ -150,6 +166,23 @@
         </field>
     </record>
 
+    <!-- Custom Tree View for Renewal Quotations -->
+    <record id="view_renewal_quotation_tree" model="ir.ui.view">
+        <field name="name">sale.order.tree.renewal</field>
+        <field name="model">sale.order</field>
+        <field name="arch" type="xml">
+            <list string="Renewal Quotations" sample="1">
+                <field name="name" string="Number"/>
+                <field name="create_date" string="Creation Date"/>
+                <field name="partner_id" string="Customer"/>
+                <field name="user_id" string="Salesperson" widget="many2one_avatar_user"/>
+                <field name="amount_total" string="Total" widget="monetary" options="{'currency_field': 'currency_id'}"/>
+                <field name="subscription_state" string="Status" widget="badge" decoration-info="1"/>
+                <field name="currency_id" column_invisible="True"/>
+            </list>
+        </field>
+    </record>
+
     <!-- Custom Tree/List view for Subscription Sales Orders -->
     <record id="view_subscription_order_tree" model="ir.ui.view">
         <field name="name">sale.order.tree.subscription</field>
@@ -191,7 +224,7 @@
                 <filter string="In Progress" name="in_progress" domain="[('subscription_state', '=', '3_progress')]"/>
                 <filter string="Paused" name="paused" domain="[('subscription_state', '=', '4_paused')]"/>
                 <filter string="Churned" name="churned" domain="[('subscription_state', '=', '6_churn')]"/>
-                <filter string="To Renew" name="to_renew" domain="[('subscription_state', '=', '2_renewal')]"/>
+                <filter string="To Renew" name="to_renew" domain="[('subscription_state', 'in', ['3_progress', '4_paused']), ('next_invoice_date', '&lt;=', context_today().strftime('%Y-%m-%d'))]"/>
                 <filter string="Upsell" name="upsell" domain="[('subscription_state', '=', '7_upsell')]"/>
                 <filter string="In Dunning" name="in_dunning" domain="[('is_in_dunning', '=', True)]"/>
                 <separator/>

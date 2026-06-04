@@ -37,7 +37,7 @@ class SaleOrder(models.Model):
         string='Until', help="End date of the subscription."
     )
     next_invoice_date = fields.Date(
-        string='Next Invoice Date',
+        string='Next Invoice Date',copy=False,
         help="Date for the next recurring billing cycle."
     )
     mrr_total = fields.Monetary(
@@ -92,7 +92,23 @@ class SaleOrder(models.Model):
         'sale.order', 'subscription_id', string="Upsells/Renewals"
     )
     upsell_count = fields.Integer(string='Upsell Count', compute='_compute_upsell_count')
+    renewal_count = fields.Integer(string='Renewal Count', compute='_compute_renewal_count')
     history_count = fields.Integer(string='History Count', compute='_compute_history_count')
+
+    is_subscription = fields.Boolean(
+        string='Is Subscription',
+        compute='_compute_is_subscription',
+        store=True,
+        help="True if this order contains at least one recurring product."
+    )
+
+    @api.depends('order_line.product_id.recurring_ok', 'order_line.product_template_id.recurring_ok')
+    def _compute_is_subscription(self):
+        for order in self:
+            order.is_subscription = any(
+                line.product_template_id.recurring_ok or getattr(line.product_id, 'recurring_ok', False)
+                for line in order.order_line
+            )
 
     @api.depends('subscription_child_ids.subscription_state')
     def _compute_upsell_count(self):
@@ -100,6 +116,15 @@ class SaleOrder(models.Model):
             order.upsell_count = self.env['sale.order'].search_count([
                 ('subscription_id', '=', order.id),
                 ('subscription_state', '=', '7_upsell'),
+                ('state', 'in', ['draft', 'sent'])
+            ])
+
+    @api.depends('subscription_child_ids.subscription_state')
+    def _compute_renewal_count(self):
+        for order in self:
+            order.renewal_count = self.env['sale.order'].search_count([
+                ('subscription_id', '=', order.id),
+                ('subscription_state', '=', '2_renewal'),
                 ('state', 'in', ['draft', 'sent'])
             ])
 
@@ -123,6 +148,36 @@ class SaleOrder(models.Model):
         ]
         action['context'] = {'default_subscription_id': self.id, 'default_subscription_state': '7_upsell'}
         return action
+
+    def action_view_renewals(self):
+        self.ensure_one()
+        action = self.env["ir.actions.actions"]._for_xml_id("sale.action_quotations_with_onboarding")
+        action['name'] = _("Renewal Quotes")
+        action['domain'] = [
+            ('subscription_id', '=', self.id),
+            ('subscription_state', '=', '2_renewal'),
+            ('state', 'in', ['draft', 'sent'])
+        ]
+        action['context'] = {'default_subscription_id': self.id, 'default_subscription_state': '2_renewal'}
+        
+        # Use custom tree view for renewals if it exists
+        tree_view = self.env.ref('subscription_management.view_renewal_quotation_tree', raise_if_not_found=False)
+        if tree_view:
+            action['views'] = [(tree_view.id, 'list'), (False, 'form')]
+            
+        return action
+
+    def action_view_parent(self):
+        self.ensure_one()
+        if not self.subscription_id:
+            return
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'sale.order',
+            'res_id': self.subscription_id.id,
+            'view_mode': 'form',
+            'views': [(self.env.ref('subscription_management.view_subscription_order_form').id, 'form')],
+        }
 
     def open_subscription_history(self):
         self.ensure_one()
@@ -199,7 +254,15 @@ class SaleOrder(models.Model):
             order.non_recurring_total = non_recurring_total
 
     def _action_cancel(self):
-        """Override standard cancel to mark active subscriptions as churned."""
+        """Override standard cancel to mark active subscriptions as churned and prevent cancelling invoiced subs."""
+        for order in self:
+            if order.plan_id and order.invoice_ids.filtered(lambda inv: inv.state != 'cancel'):
+                raise UserError(_(
+                    "Cancelling an invoiced subscription wouldn't be fair to the customer. "
+                    "Once the invoice been created and possibly even paid, it's a done deal. "
+                    "Cancelling the subscription would definitely cause some chaos!"
+                ))
+        
         res = super()._action_cancel()
         for order in self:
             if order.plan_id and order.subscription_state not in ('1_draft', '6_churn'):
@@ -233,6 +296,9 @@ class SaleOrder(models.Model):
         for order in self:
             if order.subscription_state == '7_upsell' and order.subscription_id:
                 order._confirm_upsell()
+            elif order.subscription_state == '2_renewal' and order.subscription_id:
+                order._confirm_renewal()
+                order.write({'subscription_state': '3_progress'})
             elif order.plan_id:
                 vals = {
                     'subscription_state': '3_progress',
@@ -241,6 +307,74 @@ class SaleOrder(models.Model):
                     vals['next_invoice_date'] = fields.Date.today()
                 order.write(vals)
         return res
+
+    def _confirm_renewal(self):
+        """Validates and processes a confirmed renewal quotation."""
+        self.ensure_one()
+        parent = self.subscription_id
+
+        if not parent:
+            return
+
+        # 1. Date Check
+        if parent.next_invoice_date and self.next_invoice_date and self.next_invoice_date < parent.next_invoice_date:
+            raise UserError(_("You cannot validate a renewal starting before the next invoice date of the parent contract."))
+
+        # 2. Invoice Check
+        valid_invoices = parent.invoice_ids.filtered(lambda inv: inv.state != 'cancel')
+        if not valid_invoices:
+            raise UserError(_("You cannot renew a subscription that hasn't been invoiced at least once."))
+
+        # 3. Duplicate Check
+        if parent.subscription_state == '5_renewed':
+            raise UserError(_("You cannot renew a contract that has already been renewed."))
+
+        # 4. Cancellation of Alternatives
+        other_renew_so_ids = parent.subscription_child_ids.filtered(
+            lambda o: o.id != self.id and o.subscription_state == '2_renewal' and o.state in ['draft', 'sent']
+        )
+        if other_renew_so_ids:
+            other_renew_so_ids._action_cancel()
+
+        # 5. Closing the Parent Contract
+        close_reason = self.env.ref('subscription_management.close_reason_renew', raise_if_not_found=False)
+        parent_vals = {
+            'subscription_state': '5_renewed',
+        }
+        if close_reason:
+            parent_vals['close_reason_id'] = close_reason.id
+        
+        parent.write(parent_vals)
+
+        # 6. Chatter Notifications
+        parent.message_post(body=_("This subscription is renewed in <a href=# data-oe-model=sale.order data-oe-id=%d>%s</a> with a change of plan.") % (self.id, self.name))
+        self.message_post(body=_("This subscription is a renewal of <a href=# data-oe-model=sale.order data-oe-id=%d>%s</a>.") % (parent.id, parent.name))
+
+    def action_view_mrr(self):
+        """Open the MRR Breakdown report filtered for this subscription as a timeline line chart."""
+        self.ensure_one()
+        action = self.env['ir.actions.act_window']._for_xml_id('subscription_management.action_subscription_reporting_mrr_breakdown')
+        action['domain'] = [('sale_order_id', '=', self.id)]
+        action['context'] = {
+            'graph_measure': 'mrr_change',
+            'graph_group_by': 'event_date:month',
+            'graph_mode': 'line',
+        }
+        return action
+
+    def action_reopen(self):
+        """Reopen a churned subscription and set it back to In Progress."""
+        for order in self:
+            if order.subscription_state == '6_churn':
+                order.write({
+                    'subscription_state': '3_progress',
+                    'close_reason_id': False,
+                    'close_reason_notes': False,
+                    'close_signed_by': False,
+                    'close_signed_on': False,
+                    'close_signature': False,
+                })
+        return True
 
     def action_upsell(self):
         """Create a new draft Sales Order quotation pre-filled with existing
@@ -320,8 +454,23 @@ class SaleOrder(models.Model):
             'state': 'draft',
             'client_order_ref': False,
             'subscription_state': '2_renewal',
+            'subscription_id': self.id,
+            'next_invoice_date': self.next_invoice_date,
             'plan_id': self.plan_id.id,
         })
+
+        # Strip out non-recurring lines (keeping sections and notes)
+        from odoo import Command
+        
+        non_recurring_lines = renew_order.order_line.filtered(
+            lambda l: l.product_id and not getattr(l.product_id, 'recurring_ok', False) and not getattr(l.product_id.product_tmpl_id, 'recurring_ok', False)
+        )
+        if non_recurring_lines:
+            renew_order.write({
+                'order_line': [Command.delete(line.id) for line in non_recurring_lines]
+            })
+
+        self.message_post(body=_("A renewal quotation <a href=# data-oe-model=sale.order data-oe-id=%d>%s</a> has been created.") % (renew_order.id, renew_order.name))
 
         return {
             'name': _('Renewal Quotation'),
@@ -353,7 +502,6 @@ class SaleOrder(models.Model):
         for order in self:
             vals = {
                 'subscription_state': '6_churn',
-                'state': 'cancel',
             }
             if close_reason_id:
                 vals['close_reason_id'] = close_reason_id
@@ -492,12 +640,36 @@ class SaleOrder(models.Model):
         # 1. Base Recurring Lines
         recurring_lines = self.order_line.filtered(lambda l: l.product_id.recurring_ok and not l.is_reward_line)
         for line in recurring_lines:
+            # Check for "Accept One-Time" products that have already been billed
+            if getattr(line.product_id.product_tmpl_id, 'accept_one_time', False) and line.qty_invoiced >= line.product_uom_qty:
+                continue
+
             price_unit = line.price_unit
             if self.plan_id and self.plan_id.ramp_ids:
                 for ramp in self.plan_id.ramp_ids.sorted('start_cycle'):
                     if ramp.start_cycle <= self.subscription_cycle <= ramp.end_cycle:
                         price_unit = ramp.price_unit
                         break
+
+            # Handle Prorated Price for the first cycle preview
+            if self.subscription_cycle <= 1 and self.plan_id and getattr(self.plan_id, 'align_to_period_start', False) and getattr(line.product_id.product_tmpl_id, 'prorated_price', False):
+                delta = self._get_billing_delta()
+                current_date = self.next_invoice_date or fields.Date.today()
+                
+                if self.plan_id.billing_period_unit == 'months':
+                    next_date = (current_date + delta).replace(day=1)
+                elif self.plan_id.billing_period_unit == 'years':
+                    next_date = (current_date + delta).replace(month=1, day=1)
+                else:
+                    next_date = current_date + delta
+
+                days_in_cycle = (next_date - current_date).days
+                full_cycle_date = current_date + delta
+                days_in_full_cycle = (full_cycle_date - current_date).days
+                
+                if days_in_full_cycle > 0 and 0 < days_in_cycle < days_in_full_cycle:
+                    proration_ratio = days_in_cycle / float(days_in_full_cycle)
+                    price_unit = price_unit * proration_ratio
 
             subtotal = price_unit * line.product_uom_qty
             discount_amount = subtotal * (line.discount / 100.0) if line.discount else 0.0
@@ -519,8 +691,16 @@ class SaleOrder(models.Model):
             preview['discount_amount'] += discount_amount
 
         # 1.5 Native Loyalty Reward Lines
-        reward_lines = self.order_line.filtered(lambda l: l.is_reward_line)
+        reward_lines = self.order_line.filtered(lambda l: getattr(l, 'is_reward_line', False))
         for line in reward_lines:
+            # Check if reward is still applicable to the upcoming cycle based on custom recurring logic
+            program = line.reward_id.program_id if hasattr(line, 'reward_id') and line.reward_id else False
+            if program:
+                if getattr(program, 'recurring_type', False) == 'first' and self.subscription_cycle > 1:
+                    continue
+                if getattr(program, 'recurring_type', False) == 'limited' and self.subscription_cycle > getattr(program, 'recurring_invoices', 1):
+                    continue
+
             # Reward lines typically have negative price_unit
             subtotal = line.price_unit * line.product_uom_qty
             preview['lines'].append({
@@ -580,6 +760,22 @@ class SaleOrder(models.Model):
 
     # ── Invoicing ─────────────────────────────────────────────────────────────
 
+    def _create_invoices(self, grouped=False, final=False, **kwargs):
+        """Override to intercept standard invoice generation for subscriptions."""
+        subscription_orders = self.filtered(lambda o: o.plan_id and o.subscription_state == '3_progress')
+        regular_orders = self - subscription_orders
+        
+        invoices = self.env['account.move']
+        if regular_orders:
+            invoices |= super()._create_invoices(grouped=grouped, final=final, **kwargs)
+            
+        for order in subscription_orders:
+            invoice = order._generate_recurring_invoice()
+            if invoice:
+                invoices |= invoice
+                
+        return invoices
+
     def _get_billing_delta(self):
         """Calculates and returns the python dateutil relativedelta duration representing the active subscription plan's billing period."""
         self.ensure_one()
@@ -611,6 +807,10 @@ class SaleOrder(models.Model):
 
         invoice_lines = []
         for line in recurring_lines:
+            # Check for "Accept One-Time" products that have already been billed
+            if getattr(line.product_id.product_tmpl_id, 'accept_one_time', False) and line.qty_invoiced >= line.product_uom_qty:
+                continue
+
             # Check for Ramp Pricing overrides based on the current subscription cycle
             price_unit = line.price_unit
             if self.plan_id and self.plan_id.ramp_ids:
@@ -626,6 +826,26 @@ class SaleOrder(models.Model):
                                 'Unit price for <b>%s</b> updated to <b>%.2f</b>.'
                             )) % (self.subscription_cycle, line.product_id.display_name, price_unit))
                         break # First matching ramp applies
+
+            # Handle Prorated Price for the first cycle
+            if self.subscription_cycle <= 1 and self.plan_id and getattr(self.plan_id, 'align_to_period_start', False) and getattr(line.product_id.product_tmpl_id, 'prorated_price', False):
+                delta = self._get_billing_delta()
+                current_date = self.next_invoice_date or fields.Date.today()
+                
+                if self.plan_id.billing_period_unit == 'months':
+                    next_date = (current_date + delta).replace(day=1)
+                elif self.plan_id.billing_period_unit == 'years':
+                    next_date = (current_date + delta).replace(month=1, day=1)
+                else:
+                    next_date = current_date + delta
+
+                days_in_cycle = (next_date - current_date).days
+                full_cycle_date = current_date + delta
+                days_in_full_cycle = (full_cycle_date - current_date).days
+                
+                if days_in_full_cycle > 0 and 0 < days_in_cycle < days_in_full_cycle:
+                    proration_ratio = days_in_cycle / float(days_in_full_cycle)
+                    price_unit = price_unit * proration_ratio
 
             invoice_lines.append((0, 0, {
                 'product_id': line.product_id.id,
@@ -1023,7 +1243,7 @@ class SubscriptionCloseWizard(models.TransientModel):
         'sale.order', string='Subscription (Sale Order)', required=True
     )
     close_reason_id = fields.Many2one(
-        'subscription.close.reason', string='Close Reason'
+        'subscription.close.reason', string='Close Reason', required=True
     )
     notes = fields.Text(string='Notes')
 

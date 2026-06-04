@@ -15,7 +15,6 @@
                         <group string="Subscription Constraints">
                             <field name="plan_ids" widget="many2many_tags"/>
                             <field name="first_time_only"/>
-                            <field name="max_uses_per_customer"/>
                         </group>
                     </group>
                 </page>

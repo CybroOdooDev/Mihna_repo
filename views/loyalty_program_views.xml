@@ -14,7 +14,7 @@
                         </group>
                         <group string="Subscription Constraints">
                             <field name="plan_ids" widget="many2many_tags"/>
-                            <field name="first_time_only"/>
+                            <field name="is_first_time_only"/>
                         </group>
                     </group>
                 </page>

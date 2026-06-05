@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates xml:space="preserve">
-    <t t-name="subscription_management.Dashboard" owl="1">
+    <t t-name="advanced_subscription_management.Dashboard" owl="1">
         <div class="cadence-dashboard o_subscription_dashboard">
             <t t-if="state.isLoading">
                 <div class="d-flex justify-content-center align-items-center" style="height: 50vh;">

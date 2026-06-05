@@ -50,7 +50,7 @@
     <!-- Close Reasons Menu defined after action -->
     <menuitem id="menu_subscription_close_reason" 
               name="Close Reasons" 
-              parent="subscription_management.subscription_menu_configuration" 
+              parent="advanced_subscription_management.subscription_menu_configuration" 
               action="action_subscription_close_reason" 
               sequence="20"/>
 </odoo>

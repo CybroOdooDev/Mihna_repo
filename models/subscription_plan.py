@@ -1,4 +1,24 @@
 # -*- coding: utf-8 -*-
+#############################################################################
+#
+#    Cybrosys Technologies Pvt. Ltd.
+#
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
+#
+#    You can modify it under the terms of the GNU LESSER
+#    GENERAL PUBLIC LICENSE (LGPL v3), Version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
+#
+#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
+#    (LGPL v3) along with this program.
+#    If not, see <http://www.gnu.org/licenses/>.
+#
+#############################################################################
 from odoo import models, fields, api, _
 from markupsafe import Markup
 from odoo.exceptions import UserError
@@ -13,26 +33,13 @@ class SubscriptionPlan(models.Model):
     _order = 'name'
 
     name = fields.Char(string='Plan Name', required=True, translate=True)
-    code = fields.Char(string='Code', help='Unique code for this plan')
+    code = fields.Char(string='Code', help='Unique code for this plan.')
     description = fields.Text(string='Description', translate=True)
     active = fields.Boolean(default=True)
-
-    @api.ondelete(at_uninstall=False)
-    def _unlink_except_used(self):
-        """Prevent deletion of plans that are already referenced in a sale order.
-        Suggest archiving instead."""
-        for plan in self:
-            if self.env['sale.order'].search_count([('plan_id', '=', plan.id)], limit=1):
-                raise UserError(_(
-                    "You cannot delete the subscription plan '%s' because it is already in use by a quotation or subscription.\n\n"
-                    "Please archive the plan instead if you no longer wish to use it."
-                ) % plan.name)
-
     product_id = fields.Many2one(
         'product.product', string='Website Linked Product', required=True,
         help='The core product representing this subscription plan on the website.'
     )
-
     company_id = fields.Many2one(
         'res.company', string='Company', default=lambda self: self.env.company
     )
@@ -40,7 +47,6 @@ class SubscriptionPlan(models.Model):
         'res.currency', string='Currency',
         related='company_id.currency_id', store=True
     )
-
     billing_period = fields.Selection([
         ('daily', 'Daily'),
         ('weekly', 'Weekly'),
@@ -50,13 +56,11 @@ class SubscriptionPlan(models.Model):
         ('yearly', 'Yearly'),
         ('custom', 'Custom Days')
     ], string='Billing Period', required=True, default='monthly', compute='_compute_billing_period', store=True, readonly=False)
-
     custom_days = fields.Integer(
         string='Custom Days',
-        help='Used only if Billing Period is set to Custom Days',
+        help='Used only if Billing Period is set to Custom Days.',
         compute='_compute_billing_period', store=True, readonly=False
     )
-
     trial_period_days = fields.Integer(
         string='Trial Period (Days)', default=0,
         help='Number of days for the trial period.'
@@ -65,7 +69,6 @@ class SubscriptionPlan(models.Model):
         ('free', 'Free Trial'),
         ('paid', 'Paid Trial')
     ], string='Trial Type', default='free')
-
     billing_period_value = fields.Integer(string='Billing Period Value', default=1)
     billing_period_unit = fields.Selection([
         ('days', 'Days'),
@@ -73,19 +76,16 @@ class SubscriptionPlan(models.Model):
         ('months', 'Months'),
         ('years', 'Years')
     ], string='Billing Period Unit', default='months')
-
-    align_to_period_start = fields.Boolean(string='Align to Period Start')
-    automatic_closing_days = fields.Integer(string='Automatic Closing', default=15)
+    align_to_period_start = fields.Boolean(string='Align To Period Start')
+    automatic_closing_days = fields.Integer(string='Automatic Closing Days', default=15)
     invoice_mail_template_id = fields.Many2one(
         'mail.template', string='Invoice Email Template'
     )
-
     is_closable = fields.Boolean(string='Closable')
     is_pausable = fields.Boolean(string='Pausable')
     is_add_products = fields.Boolean(string='Add Products')
     is_renew = fields.Boolean(string='Renew')
     is_popular = fields.Boolean(string='Most Popular')
-
     optional_plan_ids = fields.Many2many(
         'subscription.plan',
         'subscription_plan_optional_rel',
@@ -93,20 +93,15 @@ class SubscriptionPlan(models.Model):
         'optional_plan_id',
         string='Optional Plans'
     )
-
     remark_ids = fields.One2many('subscription.plan.remark', 'plan_id', string='Remarks')
-
     pricing_ids = fields.One2many('subscription.plan.pricing', 'plan_id', string='Pricing')
     ramp_ids = fields.One2many('subscription.plan.ramp', 'plan_id', string='Ramp Pricing Rules')
-
     subscription_count = fields.Integer(string='Subscriptions', compute='_compute_counts')
     item_count = fields.Integer(string='Subscription Items', compute='_compute_counts')
     total_price = fields.Float(string='Total Price', compute='_compute_total_price')
 
     @api.depends('product_id', 'product_id.list_price', 'pricing_ids.price', 'ramp_ids.price_unit', 'ramp_ids.start_cycle')
     def _compute_total_price(self):
-        """Compute the total recurring price by iterating through
-        all linked subscription item lines."""
         """Compute the total price of the subscription plan based on pricing lines, ramp rules, or product list price."""
         for plan in self:
             if plan.pricing_ids:
@@ -121,16 +116,12 @@ class SubscriptionPlan(models.Model):
 
     @api.depends('billing_period_value', 'billing_period_unit')
     def _compute_billing_period(self):
-        """Derive the billing period and custom days from the linked
-        product template, syncing pricing structures."""
         """Automatically sync the internal backend 'billing_period' field with the user-facing 'billing_period_value' and 'billing_period_unit' fields."""
         for plan in self:
             val = plan.billing_period_value
             unit = plan.billing_period_unit
-            
             if not val or not unit:
                 continue
-
             if unit == 'days':
                 if val == 1:
                     plan.billing_period = 'daily'
@@ -164,8 +155,6 @@ class SubscriptionPlan(models.Model):
 
     @api.depends('name')
     def _compute_counts(self):
-        """Calculate the total number of active subscriptions and items
-        associated with this billing plan."""
         """Compute stats for linked subscription sales orders and subscription line items."""
         for plan in self:
             plan.subscription_count = self.env['sale.order'].search_count(
@@ -175,13 +164,21 @@ class SubscriptionPlan(models.Model):
                 [('order_id.plan_id', '=', plan.id), ('order_id.state', '=', 'sale')]
             )
 
+    @api.ondelete(at_uninstall=False)
+    def _unlink_except_used(self):
+        """Prevent deletion of plans that are already referenced in a sale order. Suggest archiving instead."""
+        for plan in self:
+            if self.env['sale.order'].search_count([('plan_id', '=', plan.id)], limit=1):
+                raise UserError(_(
+                    "You cannot delete the subscription plan '%s' because it is already in use by a quotation or subscription.\n\n"
+                    "Please archive the plan instead if you no longer wish to use it."
+                ) % plan.name)
+
     def action_view_subscriptions(self):
-        """Open a tree view showing all active subscriptions (sale.order)
-        linked to this subscription plan."""
         """Return an action displaying all confirmed subscription sales orders for this plan."""
         self.ensure_one()
         return {
-            'name': 'Subscriptions',
+            'name': _('Subscriptions'),
             'type': 'ir.actions.act_window',
             'res_model': 'sale.order',
             'view_mode': 'list,form',
@@ -191,12 +188,10 @@ class SubscriptionPlan(models.Model):
         }
 
     def action_view_subscription_items(self):
-        """Open a tree view showing all order lines (subscription items)
-        associated with this plan."""
         """Return an action displaying all confirmed subscription sales order line items for this plan."""
         self.ensure_one()
         return {
-            'name': 'Subscription Items',
+            'name': _('Subscription Items'),
             'type': 'ir.actions.act_window',
             'res_model': 'sale.order.line',
             'view_mode': 'list,form',
@@ -222,18 +217,19 @@ class SubscriptionPlanPricing(models.Model):
     )
     variant_id = fields.Many2one('product.attribute.value', string='Variant')
     pricelist_id = fields.Many2one('product.pricelist', string='Pricelist')
-    currency_id = fields.Many2one('res.currency', related='pricelist_id.currency_id', store=True)
+    currency_id = fields.Many2one('res.currency', string='Currency', related='pricelist_id.currency_id', store=True)
     price = fields.Float(string='Unit Price', required=True)
 
     @api.model_create_multi
     def create(self, vals_list):
+        """Override create to sync pricing to active contracts upon creation."""
         records = super().create(vals_list)
         for rec in records:
             rec._sync_pricing_to_active_contracts(old_price=0.0)
         return records
 
     def write(self, vals):
-        # Cache old prices before writing
+        """Override write to sync pricing to active contracts upon price update."""
         old_prices = {}
         if 'price' in vals:
             for rec in self:
@@ -250,8 +246,7 @@ class SubscriptionPlanPricing(models.Model):
 
     def _sync_pricing_to_active_contracts(self, old_price):
         """Update active unlocked subscriptions using this plan with the new price,
-        or protect them with grandfathering if they are price-locked.
-        """
+        or protect them with grandfathering if they are price-locked."""
         self.ensure_one()
         PriceLog = self.env['subscription.price.change.log']
         new_price = self.price
@@ -261,20 +256,17 @@ class SubscriptionPlanPricing(models.Model):
         if not plan or not template:
             return
 
-        # Find all active subscriptions (sale.order) using this plan
         affected_orders = self.env['sale.order'].search([
             ('plan_id', '=', plan.id),
             ('subscription_state', 'in', ['3_progress', '4_paused']),
         ])
 
         for order in affected_orders:
-            # Find matching order line(s) for the priced product
             matching_lines = order.order_line.filtered(lambda l: l.product_template_id == template)
             for line in matching_lines:
                 is_protected = order.is_price_locked
                 current_price = line.price_unit
 
-                # If the line already has the target new price, skip log
                 if current_price == new_price:
                     continue
 
@@ -310,7 +302,7 @@ class SubscriptionPlanPricing(models.Model):
 
 class SubscriptionPlanRamp(models.Model):
     """Subscription Plan Ramp model defining graduated pricing cycles for
-    subscription plans (e.g. introductory price for cycle 1, full price from cycle 2)."""
+    subscription plans."""
 
     _name = 'subscription.plan.ramp'
     _description = 'Subscription Plan Pricing Ramp'
@@ -336,11 +328,13 @@ class SubscriptionPlanRamp(models.Model):
 
     @api.depends('start_cycle', 'end_cycle')
     def _compute_name(self):
+        """Compute the display name for the ramp rule."""
         for rec in self:
             if rec.start_cycle and rec.end_cycle:
-                rec.name = f"Cycle {rec.start_cycle} to {rec.end_cycle}"
+                rec.name = "Cycle {} to {}".format(rec.start_cycle, rec.end_cycle)
             else:
                 rec.name = "New Ramp Rule"
+
 
 class SubscriptionPlanRemark(models.Model):
     """Subscription Plan Remark model for defining bullet points on the pricing card."""

@@ -99,7 +99,7 @@ export class SubscriptionDashboard extends Component {
     }
 
     openGlobalFilters() {
-        this.actionService.doAction("subscription_management.action_subscription_subscriptions", {
+        this.actionService.doAction("advanced_subscription_management.action_subscription_subscriptions", {
             additionalContext: {
                 search_default_in_progress: 1
             }
@@ -356,7 +356,7 @@ export class SubscriptionDashboard extends Component {
     }
     
     openSubscriptions() {
-        this.actionService.doAction("subscription_management.action_subscription_subscriptions", {
+        this.actionService.doAction("advanced_subscription_management.action_subscription_subscriptions", {
             additionalContext: {
                 search_default_in_progress: 1,
             }
@@ -364,15 +364,15 @@ export class SubscriptionDashboard extends Component {
     }
 
     openRecentActivity() {
-        this.actionService.doAction("subscription_management.action_subscription_subscriptions");
+        this.actionService.doAction("advanced_subscription_management.action_subscription_subscriptions");
     }
 
     actionViewCustomers() {
-        this.actionService.doAction("subscription_management.action_subscription_customers");
+        this.actionService.doAction("advanced_subscription_management.action_subscription_customers");
     }
 
     openCustomers() {
-        this.actionService.doAction("subscription_management.action_subscription_customers");
+        this.actionService.doAction("advanced_subscription_management.action_subscription_customers");
     }
 
     openInvoices() {
@@ -380,11 +380,11 @@ export class SubscriptionDashboard extends Component {
     }
 
     openPlans() {
-        this.actionService.doAction("subscription_management.action_subscription_plan");
+        this.actionService.doAction("advanced_subscription_management.action_subscription_plan");
     }
 
     actionNewSubscription() {
-        this.actionService.doAction("subscription_management.action_new_subscription");
+        this.actionService.doAction("advanced_subscription_management.action_new_subscription");
     }
 
     exportDashboard() {
@@ -392,14 +392,14 @@ export class SubscriptionDashboard extends Component {
     }
 
     openDunningQueue() {
-        this.actionService.doAction("subscription_management.action_subscription_dunning_queue_list");
+        this.actionService.doAction("advanced_subscription_management.action_subscription_dunning_queue_list");
     }
 
     openDunningSettings() {
-        this.actionService.doAction("subscription_management.action_subscription_dunning_plan");
+        this.actionService.doAction("advanced_subscription_management.action_subscription_dunning_plan");
     }
 }
 
-SubscriptionDashboard.template = "subscription_management.Dashboard";
+SubscriptionDashboard.template = "advanced_subscription_management.Dashboard";
 
 registry.category("actions").add("subscription_dashboard_action", SubscriptionDashboard);

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Change Plan Action Form -->
+    <record id="view_subscription_change_plan_form" model="ir.ui.view">
+        <field name="name">subscription.change.plan.form</field>
+        <field name="model">subscription.change.plan</field>
+        <field name="arch" type="xml">
+            <form string="Change Subscription Plan">
+                <sheet>
+                    <group>
+                        <field name="sale_order_id" readonly="1"/>
+                        <field name="plan_id" options="{'no_create': True}"/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_change_plan" string="Apply New Plan"
+                            type="object" class="btn-primary"/>
+                    <button string="Cancel" class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

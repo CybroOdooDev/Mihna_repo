@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Close Subscription Action Form -->
+    <record id="view_subscription_close_form" model="ir.ui.view">
+        <field name="name">subscription.close.form</field>
+        <field name="model">subscription.close</field>
+        <field name="arch" type="xml">
+            <form string="Close Subscription">
+                <sheet>
+                    <group>
+                        <field name="sale_order_id" readonly="1"/>
+                        <field name="close_reason_id"/>
+                        <field name="notes" placeholder="Optional notes about the cancellation..."/>
+                    </group>
+                </sheet>
+                <footer>
+                    <button name="action_close" string="Close Subscription"
+                            type="object" class="btn-danger"/>
+                    <button string="Cancel" class="btn-secondary"
+                            special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+</odoo>

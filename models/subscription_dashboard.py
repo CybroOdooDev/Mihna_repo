@@ -1,6 +1,25 @@
 # -*- coding: utf-8 -*-
+#############################################################################
+#
+#    Cybrosys Technologies Pvt. Ltd.
+#
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
+#
+#    You can modify it under the terms of the GNU LESSER
+#    GENERAL PUBLIC LICENSE (LGPL v3), Version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
+#
+#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
+#    (LGPL v3) along with this program.
+#    If not, see <http://www.gnu.org/licenses/>.
+#
+#############################################################################
 from odoo import models, api, fields
-from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
 
 
@@ -14,15 +33,15 @@ class SubscriptionDashboard(models.AbstractModel):
     @api.model
     def get_dashboard_data(self, filter_date='YTD'):
         """Fetch and compute all KPI metrics and chart data for the main dashboard widget."""
-        today = date.today()
+        today = fields.Date.today()
         if filter_date == 'Today':
             start_date = today
         elif filter_date == '7d':
-            start_date = today - timedelta(days=7)
+            start_date = today - relativedelta(days=7)
         elif filter_date == '30d':
-            start_date = today - timedelta(days=30)
+            start_date = today - relativedelta(days=30)
         elif filter_date == '90d':
-            start_date = today - timedelta(days=90)
+            start_date = today - relativedelta(days=90)
         elif filter_date == 'YTD':
             start_date = today.replace(month=1, day=1)
         else:
@@ -60,7 +79,7 @@ class SubscriptionDashboard(models.AbstractModel):
 
         mrr_growth = []
         for i in range(5, -1, -1):
-            month_date = date.today() - relativedelta(months=i)
+            month_date = fields.Date.today() - relativedelta(months=i)
             month_label = month_date.strftime("%b %Y")
 
             mrr_record = self.env['subscription.mrr.analysis'].search(
@@ -205,15 +224,14 @@ class SubscriptionDashboard(models.AbstractModel):
             elif filter_date == '90d':
                 months_to_show = 3
             elif filter_date == 'YTD':
-                months_to_show = date.today().month
+                months_to_show = fields.Date.today().month
             elif filter_date == 'All':
                 months_to_show = 12
 
             # Simulating historical breakdown based on current MRR to ensure the dashboard looks fully populated
-            print(months_to_show,"months_to_show")
             revenue_breakdown = []
             for i in range(months_to_show - 1, -1, -1):
-                month_date = date.today() - relativedelta(months=i)
+                month_date = fields.Date.today() - relativedelta(months=i)
                 month_label = month_date.strftime("%b")
                 
                 # Base MRR
@@ -229,11 +247,10 @@ class SubscriptionDashboard(models.AbstractModel):
                     'new': new_mrr,
                     'expansion': expansion_mrr
                 })
-            print(revenue_breakdown,"revenue_breakdown")
             # 2. New vs Churned
             new_vs_churned = []
             for i in range(months_to_show - 1, -1, -1):
-                month_date = date.today() - relativedelta(months=i)
+                month_date = fields.Date.today() - relativedelta(months=i)
                 month_label = month_date.strftime("%b")
                 
                 # Count actual new subscriptions in that month

@@ -3,7 +3,7 @@
     <!-- Root Menu -->
     <menuitem id="subscription_menu_root" 
               name="Subscriptions" 
-              web_icon="subscription_management,static/description/icon.png"
+              web_icon="advanced_subscription_management,static/description/icon.png"
               sequence="45"/>
 
     <!-- Top Level Menus (Folders without actions) -->

@@ -1,5 +1,26 @@
 # -*- coding: utf-8 -*-
-from odoo import http, _
+#############################################################################
+#
+#    Cybrosys Technologies Pvt. Ltd.
+#
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
+#
+#    You can modify it under the terms of the GNU LESSER
+#    GENERAL PUBLIC LICENSE (LGPL v3), Version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
+#
+#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
+#    (LGPL v3) along with this program.
+#    If not, see <http://www.gnu.org/licenses/>.
+#
+#############################################################################
+import json
+from odoo import http, fields, _
 from odoo.http import request
 from odoo.addons.portal.controllers.portal import CustomerPortal, pager as portal_pager
 from odoo.addons.payment.controllers.portal import PaymentPortal
@@ -10,22 +31,11 @@ class SubscriptionController(http.Controller):
     subscribe routes, checkouts, coupon validation, and payment endpoints."""
 
 
-    @http.route(['/subscriptions/debug_fields'], type='http', auth="public")
-    def debug_fields(self, **kw):
-        import json
-        order_fields = request.env['sale.order'].fields_get(attributes=['type'])
-        line_fields = request.env['sale.order.line'].fields_get(attributes=['type'])
-        res = {
-            'order_fields': [k for k in order_fields.keys() if 'reward' in k or 'coupon' in k or 'loyalty' in k or 'code' in k or 'promo' in k],
-            'line_fields': [k for k in line_fields.keys() if 'reward' in k or 'coupon' in k or 'loyalty' in k or 'code' in k or 'promo' in k]
-        }
-        return request.make_response(json.dumps(res))
-
     @http.route(['/subscriptions'], type='http', auth="public", website=True)
     def subscription_plans(self, **kw):
         """Render the public subscription plans landing page listing all active plans."""
         plans = request.env['subscription.plan'].sudo().search([('active', '=', True)])
-        return request.render('subscription_management.subscription_plans_page', {
+        return request.render('advanced_subscription_management.subscription_plans_page', {
             'plans': plans
         })
 
@@ -42,7 +52,7 @@ class SubscriptionController(http.Controller):
         ], limit=1)
 
         if existing:
-            return request.render('subscription_management.subscription_success_page', {
+            return request.render('advanced_subscription_management.subscription_success_page', {
                 'plan': plan,
                 'subscription': existing,
                 'message': 'You already have an active or pending subscription for this plan.'
@@ -90,13 +100,14 @@ class SubscriptionController(http.Controller):
                 logging.getLogger(__name__).error("Failed to confirm 1-click subscription order %s: %s", order.name, e)
                 # We do not pass silently anymore in logs
 
-        return request.render('subscription_management.subscription_success_page', {
+        return request.render('advanced_subscription_management.subscription_success_page', {
             'plan': plan,
             'subscription': order,
             'message': 'Your subscription has been successfully created and is waiting for activation.'
         })
 
-    @http.route(['/subscriptions/checkout/<model("subscription.plan"):plan>'], type='http', auth="public", website=True)
+    @http.route(['/subscriptions/checkout/<model("subscription.plan"):plan>'],
+                type='http', auth="public", website=True)
     def subscription_checkout(self, plan, **kw):
         """Render the custom subscription checkout page with billing, coupon, and payment provider options."""
         partner = request.env.user.partner_id if not request.env.user._is_public() else request.env['res.partner']
@@ -117,7 +128,7 @@ class SubscriptionController(http.Controller):
                 ('state', 'in', ['sale', 'done']),
             ], limit=1)
             if active_sub:
-                return request.render('subscription_management.subscription_already_subscribed', {
+                return request.render('advanced_subscription_management.subscription_already_subscribed', {
                     'plan': plan,
                     'subscription': active_sub,
                 })
@@ -254,7 +265,7 @@ class SubscriptionController(http.Controller):
         )
 
         payment_context = {
-            'amount': order.amount_total,
+            'amount': 0.0 if plan.trial_period_days > 0 else order.amount_total,
             'currency': order.currency_id,
             'partner_id': partner.id,
             'providers_sudo': providers_sudo,
@@ -284,9 +295,10 @@ class SubscriptionController(http.Controller):
         }
         render_values.update(payment_context)
 
-        return request.render('subscription_management.subscription_checkout_page', render_values)
+        return request.render('advanced_subscription_management.subscription_checkout_page', render_values)
 
-    @http.route(['/subscriptions/checkout/save_address'], type='json', auth="public", methods=['POST'], website=True, csrf=False)
+    @http.route(['/subscriptions/checkout/save_address'],
+                type='json', auth="public", methods=['POST'], website=True, csrf=False)
     def save_address(self, name, email, street, city, zip_code, country_id, state_id, plan_id=None, **kw):
         """AJAX endpoint to save the billing address of the current user or guest
         during the subscription checkout process."""
@@ -335,7 +347,8 @@ class SubscriptionController(http.Controller):
                 
                 # Calculate discount amount
                 base_unit_price = plan.product_id.list_price if plan.product_id else plan.total_price
-                seat_qty = sum(line.product_uom_qty for line in order.order_line if line.product_id == (plan.product_id or line.product_id))
+                seat_qty = sum(line.product_uom_qty for line in order.order_line
+                               if line.product_id == (plan.product_id or line.product_id))
                 original_total = base_unit_price * seat_qty
                 discount_amount = original_total - order.amount_untaxed
                 if discount_amount < 0:
@@ -367,7 +380,8 @@ class SubscriptionController(http.Controller):
                 }
         return {'success': True}
 
-    @http.route(['/subscriptions/checkout/update_config'], type='json', auth="public", methods=['POST'], website=True, csrf=False)
+    @http.route(['/subscriptions/checkout/update_config'],
+                type='json', auth="public", methods=['POST'], website=True, csrf=False)
     def update_config(self, plan_id, seats=None, cycle=None, **kw):
         """AJAX endpoint to dynamically update seat count or billing cycle
         on the active draft sales order before finalizing checkout."""
@@ -438,7 +452,8 @@ class SubscriptionController(http.Controller):
 
             # 3. Backup search for inactive/archived coupons to provide a helpful error message
             if not program:
-                inactive_card = request.env['loyalty.card'].sudo().with_context(active_test=False).search([('code', '=ilike', clean_code)], limit=1)
+                inactive_card = request.env['loyalty.card'].sudo().with_context(active_test=False).search([
+                    ('code', '=ilike', clean_code)], limit=1)
                 if inactive_card:
                     return {'valid': False, 'message': 'This coupon code is inactive or archived.'}
                 return {'valid': False, 'message': 'Invalid coupon code.'}
@@ -464,7 +479,7 @@ class SubscriptionController(http.Controller):
             if not request.env.user._is_public():
                 partner = request.env.user.partner_id
                 
-                if program.first_time_only:
+                if program.is_first_time_only:
                     past_subs = request.env['sale.order'].sudo().search_count([
                         ('partner_id', '=', partner.id),
                         ('subscription_state', 'not in', [False, '1_draft'])
@@ -497,12 +512,14 @@ class SubscriptionController(http.Controller):
                     new_total = order.amount_total
                     
                     # Foolproof discount calculation: (Base price of positive lines) - (Final untaxed amount)
-                    base_amount = sum((line.price_unit * line.product_uom_qty) for line in order.order_line if line.price_subtotal >= 0)
+                    base_amount = sum((line.price_unit * line.product_uom_qty) for line in order.order_line
+                                      if line.price_subtotal >= 0)
                     discount_amount = base_amount - order.amount_untaxed
                     
                     # Fallback just in case of weird tax inclusions making discount negative
                     if discount_amount < 0:
-                        discount_amount = abs(sum(line.price_subtotal for line in order.order_line if line.price_subtotal < 0))
+                        discount_amount = abs(sum(line.price_subtotal
+                                                  for line in order.order_line if line.price_subtotal < 0))
                 else:
                     return {'valid': False, 'message': 'Session expired. Please refresh the page.'}
             else:
@@ -529,7 +546,8 @@ class SubscriptionController(http.Controller):
         except Exception as e:
             return {'valid': False, 'message': f'Python Error: {str(e)}'}
 
-    @http.route(['/subscriptions/checkout/<model("subscription.plan"):plan>/confirm'], type='http', auth="public", methods=['POST'], website=True, csrf=True)
+    @http.route(['/subscriptions/checkout/<model("subscription.plan"):plan>/confirm'], type='http', auth="public",
+                methods=['POST'], website=True, csrf=True)
     def subscription_checkout_confirm(self, plan, **kw):
         """Confirm checkout details, apply coupon, and redirect to the payment step."""
         name = kw.get('name')
@@ -576,7 +594,7 @@ class SubscriptionController(http.Controller):
         ], limit=1)
 
         if existing:
-            return request.render('subscription_management.subscription_success_page', {
+            return request.render('advanced_subscription_management.subscription_success_page', {
                 'plan': plan,
                 'subscription': existing,
                 'message': 'You already have an active or pending subscription for this plan.'
@@ -649,7 +667,7 @@ class SubscriptionController(http.Controller):
             if program:
                 if program.plan_ids and plan.id not in program.plan_ids.ids:
                     coupon_error = 'This promo code is not valid for the selected plan.'
-                elif program.first_time_only:
+                elif program.is_first_time_only:
                     past_subs = request.env['sale.order'].sudo().search_count([
                         ('partner_id', '=', partner.id),
                         ('subscription_state', 'not in', [False, '1_draft'])
@@ -668,7 +686,7 @@ class SubscriptionController(http.Controller):
                 countries = request.env['res.country'].sudo().search([])
                 states = request.env['res.country.state'].sudo().search([])
                 providers = request.env['payment.provider'].sudo().search([('state', 'in', ['test', 'enabled'])])
-                return request.render('subscription_management.subscription_checkout_page', {
+                return request.render('advanced_subscription_management.subscription_checkout_page', {
                     'plan': plan,
                     'partner': partner,
                     'countries': countries,
@@ -695,7 +713,7 @@ class SubscriptionController(http.Controller):
         partner_sudo = request.env.user.partner_id if logged_in else order_sudo.partner_id
         company = order_sudo.company_id
         currency = order_sudo.currency_id
-        amount = order_sudo.amount_total
+        amount = 0.0 if plan.trial_period_days > 0 else order_sudo.amount_total
 
         availability_report = {}
         providers_sudo = request.env['payment.provider'].sudo()._get_compatible_providers(
@@ -730,7 +748,7 @@ class SubscriptionController(http.Controller):
 
         render_values = {'plan': plan, 'order': order_sudo}
         render_values.update(payment_context)
-        return request.render('subscription_management.subscription_payment_page', render_values)
+        return request.render('advanced_subscription_management.subscription_payment_page', render_values)
 
     @http.route(['/subscriptions/success/<int:order_id>'], type='http', auth="public", website=True)
     def subscription_success(self, order_id, **kw):
@@ -745,12 +763,14 @@ class SubscriptionController(http.Controller):
                 order_sudo.action_confirm()
             except Exception as e:
                 import logging
-                logging.getLogger(__name__).error("Failed to confirm subscription order %s: %s", order_sudo.name, e)
+                logging.getLogger(__name__).error(
+                    "Failed to confirm subscription order %s: %s", order_sudo.name, e)
                 confirm_error = str(e)
                 
         # Instantly generate the first invoice if it hasn't been generated yet
         # (This catches orders confirmed by the payment gateway before reaching this page)
-        if not order_sudo.invoice_ids and order_sudo.state in ('sale', 'done'):
+        is_free_trial = order_sudo.plan_id and order_sudo.plan_id.trial_period_days > 0
+        if not is_free_trial and not order_sudo.invoice_ids and order_sudo.state in ('sale', 'done'):
             try:
                 order_sudo._generate_recurring_invoice()
             except Exception:
@@ -777,7 +797,7 @@ class SubscriptionController(http.Controller):
             else:
                 next_billing = today + relativedelta(months=1)
 
-        return request.render('subscription_management.subscription_success_page', {
+        return request.render('advanced_subscription_management.subscription_success_page', {
             'plan': order_sudo.plan_id,
             'subscription': order_sudo,
             'invoice': invoice,
@@ -794,22 +814,27 @@ class SubscriptionController(http.Controller):
         
         order_sudo = request.env['sale.order'].sudo().browse(order_id)
         if not order_sudo.exists():
-            return request.make_response(json.dumps({'status': 'error', 'message': 'Order not found'}), headers=[('Content-Type', 'application/json')])
+            return request.make_response(json.dumps({'status': 'error', 'message': 'Order not found'}),
+                                         headers=[('Content-Type', 'application/json')])
             
         # Security Validation
         access_token = kw.get('access_token')
         if not request.env.user._is_public():
             if order_sudo.partner_id != request.env.user.partner_id and not request.env.user.has_group('base.group_user'):
-                return request.make_response(json.dumps({'status': 'error', 'message': 'Access denied'}), headers=[('Content-Type', 'application/json')])
+                return request.make_response(json.dumps({'status': 'error', 'message': 'Access denied'}),
+                                             headers=[('Content-Type', 'application/json')])
         else:
             if order_sudo.access_token and order_sudo.access_token != access_token:
-                return request.make_response(json.dumps({'status': 'error', 'message': 'Access denied'}), headers=[('Content-Type', 'application/json')])
+                return request.make_response(json.dumps({'status': 'error', 'message': 'Access denied'}),
+                                             headers=[('Content-Type', 'application/json')])
 
         if order_sudo.state not in ['sale', 'done']:
-            return request.make_response(json.dumps({'status': 'error', 'message': 'Invalid order state'}), headers=[('Content-Type', 'application/json')])
+            return request.make_response(json.dumps({'status': 'error', 'message': 'Invalid order state'}),
+                                         headers=[('Content-Type', 'application/json')])
 
         if not order_sudo.partner_id.email:
-            return request.make_response(json.dumps({'status': 'error', 'message': 'Missing customer email'}), headers=[('Content-Type', 'application/json')])
+            return request.make_response(json.dumps({'status': 'error', 'message': 'Missing customer email'}),
+                                         headers=[('Content-Type', 'application/json')])
             
         welcome_queued = False
         receipt_queued = False
@@ -852,6 +877,7 @@ class CustomerPortalSubscription(CustomerPortal):
         '/my/orders/<int:order_id>/close_signature'
     ], type='http', auth="public", website=True)
     def portal_subscription_close_signature(self, order_id, access_token=None, **kw):
+        """Render the signature page for closing a subscription via the portal."""
         try:
             order_sudo = self._document_check_access('sale.order', order_id, access_token=access_token)
         except Exception:
@@ -864,13 +890,14 @@ class CustomerPortalSubscription(CustomerPortal):
             'sale_order': order_sudo,
             'page_name': 'subscription_close_signature',
         }
-        return request.render('subscription_management.subscription_close_signature_page', values)
+        return request.render('advanced_subscription_management.subscription_close_signature_page', values)
 
     @http.route([
         '/my/subscription/<int:order_id>/close_signature/accept',
         '/my/orders/<int:order_id>/close_signature/accept'
     ], type='jsonrpc', auth="public", website=True)
     def portal_subscription_close_signature_accept(self, order_id, access_token=None, name=None, signature=None):
+        """Handle the acceptance and saving of the electronic signature for subscription closure."""
         import binascii
         from odoo import fields
         
@@ -914,6 +941,7 @@ class CustomPortalAccount(PortalAccount):
     """Extend default account portal to support custom invoice tabs."""
 
     def _get_account_searchbar_filters(self):
+        """Extend the default account searchbar filters with paid, awaiting, and overdue invoice filters."""
         filters = super()._get_account_searchbar_filters()
         
         from odoo import fields
@@ -952,11 +980,14 @@ class CustomPortalAccount(PortalAccount):
 
         # Override native Odoo limit=1 optimization so the sidebar badges show exact counts
         if 'invoice_count' in counters:
-            values['invoice_count'] = request.env['account.move'].search_count(self._get_invoices_domain('out')) if request.env['account.move'].has_access('read') else 0
+            values['invoice_count'] = request.env['account.move'].search_count(self._get_invoices_domain('out'))\
+                if request.env['account.move'].has_access('read') else 0
         if 'order_count' in counters:
-            values['order_count'] = request.env['sale.order'].search_count(self._prepare_orders_domain(partner)) if hasattr(self, '_prepare_orders_domain') and request.env['sale.order'].has_access('read') else 0
+            values['order_count'] = request.env['sale.order'].search_count(self._prepare_orders_domain(partner))\
+                if hasattr(self, '_prepare_orders_domain') and request.env['sale.order'].has_access('read') else 0
         if 'quotation_count' in counters:
-            values['quotation_count'] = request.env['sale.order'].search_count(self._prepare_quotations_domain(partner)) if hasattr(self, '_prepare_quotations_domain') and request.env['sale.order'].has_access('read') else 0
+            values['quotation_count'] = request.env['sale.order'].search_count(self._prepare_quotations_domain(partner))\
+                if hasattr(self, '_prepare_quotations_domain') and request.env['sale.order'].has_access('read') else 0
 
         return values
 
@@ -971,9 +1002,12 @@ class CustomPortalAccount(PortalAccount):
 
         searchbar_filters = {
             'all': {'domain': [('plan_id', '!=', False), ('state', 'in', ['sale', 'done'])]},
-            'in_progress': {'domain': [('plan_id', '!=', False), ('state', 'in', ['sale', 'done']), ('subscription_state', 'in', ['3_progress', '5_renewed'])]},
-            'to_renew': {'domain': [('plan_id', '!=', False), ('state', 'in', ['sale', 'done']), ('subscription_state', 'in', ['2_renewal', '7_upsell', '4_paused'])]},
-            'closed': {'domain': [('plan_id', '!=', False), ('state', 'in', ['sale', 'done']), ('subscription_state', 'in', ['6_churn', '8_blocked'])]},
+            'in_progress': {'domain': [('plan_id', '!=', False), ('state', 'in', ['sale', 'done']),
+                                       ('subscription_state', 'in', ['3_progress', '5_renewed'])]},
+            'to_renew': {'domain': [('plan_id', '!=', False), ('state', 'in', ['sale', 'done']),
+                                    ('subscription_state', 'in', ['2_renewal', '7_upsell', '4_paused'])]},
+            'closed': {'domain': [('plan_id', '!=', False), ('state', 'in', ['sale', 'done']),
+                                  ('subscription_state', 'in', ['6_churn', '8_blocked'])]},
         }
 
         base_domain = [('partner_id', '=', partner.id)]
@@ -1011,7 +1045,8 @@ class CustomPortalAccount(PortalAccount):
             ('move_type', '=', 'out_invoice')
         ])
         portal_outstanding_amount = sum(unpaid_invoices.mapped('amount_residual'))
-        portal_overdue_count = sum(1 for inv in unpaid_invoices if inv.invoice_date_due and inv.invoice_date_due < today)
+        portal_overdue_count = sum(1 for inv in unpaid_invoices if inv.invoice_date_due and
+                                   inv.invoice_date_due < today)
 
         # Global MRR & Next Invoice
         all_active_subs = SaleOrder.search(base_domain + searchbar_filters['in_progress']['domain'])
@@ -1020,15 +1055,18 @@ class CustomPortalAccount(PortalAccount):
         portal_next_invoice_amount = 0.0
         portal_next_invoice_plan = ""
 
-        subs_with_next_date = all_active_subs.filtered(lambda s: s.next_invoice_date).sorted(key=lambda s: s.next_invoice_date)
+        subs_with_next_date = all_active_subs.filtered(lambda s: s.next_invoice_date).sorted(
+            key=lambda s: s.next_invoice_date)
         if subs_with_next_date:
             first_sub = subs_with_next_date[0]
             portal_next_invoice_date = first_sub.next_invoice_date
             portal_next_invoice_plan = first_sub.plan_id.name
-            portal_next_invoice_amount = sum(l.price_subtotal for l in first_sub.order_line if (l.product_template_id.recurring_ok or l.product_id.recurring_ok))
+            portal_next_invoice_amount = sum(l.price_subtotal for l in first_sub.order_line
+                                             if (l.product_template_id.recurring_ok or l.product_id.recurring_ok))
 
         for sub in all_active_subs:
-            sub_total = sum(l.price_subtotal for l in sub.order_line if (l.product_template_id.recurring_ok or l.product_id.recurring_ok))
+            sub_total = sum(l.price_subtotal for l in sub.order_line
+                            if (l.product_template_id.recurring_ok or l.product_id.recurring_ok))
             period = sub.plan_id.billing_period or 'monthly'
             if period == 'weekly':
                 portal_mrr += sub_total * 4.333
@@ -1051,7 +1089,7 @@ class CustomPortalAccount(PortalAccount):
             'portal_next_invoice_amount': portal_next_invoice_amount,
             'portal_next_invoice_plan': portal_next_invoice_plan,
         })
-        return request.render("subscription_management.portal_my_subscriptions", values)
+        return request.render("advanced_subscription_management.portal_my_subscriptions", values)
 
     @http.route(['/my/subscription/<int:subscription_id>'], type='http', auth="user", website=True)
     def portal_my_subscription_detail(self, subscription_id, **kw):
@@ -1069,7 +1107,7 @@ class CustomPortalAccount(PortalAccount):
             if line.product_id.recurring_ok or getattr(line, 'is_reward_line', False) or getattr(line, 'reward_id', False):
                 active_lines |= line
 
-        return request.render("subscription_management.portal_my_subscription_detail", {
+        return request.render("advanced_subscription_management.portal_my_subscription_detail", {
             'subscription': subscription,
             'close_reasons': close_reasons,
             'preview': preview,
@@ -1077,7 +1115,8 @@ class CustomPortalAccount(PortalAccount):
             'page_name': 'subscription_detail',
         })
 
-    @http.route(['/my/subscription/<int:subscription_id>/change_seats'], type='http', auth="user", methods=['POST'], website=True, csrf=True)
+    @http.route(['/my/subscription/<int:subscription_id>/change_seats'],
+                type='http', auth="user", methods=['POST'], website=True, csrf=True)
     def portal_my_subscription_change_seats(self, subscription_id, **kw):
         """Update subscription quantity (seats) from portal."""
         subscription = request.env['sale.order'].sudo().browse(subscription_id)
@@ -1092,7 +1131,8 @@ class CustomPortalAccount(PortalAccount):
                 subscription.action_change_seats(line_id, new_qty)
         return request.redirect('/my/subscription/%s' % subscription_id)
 
-    @http.route(['/my/subscription/<int:subscription_id>/pause'], type='http', auth="user", methods=['POST'], website=True, csrf=True)
+    @http.route(['/my/subscription/<int:subscription_id>/pause'],
+                type='http', auth="user", methods=['POST'], website=True, csrf=True)
     def portal_my_subscription_pause(self, subscription_id, **kw):
         """Pause the customer's subscription via portal."""
         subscription = request.env['sale.order'].sudo().browse(subscription_id)
@@ -1104,7 +1144,8 @@ class CustomPortalAccount(PortalAccount):
             subscription.action_pause()
         return request.redirect('/my/subscription/%s' % subscription_id)
 
-    @http.route(['/my/subscription/<int:subscription_id>/resume'], type='http', auth="user", methods=['POST'], website=True, csrf=True)
+    @http.route(['/my/subscription/<int:subscription_id>/resume'],
+                type='http', auth="user", methods=['POST'], website=True, csrf=True)
     def portal_my_subscription_resume(self, subscription_id, **kw):
         """Resume the customer's subscription via portal."""
         subscription = request.env['sale.order'].sudo().browse(subscription_id)
@@ -1116,7 +1157,8 @@ class CustomPortalAccount(PortalAccount):
             subscription.action_resume()
         return request.redirect('/my/subscription/%s' % subscription_id)
 
-    @http.route(['/my/subscription/<int:subscription_id>/cancel'], type='http', auth="user", methods=['POST'], website=True, csrf=True)
+    @http.route(['/my/subscription/<int:subscription_id>/cancel'],
+                type='http', auth="user", methods=['POST'], website=True, csrf=True)
     def portal_my_subscription_cancel(self, subscription_id, **kw):
         """Cancel the customer's subscription via portal."""
         subscription = request.env['sale.order'].sudo().browse(subscription_id)
@@ -1129,14 +1171,17 @@ class CustomPortalAccount(PortalAccount):
             customer_signature = kw.get('customer_signature')
             
             if customer_signature:
-                subscription.message_post(body=f"Subscription cancelled by customer. Electronic Signature: <b>{customer_signature}</b>")
+                subscription.message_post(
+                    body=f"Subscription cancelled by customer. Electronic Signature: <b>{customer_signature}</b>"
+                )
                 
             subscription._action_close_confirm(
                 close_reason_id=int(close_reason_id) if close_reason_id else None,
             )
         return request.redirect('/my/subscription/%s' % subscription_id)
 
-    @http.route(['/my/subscription/<int:subscription_id>/upsell'], type='http', auth="user", methods=['POST'], website=True, csrf=True)
+    @http.route(['/my/subscription/<int:subscription_id>/upsell'],
+                type='http', auth="user", methods=['POST'], website=True, csrf=True)
     def portal_my_subscription_upsell(self, subscription_id, **kw):
         """Handle customer-initiated upsell from the portal."""
         subscription = request.env['sale.order'].sudo().browse(subscription_id)
@@ -1177,7 +1222,8 @@ class CustomPortalAccount(PortalAccount):
             return request.redirect(upsell.get_portal_url())
         return request.redirect('/my/subscription/%s' % subscription_id)
 
-    @http.route(['/my/subscription/<int:subscription_id>/renew'], type='http', auth="user", methods=['POST'], website=True, csrf=True)
+    @http.route(['/my/subscription/<int:subscription_id>/renew'],
+                type='http', auth="user", methods=['POST'], website=True, csrf=True)
     def portal_my_subscription_renew(self, subscription_id, **kw):
         """Handle customer-initiated renewal from the portal."""
         subscription = request.env['sale.order'].sudo().browse(subscription_id)
@@ -1217,6 +1263,7 @@ class CustomPortalAccount(PortalAccount):
 class SubscriptionPaymentPostProcessing(PaymentPostProcessing):
     @http.route('/payment/status', type='http', auth='public', website=True, sitemap=False)
     def display_status(self, **kwargs):
+        """Override payment status display to handle subscription post-processing redirects."""
         monitored_tx = self._get_monitored_transaction()
         if monitored_tx and monitored_tx.landing_route and monitored_tx.landing_route.startswith('/subscriptions/success'):
             if not monitored_tx.is_post_processed:

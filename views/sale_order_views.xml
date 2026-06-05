@@ -41,7 +41,7 @@
                         <span class="o_stat_value"><field name="mrr_total" widget="monetary" options="{'currency_field': 'currency_id'}"/></span>
                     </div>
                 </button>
-                <button class="oe_stat_button" icon="fa-clock-o" type="object" name="open_subscription_history" invisible="history_count &lt; 2">
+                <button class="oe_stat_button" icon="fa-clock-o" type="object" name="action_open_subscription_history" invisible="history_count &lt; 2">
                     <div class="o_field_widget o_stat_info">
                         <span class="o_stat_value"><field name="history_count"/></span>
                         <span class="o_stat_text">Sales History</span>
@@ -123,6 +123,7 @@
                 </div>
                 <field name="next_invoice_date" string="Next Invoice" invisible="subscription_state in ('1_draft', '7_upsell', '2_renewal')"/>
                 <field name="payment_token_id" options="{'no_create': True}" invisible="not plan_id or subscription_state in ('1_draft', '7_upsell', '2_renewal')"/>
+                <field name="is_in_dunning" invisible="subscription_state in ('1_draft', '7_upsell', '2_renewal')"/>
                 <field name="dunning_plan_id" invisible="not plan_id or subscription_state in ('1_draft', '7_upsell', '2_renewal')"/>
                 <field name="next_dunning_date" invisible="not is_in_dunning or subscription_state in ('1_draft', '7_upsell', '2_renewal')"/>
                 <field name="commitment_date" string="Promised Delivery"/>

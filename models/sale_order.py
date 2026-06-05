@@ -1,4 +1,24 @@
 # -*- coding: utf-8 -*-
+#############################################################################
+#
+#    Cybrosys Technologies Pvt. Ltd.
+#
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
+#
+#    You can modify it under the terms of the GNU LESSER
+#    GENERAL PUBLIC LICENSE (LGPL v3), Version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
+#
+#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
+#    (LGPL v3) along with this program.
+#    If not, see <http://www.gnu.org/licenses/>.
+#
+#############################################################################
 from odoo import models, fields, api, _
 from markupsafe import Markup
 from odoo.exceptions import UserError
@@ -12,6 +32,7 @@ class SaleOrder(models.Model):
     pipeline linked to active subscription contracts."""
 
     _inherit = 'sale.order'
+    _description = 'Sale Order'
 
     def _default_plan_id(self):
         """Return the default monthly billing plan for new Sales Orders only if created from subscription app."""
@@ -37,7 +58,7 @@ class SaleOrder(models.Model):
         string='Until', help="End date of the subscription."
     )
     next_invoice_date = fields.Date(
-        string='Next Invoice Date',copy=False,
+        string='Next Invoice Date', copy=False,
         help="Date for the next recurring billing cycle."
     )
     mrr_total = fields.Monetary(
@@ -48,12 +69,10 @@ class SaleOrder(models.Model):
         string='Non Recurring Total', compute='_compute_mrr_totals',
         currency_field='currency_id'
     )
-
     referrer_id = fields.Many2one(
         'res.partner', string='Referrer',
         help="Select referring partner for this order."
     )
-
     is_price_locked = fields.Boolean(
         string='Price Locked', default=False,
         help="If checked, the unit prices on recurring lines are grandfathered and locked."
@@ -62,16 +81,13 @@ class SaleOrder(models.Model):
         'subscription.close.reason', string='Close Reason'
     )
     close_reason_notes = fields.Text(string='Close Notes')
-
-    close_signature = fields.Binary(string='Signature on Close', copy=False, attachment=True)
+    close_signature = fields.Binary(string='Signature On Close', copy=False, attachment=True)
     close_signed_by = fields.Char(string='Signed By', copy=False)
     close_signed_on = fields.Datetime(string='Signed On', copy=False)
-
     subscription_cycle = fields.Integer(
         string='Current Cycle', default=1, copy=False,
         help="Tracks the number of billing cycles completed plus the current one."
     )
-
     subscription_state = fields.Selection([
         ('1_draft', 'Draft'),
         ('2_renewal', 'Renewal'),
@@ -82,7 +98,6 @@ class SaleOrder(models.Model):
         ('7_upsell', 'Upsell'),
         ('8_blocked', 'Blocked'),
     ], string='Subscription Status', default='1_draft', copy=False, tracking=True)
-    
     subscription_id = fields.Many2one(
         'sale.order', string="Parent Subscription",
         help="Links this upsell/renewal back to the original subscription.",
@@ -94,110 +109,12 @@ class SaleOrder(models.Model):
     upsell_count = fields.Integer(string='Upsell Count', compute='_compute_upsell_count')
     renewal_count = fields.Integer(string='Renewal Count', compute='_compute_renewal_count')
     history_count = fields.Integer(string='History Count', compute='_compute_history_count')
-
     is_subscription = fields.Boolean(
         string='Is Subscription',
         compute='_compute_is_subscription',
         store=True,
         help="True if this order contains at least one recurring product."
     )
-
-    @api.depends('order_line.product_id.recurring_ok', 'order_line.product_template_id.recurring_ok')
-    def _compute_is_subscription(self):
-        for order in self:
-            order.is_subscription = any(
-                line.product_template_id.recurring_ok or getattr(line.product_id, 'recurring_ok', False)
-                for line in order.order_line
-            )
-
-    @api.depends('subscription_child_ids.subscription_state')
-    def _compute_upsell_count(self):
-        for order in self:
-            order.upsell_count = self.env['sale.order'].search_count([
-                ('subscription_id', '=', order.id),
-                ('subscription_state', '=', '7_upsell'),
-                ('state', 'in', ['draft', 'sent'])
-            ])
-
-    @api.depends('subscription_child_ids.subscription_state')
-    def _compute_renewal_count(self):
-        for order in self:
-            order.renewal_count = self.env['sale.order'].search_count([
-                ('subscription_id', '=', order.id),
-                ('subscription_state', '=', '2_renewal'),
-                ('state', 'in', ['draft', 'sent'])
-            ])
-
-    @api.depends('subscription_id', 'subscription_child_ids')
-    def _compute_history_count(self):
-        for order in self:
-            parent_id = order.subscription_id.id if order.subscription_id else order.id
-            order.history_count = self.env['sale.order'].search_count([
-                '|', ('id', '=', parent_id), ('subscription_id', '=', parent_id),
-                ('state', 'not in', ['cancel', 'draft'])
-            ])
-
-    def action_view_upsells(self):
-        self.ensure_one()
-        action = self.env["ir.actions.actions"]._for_xml_id("sale.action_quotations_with_onboarding")
-        action['name'] = _("Upsell Quotes")
-        action['domain'] = [
-            ('subscription_id', '=', self.id),
-            ('subscription_state', '=', '7_upsell'),
-            ('state', 'in', ['draft', 'sent'])
-        ]
-        action['context'] = {'default_subscription_id': self.id, 'default_subscription_state': '7_upsell'}
-        return action
-
-    def action_view_renewals(self):
-        self.ensure_one()
-        action = self.env["ir.actions.actions"]._for_xml_id("sale.action_quotations_with_onboarding")
-        action['name'] = _("Renewal Quotes")
-        action['domain'] = [
-            ('subscription_id', '=', self.id),
-            ('subscription_state', '=', '2_renewal'),
-            ('state', 'in', ['draft', 'sent'])
-        ]
-        action['context'] = {'default_subscription_id': self.id, 'default_subscription_state': '2_renewal'}
-        
-        # Use custom tree view for renewals if it exists
-        tree_view = self.env.ref('subscription_management.view_renewal_quotation_tree', raise_if_not_found=False)
-        if tree_view:
-            action['views'] = [(tree_view.id, 'list'), (False, 'form')]
-            
-        return action
-
-    def action_view_parent(self):
-        self.ensure_one()
-        if not self.subscription_id:
-            return
-        return {
-            'type': 'ir.actions.act_window',
-            'res_model': 'sale.order',
-            'res_id': self.subscription_id.id,
-            'view_mode': 'form',
-            'views': [(self.env.ref('subscription_management.view_subscription_order_form').id, 'form')],
-        }
-
-    def open_subscription_history(self):
-        self.ensure_one()
-        parent_id = self.subscription_id.id if self.subscription_id else self.id
-        action = {
-            "type": "ir.actions.act_window",
-            "res_model": "sale.order",
-            "name": _("Sales History"),
-            "views": [
-                [self.env.ref('subscription_management.view_subscription_order_tree').id, "list"],
-                [self.env.ref('subscription_management.view_subscription_order_form').id, "form"]
-            ],
-            "domain": [
-                '|', ('id', '=', parent_id), ('subscription_id', '=', parent_id),
-                ('state', 'not in', ['cancel', 'draft'])
-            ],
-            "context": {'create': False}
-        }
-        return action
-
     dunning_plan_id = fields.Many2one(
         'subscription.dunning.plan', string='Dunning Plan',
         help="Dunning plan to apply if a payment fails."
@@ -207,11 +124,50 @@ class SaleOrder(models.Model):
         domain="[('partner_id', '=', partner_id)]",
         help="Saved payment method used for automatic billing."
     )
-    is_in_dunning = fields.Boolean(string='In Dunning', default=False)
-    next_dunning_date = fields.Date(string='Next Dunning Date')
+    is_in_dunning = fields.Boolean(string='In Dunning', default=False, copy=False)
+    next_dunning_date = fields.Date(string='Next Dunning Date', copy=False)
     dunning_stage_id = fields.Many2one(
-        'subscription.dunning.plan.line', string='Current Dunning Stage'
+        'subscription.dunning.plan.line', string='Current Dunning Stage', copy=False
     )
+
+    @api.depends('order_line.product_id.recurring_ok', 'order_line.product_template_id.recurring_ok')
+    def _compute_is_subscription(self):
+        """Compute whether the order is a subscription by checking for recurring products."""
+        for order in self:
+            order.is_subscription = any(
+                line.product_template_id.recurring_ok or getattr(line.product_id, 'recurring_ok', False)
+                for line in order.order_line
+            )
+
+    @api.depends('subscription_child_ids.subscription_state')
+    def _compute_upsell_count(self):
+        """Compute the number of upsell quotations linked to this subscription."""
+        for order in self:
+            order.upsell_count = self.env['sale.order'].search_count([
+                ('subscription_id', '=', order.id),
+                ('subscription_state', '=', '7_upsell'),
+                ('state', 'in', ['draft', 'sent'])
+            ])
+
+    @api.depends('subscription_child_ids.subscription_state')
+    def _compute_renewal_count(self):
+        """Compute the number of renewal quotations linked to this subscription."""
+        for order in self:
+            order.renewal_count = self.env['sale.order'].search_count([
+                ('subscription_id', '=', order.id),
+                ('subscription_state', '=', '2_renewal'),
+                ('state', 'in', ['draft', 'sent'])
+            ])
+
+    @api.depends('subscription_id', 'subscription_child_ids')
+    def _compute_history_count(self):
+        """Compute the total number of historical orders (upsells, renewals) in this subscription family."""
+        for order in self:
+            parent_id = order.subscription_id.id if order.subscription_id else order.id
+            order.history_count = self.env['sale.order'].search_count([
+                '|', ('id', '=', parent_id), ('subscription_id', '=', parent_id),
+                ('state', 'not in', ['cancel', 'draft'])
+            ])
 
     @api.depends(
         'order_line.price_subtotal', 'plan_id',
@@ -252,6 +208,71 @@ class SaleOrder(models.Model):
                     non_recurring_total += line.price_subtotal
             order.mrr_total = mrr_total
             order.non_recurring_total = non_recurring_total
+
+    def action_view_upsells(self):
+        """Returns action to open upsell quotes for this subscription."""
+        self.ensure_one()
+        action = self.env["ir.actions.actions"]._for_xml_id("sale.action_quotations_with_onboarding")
+        action['name'] = _("Upsell Quotes")
+        action['domain'] = [
+            ('subscription_id', '=', self.id),
+            ('subscription_state', '=', '7_upsell'),
+            ('state', 'in', ['draft', 'sent'])
+        ]
+        action['context'] = {'default_subscription_id': self.id, 'default_subscription_state': '7_upsell'}
+        return action
+
+    def action_view_renewals(self):
+        """Returns action to open renewal quotes for this subscription."""
+        self.ensure_one()
+        action = self.env["ir.actions.actions"]._for_xml_id("sale.action_quotations_with_onboarding")
+        action['name'] = _("Renewal Quotes")
+        action['domain'] = [
+            ('subscription_id', '=', self.id),
+            ('subscription_state', '=', '2_renewal'),
+            ('state', 'in', ['draft', 'sent'])
+        ]
+        action['context'] = {'default_subscription_id': self.id, 'default_subscription_state': '2_renewal'}
+        
+        # Use custom tree view for renewals if it exists
+        tree_view = self.env.ref('advanced_subscription_management.view_renewal_quotation_tree', raise_if_not_found=False)
+        if tree_view:
+            action['views'] = [(tree_view.id, 'list'), (False, 'form')]
+            
+        return action
+
+    def action_view_parent(self):
+        """Returns action to open the parent subscription order."""
+        self.ensure_one()
+        if not self.subscription_id:
+            return
+        return {
+            'type': 'ir.actions.act_window',
+            'res_model': 'sale.order',
+            'res_id': self.subscription_id.id,
+            'view_mode': 'form',
+            'views': [(self.env.ref('advanced_subscription_management.view_subscription_order_form').id, 'form')],
+        }
+
+    def action_open_subscription_history(self):
+        """Returns action to open the complete sales history of this subscription."""
+        self.ensure_one()
+        parent_id = self.subscription_id.id if self.subscription_id else self.id
+        action = {
+            "type": "ir.actions.act_window",
+            "res_model": "sale.order",
+            "name": _("Sales History"),
+            "views": [
+                [self.env.ref('advanced_subscription_management.view_subscription_order_tree').id, "list"],
+                [self.env.ref('advanced_subscription_management.view_subscription_order_form').id, "form"]
+            ],
+            "domain": [
+                '|', ('id', '=', parent_id), ('subscription_id', '=', parent_id),
+                ('state', 'not in', ['cancel', 'draft'])
+            ],
+            "context": {'create': False}
+        }
+        return action
 
     def _action_cancel(self):
         """Override standard cancel to mark active subscriptions as churned and prevent cancelling invoiced subs."""
@@ -304,7 +325,10 @@ class SaleOrder(models.Model):
                     'subscription_state': '3_progress',
                 }
                 if not order.next_invoice_date:
-                    vals['next_invoice_date'] = fields.Date.today()
+                    if order.plan_id.trial_period_days > 0:
+                        vals['next_invoice_date'] = fields.Date.today() + relativedelta(days=order.plan_id.trial_period_days)
+                    else:
+                        vals['next_invoice_date'] = fields.Date.today()
                 order.write(vals)
         return res
 
@@ -337,9 +361,12 @@ class SaleOrder(models.Model):
             other_renew_so_ids._action_cancel()
 
         # 5. Closing the Parent Contract
-        close_reason = self.env.ref('subscription_management.close_reason_renew', raise_if_not_found=False)
+        close_reason = self.env.ref('advanced_subscription_management.close_reason_renew', raise_if_not_found=False)
         parent_vals = {
             'subscription_state': '5_renewed',
+            'is_in_dunning': False,
+            'dunning_stage_id': False,
+            'next_dunning_date': False,
         }
         if close_reason:
             parent_vals['close_reason_id'] = close_reason.id
@@ -347,13 +374,17 @@ class SaleOrder(models.Model):
         parent.write(parent_vals)
 
         # 6. Chatter Notifications
-        parent.message_post(body=_("This subscription is renewed in <a href=# data-oe-model=sale.order data-oe-id=%d>%s</a> with a change of plan.") % (self.id, self.name))
-        self.message_post(body=_("This subscription is a renewal of <a href=# data-oe-model=sale.order data-oe-id=%d>%s</a>.") % (parent.id, parent.name))
+        parent.message_post(
+            body=Markup(_("This subscription is renewed in <a href=# data-oe-model=sale.order data-oe-id=%d>%s</a> with a change of plan.")) % (self.id, self.name)
+        )
+        self.message_post(
+            body=Markup(_("This subscription is a renewal of <a href=# data-oe-model=sale.order data-oe-id=%d>%s</a>.")) % (parent.id, parent.name)
+        )
 
     def action_view_mrr(self):
         """Open the MRR Breakdown report filtered for this subscription as a timeline line chart."""
         self.ensure_one()
-        action = self.env['ir.actions.act_window']._for_xml_id('subscription_management.action_subscription_reporting_mrr_breakdown')
+        action = self.env['ir.actions.act_window']._for_xml_id('advanced_subscription_management.action_subscription_reporting_mrr_breakdown')
         action['domain'] = [('sale_order_id', '=', self.id)]
         action['context'] = {
             'graph_measure': 'mrr_change',
@@ -402,7 +433,7 @@ class SaleOrder(models.Model):
             'res_model': 'sale.order',
             'view_mode': 'form',
             'res_id': upsell_order.id,
-            'views': [(self.env.ref('subscription_management.view_subscription_order_form').id, 'form')],
+            'views': [(self.env.ref('advanced_subscription_management.view_subscription_order_form').id, 'form')],
             'target': 'current',
         }
 
@@ -432,9 +463,9 @@ class SaleOrder(models.Model):
         """Returns the window action to display all upsell quotes linked to this subscription."""
         self.ensure_one()
         upsells = self.subscription_child_ids.filtered(lambda o: o.subscription_state == '7_upsell')
-        action = self.env["ir.actions.actions"]._for_xml_id("subscription_management.action_subscription_upsells")
+        action = self.env["ir.actions.actions"]._for_xml_id("advanced_subscription_management.action_subscription_upsells")
         if len(upsells) == 1:
-            action['views'] = [(self.env.ref('subscription_management.view_subscription_order_form').id, 'form')]
+            action['views'] = [(self.env.ref('advanced_subscription_management.view_subscription_order_form').id, 'form')]
             action['res_id'] = upsells.id
         else:
             action['domain'] = [('id', 'in', upsells.ids)]
@@ -470,7 +501,7 @@ class SaleOrder(models.Model):
                 'order_line': [Command.delete(line.id) for line in non_recurring_lines]
             })
 
-        self.message_post(body=_("A renewal quotation <a href=# data-oe-model=sale.order data-oe-id=%d>%s</a> has been created.") % (renew_order.id, renew_order.name))
+        self.message_post(body=Markup(_("A renewal quotation <a href=# data-oe-model=sale.order data-oe-id=%d>%s</a> has been created.")) % (renew_order.id, renew_order.name))
 
         return {
             'name': _('Renewal Quotation'),
@@ -478,7 +509,7 @@ class SaleOrder(models.Model):
             'res_model': 'sale.order',
             'view_mode': 'form',
             'res_id': renew_order.id,
-            'views': [(self.env.ref('subscription_management.view_subscription_order_form').id, 'form')],
+            'views': [(self.env.ref('advanced_subscription_management.view_subscription_order_form').id, 'form')],
             'target': 'current',
         }
 
@@ -489,7 +520,7 @@ class SaleOrder(models.Model):
         return {
             'name': _('Close Subscription Reason'),
             'type': 'ir.actions.act_window',
-            'res_model': 'subscription.close.wizard',
+            'res_model': 'subscription.close',
             'view_mode': 'form',
             'target': 'new',
             'context': {
@@ -511,7 +542,7 @@ class SaleOrder(models.Model):
             order.message_post(body=_("Subscription closed/churned."))
 
             # Trigger signature email
-            template = self.env.ref('subscription_management.mail_template_subscription_close_signature_v2', raise_if_not_found=False)
+            template = self.env.ref('advanced_subscription_management.mail_template_subscription_close_signature_v2', raise_if_not_found=False)
             if template:
                 template.sudo().send_mail(order.id, force_send=True)
 
@@ -1181,17 +1212,12 @@ class SaleOrderLine(models.Model):
     associated with service subscription line items."""
 
     _inherit = 'sale.order.line'
+    _description = 'Sale Order Line'
 
     resource_id = fields.Many2one(
         'res.partner', string='Resource',
         help="Select resource associated with this line."
     )
-
-    @api.onchange('product_id', 'product_uom_qty')
-    def _onchange_product_id_subscription(self):
-        """Force price recomputation in the UI when product or quantity changes."""
-        if self.order_id.plan_id:
-            self._compute_price_unit()
 
     @api.depends('order_id.plan_id', 'order_id.pricelist_id', 'product_id', 'product_uom_qty')
     def _compute_price_unit(self):
@@ -1216,8 +1242,14 @@ class SaleOrderLine(models.Model):
                 if pricing:
                     line.price_unit = pricing.price
 
+    @api.onchange('product_id', 'product_uom_qty')
+    def _onchange_product_id_subscription(self):
+        """Force price recomputation in the UI when product or quantity changes."""
+        if self.order_id.plan_id:
+            self._compute_price_unit()
+
     def write(self, vals):
-        # Block price_unit changes on lines belonging to a price-locked subscription.
+        """Block price_unit changes on lines belonging to a price-locked subscription."""
         if 'price_unit' in vals and not self.env.context.get('_price_lock_bypass'):
             locked_lines = self.filtered(lambda l: l.order_id.is_price_locked and l.product_id.recurring_ok)
             if locked_lines:
@@ -1231,50 +1263,4 @@ class SaleOrderLine(models.Model):
         return super().write(vals)
 
 
-# ── Wizards ───────────────────────────────────────────────────────────────────
 
-class SubscriptionCloseWizard(models.TransientModel):
-    """Wizard allowing users to select a close reason before terminating a subscription."""
-
-    _name = 'subscription.close.wizard'
-    _description = 'Close Subscription Wizard'
-
-    sale_order_id = fields.Many2one(
-        'sale.order', string='Subscription (Sale Order)', required=True
-    )
-    close_reason_id = fields.Many2one(
-        'subscription.close.reason', string='Close Reason', required=True
-    )
-    notes = fields.Text(string='Notes')
-
-    def action_close(self):
-        """Apply the selected close reason and permanently close the subscription."""
-        self.ensure_one()
-        self.sale_order_id._action_close_confirm(
-            close_reason_id=self.close_reason_id.id if self.close_reason_id else None,
-            notes=self.notes,
-        )
-        return {'type': 'ir.actions.act_window_close'}
-
-
-class SubscriptionChangePlanWizard(models.TransientModel):
-    """Wizard for changing the subscription plan on an active contract."""
-
-    _name = 'subscription.change.plan.wizard'
-    _description = 'Change Subscription Plan Wizard'
-
-    sale_order_id = fields.Many2one(
-        'sale.order', string='Subscription (Sale Order)', required=True
-    )
-    plan_id = fields.Many2one(
-        'subscription.plan', string='New Plan', required=True
-    )
-
-    def action_change_plan(self):
-        """Update the subscription's plan and post a chatter message with the change."""
-        self.ensure_one()
-        self.sale_order_id.write({'plan_id': self.plan_id.id})
-        self.sale_order_id.message_post(
-            body=Markup(_('Subscription plan changed to <b>%s</b>.')) % self.plan_id.name
-        )
-        return {'type': 'ir.actions.act_window_close'}

@@ -1,4 +1,24 @@
 # -*- coding: utf-8 -*-
+#############################################################################
+#
+#    Cybrosys Technologies Pvt. Ltd.
+#
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
+#
+#    You can modify it under the terms of the GNU LESSER
+#    GENERAL PUBLIC LICENSE (LGPL v3), Version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
+#
+#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
+#    (LGPL v3) along with this program.
+#    If not, see <http://www.gnu.org/licenses/>.
+#
+#############################################################################
 from odoo import models, fields
 
 class LoyaltyProgram(models.Model):
@@ -6,6 +26,7 @@ class LoyaltyProgram(models.Model):
     recurring subscription discounts, limited invoice application, and
     first-time customer constraints."""
     _inherit = 'loyalty.program'
+    _description = 'Loyalty Program'
 
     recurring_type = fields.Selection([
         ('first', 'First Invoice Only'),
@@ -24,7 +45,7 @@ class LoyaltyProgram(models.Model):
         help="Leave empty to apply to all plans."
     )
     
-    first_time_only = fields.Boolean(
+    is_first_time_only = fields.Boolean(
         string='First-Time Customers Only', default=False,
         help="If true, this promotion will only apply if the customer has no previous active subscriptions."
     )

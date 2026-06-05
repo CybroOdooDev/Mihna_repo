@@ -130,7 +130,7 @@
     <!-- Menu -->
     <menuitem id="menu_subscription_plan" 
               name="Recurring Plans" 
-              parent="subscription_management.subscription_menu_configuration" 
+              parent="advanced_subscription_management.subscription_menu_configuration" 
               action="action_subscription_plan" 
               sequence="10"/>
 </odoo>

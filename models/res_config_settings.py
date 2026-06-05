@@ -1,5 +1,27 @@
 # -*- coding: utf-8 -*-
-from odoo import models, fields, api
+#############################################################################
+#
+#    Cybrosys Technologies Pvt. Ltd.
+#
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
+#
+#    You can modify it under the terms of the GNU LESSER
+#    GENERAL PUBLIC LICENSE (LGPL v3), Version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
+#
+#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
+#    (LGPL v3) along with this program.
+#    If not, see <http://www.gnu.org/licenses/>.
+#
+#############################################################################
+from odoo import models, fields, api, _
+from odoo.exceptions import UserError
+import requests
 
 class SubscriptionWhatsAppConfig(models.Model):
     """Model storing WhatsApp integration settings for the UltraMsg gateway api.
@@ -19,9 +41,6 @@ class SubscriptionWhatsAppConfig(models.Model):
     def action_test_and_confirm(self):
         """Test the connection to the UltraMsg API using the provided credentials
         and confirm the configuration if successful."""
-        import requests
-        from odoo.exceptions import UserError
-        from odoo import _
         for record in self:
             if not record.instance_id or not record.token:
                 raise UserError(_("Please provide both Instance ID and Token before confirming."))

@@ -56,13 +56,15 @@ class SubscriptionWhatsAppConfig(models.Model):
                     data = {}
                     
                 if isinstance(data, dict) and data.get('error'):
-                    raise UserError(_("Failed to connect to WhatsApp Instance. Please verify your Instance ID, Token, and ensure your instance is active."))
+                    raise UserError(_("Failed to connect to WhatsApp Instance. Please verify your Instance ID, "
+                                      "Token, and ensure your instance is active."))
                 
                 if response.status_code == 200:
                     # If request is successful and no error in JSON, transition to confirmed
                     record.state = 'confirmed'
                 else:
-                    raise UserError(_("Failed to verify credentials. HTTP Status: %s. Response: %s") % (response.status_code, response.text))
+                    raise UserError(_("Failed to verify credentials. HTTP Status: %s. Response: %s")
+                                    % (response.status_code, response.text))
             except requests.exceptions.RequestException as e:
                 raise UserError(_("Connection Error while reaching UltraMsg API: %s") % str(e))
 

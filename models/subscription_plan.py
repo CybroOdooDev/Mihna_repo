@@ -55,7 +55,9 @@ class SubscriptionPlan(models.Model):
         ('semi_annually', 'Semi-Annually'),
         ('yearly', 'Yearly'),
         ('custom', 'Custom Days')
-    ], string='Billing Period', required=True, default='monthly', compute='_compute_billing_period', store=True, readonly=False)
+    ], string='Billing Period', required=True, default='monthly',
+        compute='_compute_billing_period',
+        store=True, readonly=False)
     custom_days = fields.Integer(
         string='Custom Days',
         help='Used only if Billing Period is set to Custom Days.',
@@ -116,7 +118,8 @@ class SubscriptionPlan(models.Model):
 
     @api.depends('billing_period_value', 'billing_period_unit')
     def _compute_billing_period(self):
-        """Automatically sync the internal backend 'billing_period' field with the user-facing 'billing_period_value' and 'billing_period_unit' fields."""
+        """Automatically sync the internal backend 'billing_period' field with the user-facing
+         'billing_period_value' and 'billing_period_unit' fields."""
         for plan in self:
             val = plan.billing_period_value
             unit = plan.billing_period_unit
@@ -217,7 +220,8 @@ class SubscriptionPlanPricing(models.Model):
     )
     variant_id = fields.Many2one('product.attribute.value', string='Variant')
     pricelist_id = fields.Many2one('product.pricelist', string='Pricelist')
-    currency_id = fields.Many2one('res.currency', string='Currency', related='pricelist_id.currency_id', store=True)
+    currency_id = fields.Many2one('res.currency', string='Currency', related='pricelist_id.currency_id',
+                                  store=True)
     price = fields.Float(string='Unit Price', required=True)
 
     @api.model_create_multi
@@ -349,4 +353,3 @@ class SubscriptionPlanRemark(models.Model):
     )
     sequence = fields.Integer(string='Sequence', default=10)
     name = fields.Char(string='Remark', required=True, translate=True)
-

@@ -1034,15 +1034,22 @@ class CustomPortalAccount(PortalAccount):
 
         # --- Metrics Calculation ---
         from odoo import fields
-        AccountMove = request.env['account.move'].sudo()
+        AccountMove = request.env['account.move']
         today = fields.Date.today()
         
         # Outstanding & Overdue Invoices
-        unpaid_invoices = AccountMove.search([
-            ('commercial_partner_id', '=', partner.commercial_partner_id.id),
+        invoice_domain = [
             ('state', 'not in', ('cancel', 'draft')),
+            ('move_type', 'in', ('out_invoice', 'out_refund', 'in_invoice', 'in_refund', 'out_receipt', 'in_receipt'))
+        ]
+        if hasattr(self, '_get_invoices_domain'):
+            try:
+                invoice_domain = self._get_invoices_domain()
+            except Exception:
+                pass
+
+        unpaid_invoices = AccountMove.search(invoice_domain + [
             ('payment_state', 'in', ('not_paid', 'partial')),
-            ('move_type', '=', 'out_invoice')
         ])
         portal_outstanding_amount = sum(unpaid_invoices.mapped('amount_residual'))
         portal_overdue_count = sum(1 for inv in unpaid_invoices if inv.invoice_date_due and

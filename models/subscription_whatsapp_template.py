@@ -30,5 +30,7 @@ class SubscriptionWhatsappTemplate(models.Model):
     body = fields.Html(
         string='Body', 
         required=True, 
-        help="Custom text template for WhatsApp. Available placeholders: {customer_name}, {subscription_name}, {invoice_amount}, {invoice_currency}, {status_label}"
+        help="Custom text template for WhatsApp."
+             " Available placeholders:"
+             " {customer_name}, {subscription_name}, {invoice_amount}, {invoice_currency}, {status_label}"
     )

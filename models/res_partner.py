@@ -27,7 +27,14 @@ class ResPartner(models.Model):
     _description = 'Res Partner'
 
     subscription_ids = fields.One2many('sale.order', 'partner_id', string='Subscriptions',
-                                       domain=[('subscription_state', 'in', ['1_draft', '2_renewal', '3_progress', '4_paused', '5_renewed', '6_churn', '7_upsell', '8_blocked'])])
+                                       domain=[('subscription_state', 'in', ['1_draft',
+                                                                             '2_renewal',
+                                                                             '3_progress',
+                                                                             '4_paused',
+                                                                             '5_renewed',
+                                                                             '6_churn',
+                                                                             '7_upsell',
+                                                                             '8_blocked'])])
     subscription_count = fields.Integer(string='Subscription Count', compute='_compute_subscription_count')
 
     def _compute_subscription_count(self):
@@ -37,4 +44,3 @@ class ResPartner(models.Model):
                 ('partner_id', '=', partner.id),
                 ('subscription_state', 'in', ['3_progress', '4_paused', '1_draft', '2_renewal', '8_blocked']),
             ])
-

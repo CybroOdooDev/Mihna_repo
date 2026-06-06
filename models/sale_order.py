@@ -414,7 +414,8 @@ class SaleOrder(models.Model):
         
         valid_invoices = self.invoice_ids.filtered(lambda inv: inv.state != 'cancel')
         if not valid_invoices:
-            raise UserError(_("You can not upsell or renew a subscription that has not been invoiced yet. Please, update directly the %s contract or invoice it first.") % self.name)
+            raise UserError(_("You can not upsell or renew a subscription that has not been invoiced yet."
+                              " Please, update directly the %s contract or invoice it first.") % self.name)
             
         upsell_order = self.copy({
             'origin': _("Upsell of %s") % self.name,
@@ -494,7 +495,8 @@ class SaleOrder(models.Model):
         from odoo import Command
         
         non_recurring_lines = renew_order.order_line.filtered(
-            lambda l: l.product_id and not getattr(l.product_id, 'recurring_ok', False) and not getattr(l.product_id.product_tmpl_id, 'recurring_ok', False)
+            lambda l: l.product_id and not getattr(l.product_id, 'recurring_ok', False)
+                      and not getattr(l.product_id.product_tmpl_id, 'recurring_ok', False)
         )
         if non_recurring_lines:
             renew_order.write({
@@ -542,12 +544,15 @@ class SaleOrder(models.Model):
             order.message_post(body=_("Subscription closed/churned."))
 
             # Trigger signature email
-            template = self.env.ref('advanced_subscription_management.mail_template_subscription_close_signature_v2', raise_if_not_found=False)
+            template = self.env.ref(
+                'advanced_subscription_management.mail_template_subscription_close_signature_v2',
+                raise_if_not_found=False)
             if template:
                 template.sudo().send_mail(order.id, force_send=True)
 
     def action_mrr_smart_button(self):
-        """Returns the window action details to navigate to and display MRR breakdown analysis records linked to this subscription."""
+        """Returns the window action details to navigate to and
+         display MRR breakdown analysis records linked to this subscription."""
         self.ensure_one()
         return {
             'name': _('MRR Analysis'),
@@ -557,18 +562,9 @@ class SaleOrder(models.Model):
             'domain': [('sale_order_id', '=', self.id)],
         }
 
-    def action_lock_prices(self):
-        """Locks the unit prices of recurring items (grandfathering) on this subscription to protect them from future automatic pricelist updates."""
-        self.write({'is_price_locked': True})
-        self.message_post(body=_("Subscription prices have been locked (grandfathered)."))
-
-    def action_unlock_prices(self):
-        """Unlocks unit prices on this subscription to allow automated pricelist updates or manual reapplications to modify them."""
-        self.write({'is_price_locked': False})
-        self.message_post(body=_("Subscription prices have been unlocked."))
-
     def action_apply_latest_prices(self):
-        """Compares and overrides unit prices on all recurring lines of this subscription with the latest product template list prices, logging price change actions."""
+        """Compares and overrides unit prices on all recurring lines of this subscription
+         with the latest product template list prices, logging price change actions."""
         updated = 0
         for line in self.order_line.filtered(lambda l: l.product_id.recurring_ok):
             new_price = line.product_id.list_price
@@ -650,7 +646,12 @@ class SaleOrder(models.Model):
                 })
         
         line.with_context(_price_lock_bypass=True).write({'product_uom_qty': new_quantity})
-        self.message_post(body=Markup(_('Quantity of <b>%s</b> updated from %s to %s. Prorated charges applied if applicable.')) % (line.product_id.display_name, old_qty, new_quantity))
+        self.message_post(
+            body=Markup(_(
+                'Quantity of <b>%s</b> updated from %s to %s. '
+                'Prorated charges applied if applicable.'
+            )) % (line.product_id.display_name, old_qty, new_quantity)
+        )
         return True
 
     def _preview_next_invoice(self):
@@ -683,7 +684,8 @@ class SaleOrder(models.Model):
                         break
 
             # Handle Prorated Price for the first cycle preview
-            if self.subscription_cycle <= 1 and self.plan_id and getattr(self.plan_id, 'align_to_period_start', False) and getattr(line.product_id.product_tmpl_id, 'prorated_price', False):
+            if (self.subscription_cycle <= 1 and self.plan_id and getattr(self.plan_id, 'align_to_period_start', False)
+                    and getattr(line.product_id.product_tmpl_id, 'prorated_price', False)):
                 delta = self._get_billing_delta()
                 current_date = self.next_invoice_date or fields.Date.today()
                 
@@ -707,7 +709,9 @@ class SaleOrder(models.Model):
             
             tax_amt = 0.0
             if line.tax_ids:
-                taxes = line.tax_ids.compute_all(price_unit, self.currency_id, line.product_uom_qty, line.product_id, self.partner_id)
+                taxes = line.tax_ids.compute_all(
+                    price_unit, self.currency_id, line.product_uom_qty, line.product_id, self.partner_id
+                )
                 tax_amt = sum(t.get('amount', 0.0) for t in taxes.get('taxes', []))
             
             preview['lines'].append({
@@ -729,7 +733,8 @@ class SaleOrder(models.Model):
             if program:
                 if getattr(program, 'recurring_type', False) == 'first' and self.subscription_cycle > 1:
                     continue
-                if getattr(program, 'recurring_type', False) == 'limited' and self.subscription_cycle > getattr(program, 'recurring_invoices', 1):
+                if (getattr(program, 'recurring_type', False) == 'limited' and
+                        self.subscription_cycle > getattr(program, 'recurring_invoices', 1)):
                     continue
 
             # Reward lines typically have negative price_unit
@@ -743,7 +748,9 @@ class SaleOrder(models.Model):
             preview['discount_amount'] += abs(subtotal)
             
             if line.tax_ids:
-                taxes = line.tax_ids.compute_all(line.price_unit, self.currency_id, line.product_uom_qty, line.product_id, self.partner_id)
+                taxes = line.tax_ids.compute_all(
+                    line.price_unit, self.currency_id, line.product_uom_qty, line.product_id, self.partner_id
+                )
                 tax_amt = sum(t.get('amount', 0.0) for t in taxes.get('taxes', []))
                 tax_total += tax_amt
 
@@ -763,7 +770,8 @@ class SaleOrder(models.Model):
             })
             subtotal_before_discount += subtotal
             if usage.product_id.taxes_id:
-                taxes = usage.product_id.taxes_id.compute_all(price_unit, self.currency_id, usage.quantity, usage.product_id, self.partner_id)
+                taxes = usage.product_id.taxes_id.compute_all(
+                    price_unit, self.currency_id, usage.quantity, usage.product_id, self.partner_id)
                 tax_total += sum(t.get('amount', 0.0) for t in taxes.get('taxes', []))
 
         # 3. Unbilled Prorations
@@ -1261,6 +1269,3 @@ class SaleOrderLine(models.Model):
                     "'Unlock Prices' or use 'Apply Latest Prices'."
                 ) % product_names)
         return super().write(vals)
-
-
-

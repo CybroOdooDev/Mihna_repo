@@ -334,9 +334,12 @@ class SubscriptionDashboard(models.AbstractModel):
             forecast_revenue = round(mrr * 1.05, 2) # Assume 5% growth for forecast
             
             # Nav Counts
-            subs_count = self.env['sale.order'].search_count([('is_subscription', '=', True), ('subscription_state', 'in', ['3_progress', '4_paused'])])
+            subs_count = self.env['sale.order'].search_count([('is_subscription', '=', True),
+                                                              ('subscription_state', 'in', ['3_progress', '4_paused'])])
             customers_count = self.env['res.partner'].search_count([('customer_rank', '>', 0)])
-            invoices_count = self.env['account.move'].search_count([('move_type', 'in', ('out_invoice', 'out_refund', 'out_receipt'))])
+            invoices_count = self.env['account.move'].search_count([
+                ('move_type', 'in', ('out_invoice', 'out_refund', 'out_receipt')
+                 )])
             dunning_count = len(dunning_subs)
             plans_count = self.env['subscription.plan'].search_count([])
             
@@ -388,4 +391,3 @@ class SubscriptionDashboard(models.AbstractModel):
             import traceback
             error_trace = traceback.format_exc()
             return {'error': f"DASHBOARD ERROR: {str(e)} \n\n TRACE: {error_trace}"}
-

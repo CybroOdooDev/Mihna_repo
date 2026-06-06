@@ -49,4 +49,3 @@ class LoyaltyProgram(models.Model):
         string='First-Time Customers Only', default=False,
         help="If true, this promotion will only apply if the customer has no previous active subscriptions."
     )
-    

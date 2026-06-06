@@ -27,7 +27,8 @@ class SubscriptionProration(models.Model):
     _description = 'Subscription Proration'
     _order = 'date desc, id desc'
 
-    subscription_order_id = fields.Many2one('sale.order', string='Subscription', required=True, ondelete='cascade')
+    subscription_order_id = fields.Many2one('sale.order', string='Subscription',
+                                            required=True, ondelete='cascade')
     product_id = fields.Many2one('product.product', string='Product', required=True)
     description = fields.Char(string='Description', required=True)
     quantity = fields.Float(string='Quantity', default=1.0)

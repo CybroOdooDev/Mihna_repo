@@ -35,7 +35,8 @@ class SubscriptionDunningPlan(models.Model):
         'subscription.dunning.plan.line', 'plan_id', string='Dunning Stages',
         copy=True
     )
-    company_id = fields.Many2one('res.company', string='Company', default=lambda self: self.env.company)
+    company_id = fields.Many2one('res.company', string='Company',
+                                 default=lambda self: self.env.company)
 
 class SubscriptionDunningPlanLine(models.Model):
     """Model representing a single stage or trigger level within a Dunning Plan.
@@ -69,7 +70,9 @@ class SubscriptionDunningPlanLine(models.Model):
     whatsapp_template_id = fields.Many2one(
         'subscription.whatsapp.template',
         string='WhatsApp Template',
-        help="Custom text template for WhatsApp. Available placeholders: {customer_name}, {subscription_name}, {invoice_amount}, {invoice_currency}, {status_label}"
+        help="Custom text template for WhatsApp."
+             " Available placeholders:"
+             " {customer_name}, {subscription_name}, {invoice_amount}, {invoice_currency}, {status_label}"
     )
 
     def _compute_display_name(self):

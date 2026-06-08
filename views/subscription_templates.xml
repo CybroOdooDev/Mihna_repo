@@ -1339,10 +1339,10 @@
                                         <div class="d-flex justify-content-between align-items-start mb-1">
                                             <div>
                                                 <div class="font-weight-bold" style="color: #212529; font-size: 15px;"><t t-esc="plan.name"/></div>
-                                                <div class="text-muted" style="font-size: 12px;"><t t-esc="seat_qty"/> seat(s) × <span t-esc="website_price" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/> / <t t-esc="plan.billing_period"/></div>
+                                                <div class="text-muted" style="font-size: 12px;"><span id="summary_seat_qty"><t t-esc="seat_qty"/></span> seat(s) × <span t-esc="website_price" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/> / <t t-esc="plan.billing_period"/></div>
                                             </div>
                                             <div class="font-weight-bold" style="color: #212529; font-size: 15px;">
-                                                <span t-esc="subtotal" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/>
+                                                <span id="summary_subtotal_top" t-esc="subtotal" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/>
                                             </div>
                                         </div>
                                         
@@ -1364,7 +1364,7 @@
 
                                         <div class="d-flex justify-content-between mb-3" style="font-size: 14px; color: #495057;">
                                             <span>Subtotal</span>
-                                            <span class="font-weight-bold" style="color: #212529;"><span t-esc="subtotal" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/></span>
+                                            <span class="font-weight-bold" style="color: #212529;"><span id="summary_subtotal_bottom" t-esc="subtotal" t-options="{'widget': 'monetary', 'display_currency': plan.currency_id}"/></span>
                                         </div>
                                         
                                         <!-- Dynamic Discount Row -->
@@ -1473,7 +1473,11 @@
                                         if (data.result.redirect) {
                                             window.location.href = data.result.redirect;
                                         } else {
-                                            window.location.href = window.location.pathname;
+                                            if (seats !== null) {
+                                                document.getElementById('seat-count').value = seats;
+                                            }
+                                            updateSummaryUI(data.result);
+                                            document.getElementById('seat-count').style.opacity = '1';
                                         }
                                     } else if (data.result &amp;&amp; data.result.error) {
                                         alert(data.result.error);
@@ -1572,6 +1576,18 @@
                                         } else {
                                             taxesRow.style.setProperty('display', 'none', 'important');
                                         }
+                                    }
+
+                                    // Update Subtotal and Seats
+                                    if (res.new_subtotal) {
+                                        const subTop = document.getElementById('summary_subtotal_top');
+                                        if (subTop) subTop.textContent = res.new_subtotal;
+                                        const subBot = document.getElementById('summary_subtotal_bottom');
+                                        if (subBot) subBot.textContent = res.new_subtotal;
+                                    }
+                                    if (res.seats) {
+                                        const seatQtyEl = document.getElementById('summary_seat_qty');
+                                        if (seatQtyEl) seatQtyEl.textContent = res.seats;
                                     }
 
                                     // Update Total

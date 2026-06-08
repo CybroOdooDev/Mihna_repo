@@ -53,7 +53,6 @@ Features include:
         'views/loyalty_program_views.xml',
         'views/subscription_plan_views.xml',
         'views/sale_order_views.xml',
-        'views/subscription_price_lock_views.xml',
         'views/subscription_dunning_views.xml',
         'views/subscription_whatsapp_template_views.xml',
         'report/subscription_report_views.xml',

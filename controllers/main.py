@@ -62,7 +62,6 @@ class SubscriptionController(http.Controller):
             'partner_id': partner.id,
             'plan_id': plan.id,
             'state': 'draft',
-            'is_price_locked': True,
         })
 
         product = plan.product_id or request.env['product.product'].sudo().search(
@@ -232,9 +231,16 @@ class SubscriptionController(http.Controller):
             elif hasattr(order, '_amount_all'):
                 order._amount_all()
 
-        # Calculate discount amount safely by looking at price_unit vs price_subtotal
-        seat_qty = sum(line.product_uom_qty for line in order.order_line if line.product_id == (plan.product_id or line.product_id))
-        base_amount = sum((line.price_unit * line.product_uom_qty) for line in order.order_line if line.price_subtotal >= 0)
+        # Calculate discount amount safely by looking at list price vs untaxed
+        seat_qty = 0.0
+        for line in order.order_line:
+            if not getattr(line, 'reward_id', False):
+                seat_qty += line.product_uom_qty
+        if seat_qty <= 0:
+            seat_qty = 1.0
+            
+        base_unit_price = plan.product_id.list_price if plan.product_id else plan.total_price
+        base_amount = base_unit_price * seat_qty
         discount_amount = base_amount - order.amount_untaxed
         if discount_amount < 0:
             discount_amount = 0.0
@@ -298,7 +304,7 @@ class SubscriptionController(http.Controller):
         return request.render('advanced_subscription_management.subscription_checkout_page', render_values)
 
     @http.route(['/subscriptions/checkout/save_address'],
-                type='json', auth="public", methods=['POST'], website=True, csrf=False)
+                type='jsonrpc', auth="public", methods=['POST'], website=True, csrf=False)
     def save_address(self, name, email, street, city, zip_code, country_id, state_id, plan_id=None, **kw):
         """AJAX endpoint to save the billing address of the current user or guest
         during the subscription checkout process."""
@@ -347,8 +353,13 @@ class SubscriptionController(http.Controller):
                 
                 # Calculate discount amount
                 base_unit_price = plan.product_id.list_price if plan.product_id else plan.total_price
-                seat_qty = sum(line.product_uom_qty for line in order.order_line
-                               if line.product_id == (plan.product_id or line.product_id))
+                seat_qty = 0.0
+                for line in order.order_line:
+                    if not getattr(line, 'reward_id', False):
+                        seat_qty += line.product_uom_qty
+                if seat_qty <= 0:
+                    seat_qty = 1.0
+                    
                 original_total = base_unit_price * seat_qty
                 discount_amount = original_total - order.amount_untaxed
                 if discount_amount < 0:
@@ -381,7 +392,7 @@ class SubscriptionController(http.Controller):
         return {'success': True}
 
     @http.route(['/subscriptions/checkout/update_config'],
-                type='json', auth="public", methods=['POST'], website=True, csrf=False)
+                type='jsonrpc', auth="public", methods=['POST'], website=True, csrf=False)
     def update_config(self, plan_id, seats=None, cycle=None, **kw):
         """AJAX endpoint to dynamically update seat count or billing cycle
         on the active draft sales order before finalizing checkout."""
@@ -395,36 +406,81 @@ class SubscriptionController(http.Controller):
         if not order.exists() or order.state != 'draft':
             return {'success': False, 'error': 'Invalid order state.'}
 
-        # Update seats
-        if seats is not None:
+        try:
+            plan = order.plan_id
+            # Update seats
+            if seats is not None:
+                new_qty = max(1.0, float(seats))
+                target_product_id = plan.product_id.id if plan.product_id else False
+                for line in order.order_line:
+                    # Update the main subscription line, ignoring promotional reward lines
+                    if not getattr(line, 'reward_id', False):
+                        line.write({'product_uom_qty': new_qty})
+                
+                # Force recomputing fiscal position, taxes, and prices
+                order.env.flush_all()
+                if hasattr(order, '_compute_fiscal_position_id'):
+                    order._compute_fiscal_position_id()
+                if hasattr(order.order_line, '_compute_tax_ids'):
+                    order.order_line._compute_tax_ids()
+                if hasattr(order, '_recompute_prices'):
+                    order._recompute_prices()
+                if hasattr(order, '_update_programs_and_rewards'):
+                    order._update_programs_and_rewards()
+                order.env.flush_all()
+                    
+            # Handle billing cycle switch
+            if cycle:
+                current_plan = request.env['subscription.plan'].sudo().browse(int(plan_id))
+                if current_plan.billing_period != cycle:
+                    # Find matching plan with the requested cycle
+                    new_plan = request.env['subscription.plan'].sudo().search([
+                        ('name', '=', current_plan.name),
+                        ('billing_period', '=', cycle),
+                        ('active', '=', True)
+                    ], limit=1)
+                    
+                    if new_plan:
+                        return {'success': True, 'redirect': f'/subscriptions/checkout/{new_plan.id}'}
+                    else:
+                        return {'success': False, 'error': f'The {cycle} variant for this plan is not currently available.'}
+                    
+            target_product_id = plan.product_id.id if plan.product_id else False
+            base_unit_price = plan.product_id.list_price if plan.product_id else plan.total_price
+            
+            seat_qty = 0.0
             for line in order.order_line:
-                if line.product_id.recurring_ok:
-                    line.product_uom_qty = max(1.0, float(seats))
-            # Force recomputing fiscal position, taxes, and prices to ensure backend/frontend synchronization
-            order._compute_fiscal_position_id()
-            order.order_line._compute_tax_ids()
-            order._recompute_prices()
-            order._update_programs_and_rewards()
+                if not getattr(line, 'reward_id', False):
+                    seat_qty += line.product_uom_qty
+            if seat_qty <= 0:
+                seat_qty = 1.0
                 
-        # Handle billing cycle switch
-        if cycle:
-            current_plan = request.env['subscription.plan'].sudo().browse(int(plan_id))
-            if current_plan.billing_period != cycle:
-                # Find matching plan with the requested cycle
-                new_plan = request.env['subscription.plan'].sudo().search([
-                    ('name', '=', current_plan.name),
-                    ('billing_period', '=', cycle),
-                    ('active', '=', True)
-                ], limit=1)
-                
-                if new_plan:
-                    return {'success': True, 'redirect': f'/subscriptions/checkout/{new_plan.id}'}
-                else:
-                    return {'success': False, 'error': f'The {cycle} variant for this plan is not currently available.'}
-                
-        return {'success': True}
-
-    @http.route(['/subscriptions/checkout/validate_coupon'], type='json', auth="public", methods=['POST'], website=True, csrf=False)
+            original_total = base_unit_price * seat_qty
+            discount_amount = original_total - order.amount_untaxed
+            if discount_amount < 0:
+                discount_amount = 0.0
+            
+            currency = plan.currency_id
+            formatted_discount = f"{currency.symbol or ''}{discount_amount:.2f}" if currency else f"${discount_amount:.2f}"
+            formatted_total = f"{currency.symbol or ''}{order.amount_total:.2f}" if currency else f"${order.amount_total:.2f}"
+            formatted_tax = f"{currency.symbol or ''}{order.amount_tax:.2f}" if currency else f"${order.amount_tax:.2f}"
+            
+            formatted_subtotal = f"{currency.symbol or ''}{original_total:.2f}" if currency else f"${original_total:.2f}"
+            
+            return {
+                'success': True,
+                'new_total': formatted_total,
+                'new_subtotal': formatted_subtotal,
+                'new_tax': formatted_tax,
+                'has_tax': order.amount_tax > 0,
+                'discount_amount': formatted_discount,
+                'discount_amount_raw': discount_amount,
+                'seats': seat_qty,
+            }
+        except Exception as e:
+            return {'success': False, 'error': f"Server Error: {str(e)}"}
+    @http.route(['/subscriptions/checkout/validate_coupon'],
+                type='jsonrpc', auth="public", methods=['POST'], website=True, csrf=False)
     def validate_coupon(self, coupon_code, plan_id, **kw):
         """Validate the applied coupon code asynchronously via JSON-RPC endpoint."""
         try:
@@ -621,7 +677,6 @@ class SubscriptionController(http.Controller):
                     'partner_shipping_id': partner.id,
                     'plan_id': plan.id,
                     'state': 'draft',
-                    'is_price_locked': True,
                 })
                 product = plan.product_id or request.env['product.product'].sudo().search(
                     [('recurring_ok', '=', True), ('subscription_plan_id', '=', plan.id)], limit=1
@@ -1217,7 +1272,7 @@ class CustomPortalAccount(PortalAccount):
                 'subscription_id': subscription.id,
             })
             for line in upsell.order_line.filtered(lambda l: l.product_id.recurring_ok):
-                line.with_context(_price_lock_bypass=True).write({'product_uom_qty': 0})
+                line.write({'product_uom_qty': 0})
                 
             # Attempt to send quotation email, fallback to just marking it sent
             try:

@@ -73,10 +73,7 @@ class SaleOrder(models.Model):
         'res.partner', string='Referrer',
         help="Select referring partner for this order."
     )
-    is_price_locked = fields.Boolean(
-        string='Price Locked', default=False,
-        help="If checked, the unit prices on recurring lines are grandfathered and locked."
-    )
+
     close_reason_id = fields.Many2one(
         'subscription.close.reason', string='Close Reason'
     )
@@ -375,16 +372,25 @@ class SaleOrder(models.Model):
 
         # 6. Chatter Notifications
         parent.message_post(
-            body=Markup(_("This subscription is renewed in <a href=# data-oe-model=sale.order data-oe-id=%d>%s</a> with a change of plan.")) % (self.id, self.name)
+            body=Markup(
+                _("This subscription is renewed in "
+                  "<a href=# data-oe-model=sale.order data-oe-id=%d>%s</a> "
+                  "with a change of plan.")
+            ) % (self.id, self.name)
         )
         self.message_post(
-            body=Markup(_("This subscription is a renewal of <a href=# data-oe-model=sale.order data-oe-id=%d>%s</a>.")) % (parent.id, parent.name)
+            body=Markup(
+                _("This subscription is a renewal of "
+                  "<a href=# data-oe-model=sale.order data-oe-id=%d>%s</a>.")
+            ) % (parent.id, parent.name)
         )
 
     def action_view_mrr(self):
         """Open the MRR Breakdown report filtered for this subscription as a timeline line chart."""
         self.ensure_one()
-        action = self.env['ir.actions.act_window']._for_xml_id('advanced_subscription_management.action_subscription_reporting_mrr_breakdown')
+        action = self.env['ir.actions.act_window']._for_xml_id(
+            'advanced_subscription_management.action_subscription_reporting_mrr_breakdown'
+        )
         action['domain'] = [('sale_order_id', '=', self.id)]
         action['context'] = {
             'graph_measure': 'mrr_change',
@@ -479,7 +485,10 @@ class SaleOrder(models.Model):
         
         valid_invoices = self.invoice_ids.filtered(lambda inv: inv.state != 'cancel')
         if not valid_invoices:
-            raise UserError(_("You can not upsell or renew a subscription that has not been invoiced yet. Please, update directly the %s contract or invoice it first.") % self.name)
+            raise UserError(_(
+                "You can not upsell or renew a subscription that has not been invoiced yet. "
+                "Please, update directly the %s contract or invoice it first."
+            ) % self.name)
             
         renew_order = self.copy({
             'origin': _("Renewal of %s") % self.name,
@@ -503,7 +512,11 @@ class SaleOrder(models.Model):
                 'order_line': [Command.delete(line.id) for line in non_recurring_lines]
             })
 
-        self.message_post(body=Markup(_("A renewal quotation <a href=# data-oe-model=sale.order data-oe-id=%d>%s</a> has been created.")) % (renew_order.id, renew_order.name))
+        self.message_post(
+            body=Markup(
+                _("A renewal quotation <a href=# data-oe-model=sale.order data-oe-id=%d>%s</a> has been created.")
+            ) % (renew_order.id, renew_order.name)
+        )
 
         return {
             'name': _('Renewal Quotation'),
@@ -562,40 +575,7 @@ class SaleOrder(models.Model):
             'domain': [('sale_order_id', '=', self.id)],
         }
 
-    def action_apply_latest_prices(self):
-        """Compares and overrides unit prices on all recurring lines of this subscription
-         with the latest product template list prices, logging price change actions."""
-        updated = 0
-        for line in self.order_line.filtered(lambda l: l.product_id.recurring_ok):
-            new_price = line.product_id.list_price
-            if new_price != line.price_unit:
-                self.env['subscription.price.change.log'].create({
-                    'sale_order_id': self.id,
-                    'product_id': line.product_id.id,
-                    'old_price': line.price_unit,
-                    'new_price': new_price,
-                    'changed_by': self.env.user.id,
-                    'is_protected': False,
-                    'notes': _('Manually applied via Apply Latest Prices'),
-                })
-                line.with_context(_price_lock_bypass=True).write({'price_unit': new_price})
-                updated += 1
-        if updated:
-            self.message_post(body=Markup(_('<b>%d line(s)</b> updated to latest product prices.')) % updated)
-        else:
-            self.message_post(body=_('All line prices are already up to date.'))
-        return True
 
-    def action_view_price_history(self):
-        """Returns the window action to display price changes and logs linked to this subscription."""
-        self.ensure_one()
-        return {
-            'name': _('Price History'),
-            'type': 'ir.actions.act_window',
-            'res_model': 'subscription.price.change.log',
-            'view_mode': 'list,form',
-            'domain': [('sale_order_id', '=', self.id)],
-        }
 
     def action_pause(self):
         """Pauses billing cycle processing and places the subscription in paused state."""
@@ -608,7 +588,8 @@ class SaleOrder(models.Model):
         self.message_post(body=_("Subscription has been resumed."))
 
     def action_change_seats(self, line_id, new_quantity):
-        """Modifies recurring line quantities (seats) dynamically, applying proration rules for remaining days in cycle."""
+        """Modifies recurring line quantities (seats) dynamically,
+         applying proration rules for remaining days in cycle."""
         self.ensure_one()
         line = self.env['sale.order.line'].browse(line_id)
         if not line or line.order_id.id != self.id:
@@ -617,7 +598,7 @@ class SaleOrder(models.Model):
         old_qty = line.product_uom_qty
         qty_diff = new_quantity - old_qty
         if qty_diff <= 0:
-            line.with_context(_price_lock_bypass=True).write({'product_uom_qty': new_quantity})
+            line.write({'product_uom_qty': new_quantity})
             return True
             
         # Proration logic
@@ -645,7 +626,7 @@ class SaleOrder(models.Model):
                     'amount': prorated_amount,
                 })
         
-        line.with_context(_price_lock_bypass=True).write({'product_uom_qty': new_quantity})
+        line.write({'product_uom_qty': new_quantity})
         self.message_post(
             body=Markup(_(
                 'Quantity of <b>%s</b> updated from %s to %s. '
@@ -655,7 +636,8 @@ class SaleOrder(models.Model):
         return True
 
     def _preview_next_invoice(self):
-        """Generates a complete, structured dictionary preview of lines, taxes, and totals for the next scheduled invoice cycle."""
+        """Generates a complete, structured dictionary preview of lines, taxes,
+         and totals for the next scheduled invoice cycle."""
         self.ensure_one()
         preview = {
             'next_invoice_date': self.next_invoice_date or fields.Date.today(),
@@ -834,7 +816,8 @@ class SaleOrder(models.Model):
         return period_map.get(plan.billing_period, relativedelta(months=1))
 
     def _generate_recurring_invoice(self):
-        """Generates, posts, and attempts automatic payment collection for the next recurring cycle invoice, initiating dunning if the payment fails."""
+        """Generates, posts, and attempts automatic payment collection for the next recurring cycle invoice,
+         initiating dunning if the payment fails."""
         self.ensure_one()
         if self.subscription_state not in ('3_progress',):
             return False
@@ -859,7 +842,7 @@ class SaleOrder(models.Model):
                         # Update the sale order line so the UI reflects the current cycle's price.
                         # Bypassing the lock so the contract explicitly ramps up/down as planned.
                         if line.price_unit != price_unit:
-                            line.with_context(_price_lock_bypass=True).write({'price_unit': price_unit})
+                            line.write({'price_unit': price_unit})
                             self.message_post(body=Markup(_(
                                 '<b>Ramp Pricing Applied:</b> Cycle %s reached.<br/>'
                                 'Unit price for <b>%s</b> updated to <b>%.2f</b>.'
@@ -867,7 +850,12 @@ class SaleOrder(models.Model):
                         break # First matching ramp applies
 
             # Handle Prorated Price for the first cycle
-            if self.subscription_cycle <= 1 and self.plan_id and getattr(self.plan_id, 'align_to_period_start', False) and getattr(line.product_id.product_tmpl_id, 'prorated_price', False):
+            if (
+                self.subscription_cycle <= 1
+                and self.plan_id
+                and getattr(self.plan_id, 'align_to_period_start', False)
+                and getattr(line.product_id.product_tmpl_id, 'prorated_price', False)
+            ):
                 delta = self._get_billing_delta()
                 current_date = self.next_invoice_date or fields.Date.today()
                 
@@ -980,8 +968,13 @@ class SaleOrder(models.Model):
             next_date = (self.next_invoice_date or fields.Date.today()) + relativedelta(days=self.plan_id.trial_period_days)
             for line in self.order_line:
                 if line.discount == 100.0:
-                    line.with_context(_price_lock_bypass=True).write({'discount': 0.0})
-            self.message_post(body=Markup(_("Free trial invoice generated. Next billing date set to %s after %s trial days. Full price will apply on next cycle.")) % (next_date, self.plan_id.trial_period_days))
+                    line.write({'discount': 0.0})
+            self.message_post(
+                body=Markup(
+                    _("Free trial invoice generated. Next billing date set to %s "
+                      "after %s trial days. Full price will apply on next cycle.")
+                ) % (next_date, self.plan_id.trial_period_days)
+            )
         else:
             delta = self._get_billing_delta()
             current_date = self.next_invoice_date or fields.Date.today()
@@ -1000,7 +993,8 @@ class SaleOrder(models.Model):
             vals['is_in_dunning'] = True
             vals['next_dunning_date'] = fields.Date.today()
             if not self.payment_token_id:
-                self.message_post(body=Markup(_("Invoice %s generated, but no payment token is on file. Subscription placed in Dunning." % invoice.name)))
+                self.message_post(body=Markup(_("Invoice %s generated, but no payment token is on file."
+                                                " Subscription placed in Dunning." % invoice.name)))
             
         self.write(vals)
         
@@ -1015,7 +1009,8 @@ class SaleOrder(models.Model):
 
     @api.model
     def _cron_generate_invoices(self):
-        """Automated scheduled action running daily to identify active subscriptions due for recurring billing and generate their next cycle invoices."""
+        """Automated scheduled action running daily to identify active subscriptions due for
+         recurring billing and generate their next cycle invoices."""
         today = fields.Date.today()
         due_subs = self.search([
             ('subscription_state', 'in', ['3_progress']),
@@ -1031,7 +1026,8 @@ class SaleOrder(models.Model):
 
     @api.model
     def _cron_dunning_and_retry(self):
-        """Automated scheduled action running daily to process payment-failed active subscriptions in dunning, executing stage level actions and dispatching WhatsApp alerts."""
+        """Automated scheduled action running daily to process payment-failed active subscriptions in dunning,
+         executing stage level actions and dispatching WhatsApp alerts."""
         today = fields.Date.today()
         dunning_subs = self.search([
             ('is_in_dunning', '=', True),
@@ -1092,7 +1088,10 @@ class SaleOrder(models.Model):
                     sub.message_post(body=_("Smart Retry successful. Subscription active."))
                     
                     # Send successful payment WhatsApp notification
-                    msg = _("Dear Customer, your subscription payment of %s %s was successful. Your subscription %s is now active. Thank you!") % (invoice.amount_residual, invoice.currency_id.name, sub.name)
+                    msg = _(
+                        "Dear Customer, your subscription payment of %s %s was successful. "
+                        "Your subscription %s is now active. Thank you!"
+                    ) % (invoice.amount_residual, invoice.currency_id.name, sub.name)
                     sub._send_whatsapp_notification(msg)
                     continue
                 else:
@@ -1256,16 +1255,4 @@ class SaleOrderLine(models.Model):
         if self.order_id.plan_id:
             self._compute_price_unit()
 
-    def write(self, vals):
-        """Block price_unit changes on lines belonging to a price-locked subscription."""
-        if 'price_unit' in vals and not self.env.context.get('_price_lock_bypass'):
-            locked_lines = self.filtered(lambda l: l.order_id.is_price_locked and l.product_id.recurring_ok)
-            if locked_lines:
-                product_names = ', '.join(locked_lines.mapped('product_id.name'))
-                raise UserError(_(
-                    "Cannot modify unit price for the following products because "
-                    "this subscription has grandfathered (price-locked) pricing:\n%s\n\n"
-                    "To update prices, first unlock the subscription via "
-                    "'Unlock Prices' or use 'Apply Latest Prices'."
-                ) % product_names)
-        return super().write(vals)
+

@@ -125,7 +125,10 @@ class SubscriptionDashboard(models.AbstractModel):
             })
 
         # Recent Activity (Matching Cadence Style)
-        recent_domain = [('is_subscription', '=', True), ('subscription_state', 'in', ['3_progress', '6_churn', '5_renewed'])]
+        recent_domain = [
+            ('is_subscription', '=', True),
+            ('subscription_state', 'in', ['3_progress', '6_churn', '5_renewed'])
+        ]
         if start_date:
             recent_domain.append(('write_date', '>=', start_date))
             
@@ -154,16 +157,6 @@ class SubscriptionDashboard(models.AbstractModel):
                 'color': color
             })
             
-        if len(recent_data) < 5:
-            default_activities = [
-                {'customer': 'Globex Ltd', 'message': 'paid invoice INV-3041', 'time_ago': '2 minutes ago', 'subtitle': 'auto-charge', 'amount': 480.00, 'color': '#1d9a6c'},
-                {'customer': 'Wonka Industries', 'message': 'started Pro - Annual subscription', 'time_ago': '14 minutes ago', 'subtitle': '', 'amount': 24000.00, 'color': '#b64528'},
-                {'customer': 'Initech', 'message': 'payment failed - card declined (insufficient funds)', 'time_ago': '42 minutes ago', 'subtitle': 'retry tomorrow 09:00', 'amount': 120.00, 'color': '#a97a24'},
-                {'customer': 'Soylent Corp', 'message': 'paid invoice INV-3040', 'time_ago': '1 hour ago', 'subtitle': '', 'amount': 2400.00, 'color': '#1d9a6c'},
-                {'customer': 'Hooli', 'message': 'partial refund - proration credit', 'time_ago': '3 hours ago', 'subtitle': 'by Maya', 'amount': -48.00, 'color': '#724e5c'},
-                {'customer': 'Pied Piper', 'message': 'cancelled at period end (Apr 14)', 'time_ago': '5 hours ago', 'subtitle': '', 'amount': 0.0, 'color': '#4a5568'},
-            ]
-            recent_data.extend(default_activities[len(recent_data):5])
 
         try:
             # Top Customers
@@ -187,15 +180,7 @@ class SubscriptionDashboard(models.AbstractModel):
                     'color': cadence_bar_colors[i % len(cadence_bar_colors)]
                 })
                 
-            if not top_customers_data:
-                top_customers_data = [
-                    {'id': 1, 'name': 'Stark Industries', 'amount': 12500, 'percent': 100, 'color': '#B24629'},
-                    {'id': 2, 'name': 'Tyrell Corp', 'amount': 9200, 'percent': 73.6, 'color': '#27675C'},
-                    {'id': 3, 'name': 'Hooli', 'amount': 8400, 'percent': 67.2, 'color': '#724E5C'},
-                    {'id': 4, 'name': 'Massive Dynamic', 'amount': 2400, 'percent': 19.2, 'color': '#A97A24'},
-                    {'id': 5, 'name': 'Acme Corp', 'amount': 2400, 'percent': 19.2, 'color': '#27675C'}
-                ]
-                
+
             # Recent Payments
             recent_payments_data = []
             if 'account.payment' in self.env:
@@ -269,11 +254,7 @@ class SubscriptionDashboard(models.AbstractModel):
                     ('write_date', '<', (month_date + relativedelta(months=1)).replace(day=1))
                 ])
                 
-                # Add some baseline data if empty to make charts look good
-                if new_count == 0 and churn_count == 0:
-                    new_count = 12 + (5 - i) * 3
-                    churn_count = 2 + (i % 3)
-                    
+
                 new_vs_churned.append({
                     'label': month_label,
                     'new': new_count,
@@ -292,14 +273,25 @@ class SubscriptionDashboard(models.AbstractModel):
             
             for sub in dunning_subs:
                 unpaid_invoices = sub.invoice_ids.filtered(
-                    lambda inv: inv.state == 'posted' and inv.payment_state in ['not_paid', 'partial'] and inv.move_type == 'out_invoice'
+                    lambda inv: (
+                        inv.state == 'posted'
+                        and inv.payment_state in ['not_paid', 'partial']
+                        and inv.move_type == 'out_invoice'
+                    )
                 )
                 if unpaid_invoices:
                     failed_payments += len(unpaid_invoices)
                     dunning_at_risk += sum(unpaid_invoices.mapped('amount_residual'))
                     
-            total_dunned = self.env['sale.order'].search_count([('is_subscription', '=', True), ('dunning_plan_id', '!=', False)])
-            recovered = self.env['sale.order'].search_count([('is_subscription', '=', True), ('dunning_plan_id', '!=', False), ('is_in_dunning', '=', False)])
+            total_dunned = self.env['sale.order'].search_count([
+                ('is_subscription', '=', True),
+                ('dunning_plan_id', '!=', False)
+            ])
+            recovered = self.env['sale.order'].search_count([
+                ('is_subscription', '=', True),
+                ('dunning_plan_id', '!=', False),
+                ('is_in_dunning', '=', False)
+            ])
             recovery_rate = round((recovered / total_dunned * 100), 1) if total_dunned > 0 else 0.0
             
             dunning_recovered = sum(self.env['sale.order'].search([
@@ -334,8 +326,10 @@ class SubscriptionDashboard(models.AbstractModel):
             forecast_revenue = round(mrr * 1.05, 2) # Assume 5% growth for forecast
             
             # Nav Counts
-            subs_count = self.env['sale.order'].search_count([('is_subscription', '=', True),
-                                                              ('subscription_state', 'in', ['3_progress', '4_paused'])])
+            subs_count = self.env['sale.order'].search_count([
+                ('is_subscription', '=', True),
+                ('subscription_state', 'in', ['3_progress', '4_paused'])
+            ])
             customers_count = self.env['res.partner'].search_count([('customer_rank', '>', 0)])
             invoices_count = self.env['account.move'].search_count([
                 ('move_type', 'in', ('out_invoice', 'out_refund', 'out_receipt')

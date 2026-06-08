@@ -20,7 +20,6 @@
 #
 #############################################################################
 from . import subscription_plan
-from . import subscription_price_lock
 from . import res_partner
 from . import stock_picking
 from . import subscription_close_reason

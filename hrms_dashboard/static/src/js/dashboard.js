@@ -1,0 +1,1804 @@
+/** @odoo-module **/
+import { registry } from "@web/core/registry";
+import { session } from "@web/session";
+import { _t } from "@web/core/l10n/translation";
+import { onMounted, Component, useRef } from "@odoo/owl";
+import { onWillStart, useState, onWillUnmount } from "@odoo/owl";
+import { useService } from "@web/core/utils/hooks";
+import { WebClient } from "@web/webclient/webclient";
+import { user } from "@web/core/user";
+const actionRegistry = registry.category("actions");
+import { ActivityMenu } from "@hr_attendance/components/attendance_menu/attendance_menu";
+import { patch } from "@web/core/utils/patch";
+import { rpc } from "@web/core/network/rpc";
+export class HrDashboard extends Component{
+    static template = 'HrDashboardMain';
+    static props = ["*"];
+    setup() {
+        this.effect = useService("effect");
+        this.action = useService("action");
+        this.log_in_out = useRef("log_in_out")
+        this.emp_graph = useRef("emp_graph")
+        this.leave_graph = useRef("leave_graph")
+        this.join_resign_trend = useRef("join_resign_trend")
+        this.attrition_rate = useRef("attrition_rate")
+        this.leave_trend = useRef("leave_trend")
+        this.orm = useService("orm");
+        this.notification = useService("notification");
+        this.state = useState({
+            is_manager: false,
+            date_range: 'week',
+            dashboards_templates: ['LoginEmployeeDetails','ManagerDashboard', 'EmployeeDashboard'],
+            employee_birthday: [],
+            upcoming_events: [],
+            announcements: [],
+            login_employee: [],
+            templates: [],
+            pending_approvals: [],
+            expiring_documents: [],
+            urgent_count: 0,
+            activities: [],
+            open_hrms_requests: {},
+            checkin_time_str: '00:00:00',
+            checkin_since_str: 'Tap to start your day',
+            checkin_hm_str: '0h 0m',
+            show_profile_dropdown: false,
+            show_date_dropdown: false,
+            date_dropdown_view: 'list',
+            custom_date_from: '',
+            custom_date_to: '',
+        })
+        
+        onMounted(() => {
+            this.timerInterval = setInterval(() => {
+                this.updateTimer();
+            }, 1000);
+        });
+        
+        onWillUnmount(() => {
+            if (this.timerInterval) {
+                clearInterval(this.timerInterval);
+            }
+        });
+        
+        onWillStart(async () => {
+            this.isHrManager = await user.hasGroup("hr.group_hr_manager");
+            this.state.login_employee = {}
+            if ( await this.orm.call('hr.employee', 'check_user_group', []) ) {
+                this.state.is_manager = true
+            }
+            else {
+                this.state.is_manager = false
+            }
+            var empDetails = await this.orm.call('hr.employee', 'get_user_employee_details', [])
+            if ( empDetails ){
+                this.state.login_employee = empDetails[0];
+            }
+            
+            // Fetch Open HRMS Requests
+            this.state.open_hrms_requests = await this.orm.call('hr.employee', 'get_open_hrms_requests', []);
+            
+            var res = await this.orm.call('hr.employee', 'get_upcoming', [])
+            if ( res ) {
+                // Process Upcoming Events
+                if (res['event'] && res['event'].length > 0) {
+                    const eventMonthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+                    this.state.upcoming_events = res['event'].slice(0, 4).map((e, index) => {
+                        let dateObj = new Date(e.date_begin.replace(' ', 'T') + 'Z');
+                        let monthStr = eventMonthNames[dateObj.getMonth()];
+                        let dayStr = String(dateObj.getDate()).padStart(2, '0');
+                        let yearStr = dateObj.getFullYear();
+                        
+                        let hours = dateObj.getHours();
+                        let minutes = String(dateObj.getMinutes()).padStart(2, '0');
+                        let ampm = hours >= 12 ? 'PM' : 'AM';
+                        hours = hours % 12;
+                        hours = hours ? hours : 12;
+                        let timeStr = hours + ':' + minutes + ' ' + ampm;
+                        
+                        const colors = ['#1B5298', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
+                        let iconColor = colors[index % colors.length];
+
+                        return {
+                            ...e,
+                            event_month: monthStr,
+                            event_day: dayStr,
+                            event_year: yearStr,
+                            event_time: timeStr,
+                            icon_color: iconColor
+                        };
+                    });
+                } else {
+                    this.state.upcoming_events = [];
+                }
+                
+                // Process Announcements
+                if (res['announcement'] && res['announcement'].length > 0) {
+                    const annIds = res['announcement'].map(a => a.id);
+                    let annDetails = await this.orm.searchRead('hr.announcement', [['id', 'in', annIds]], ['id', 'create_date', 'create_uid']);
+                    let annMap = {};
+                    annDetails.forEach(d => annMap[d.id] = d);
+                    
+                    let now = new Date();
+                    
+                    this.state.announcements = res['announcement'].map(a => {
+                        let detail = annMap[a.id];
+                        let author = detail && detail.create_uid ? detail.create_uid[1] : 'HR Team';
+                        // Clean author name if it's a long internal name
+                        if (author && author.includes('OdooBot')) author = 'System';
+                        else if (author && author.includes('Administrator')) author = 'HR Team';
+                        
+                        let cDate = detail && detail.create_date ? new Date(detail.create_date + 'Z') : new Date(a.date_start);
+                        
+                        let diffMs = now - cDate;
+                        let diffMins = Math.floor(diffMs / 60000);
+                        let diffHours = Math.floor(diffMs / 3600000);
+                        let diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                        
+                        let timeAgo = '';
+                        if (diffMins < 60) {
+                            timeAgo = diffMins <= 0 ? 'Just now' : `${diffMins}m ago`;
+                        } else if (diffHours < 24) {
+                            timeAgo = `${diffHours}h ago`;
+                        } else if (diffDays === 1) {
+                            timeAgo = 'Yesterday';
+                        } else {
+                            timeAgo = `${diffDays} days ago`;
+                        }
+                        
+                        return {
+                            ...a,
+                            author: author,
+                            time_ago: timeAgo
+                        };
+                    });
+                } else {
+                    this.state.announcements = [];
+                }
+                
+                // Process Birthdays
+                if (res['birthday'] && res['birthday'].length > 0) {
+                    const bdayIds = res['birthday'].map(b => b.id);
+                    const bdayColors = ['#1B5298', '#ec4899', '#0ea5e9', '#8b5cf6', '#14b8a6', '#f59e0b'];
+                    const bdayMonthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                    
+                    let depts = await this.orm.searchRead('hr.employee', [['id', 'in', bdayIds]], ['id', 'department_id']);
+                    let deptMap = {};
+                    depts.forEach(d => deptMap[d.id] = d.department_id ? d.department_id[1] : 'Employee');
+                    
+                    this.state.employee_birthday = res['birthday'].map((b, i) => {
+                        let initials = b.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                        let color = bdayColors[i % bdayColors.length];
+                        
+                        let dateStr = '';
+                        if (b.is_birthday) {
+                            dateStr = 'Today';
+                        } else if (b.days === 1) {
+                            dateStr = 'Tomorrow';
+                        } else {
+                            let dateObj = new Date(b.birthday);
+                            dateStr = bdayMonthNames[dateObj.getMonth()] + ' ' + String(dateObj.getDate()).padStart(2, '0');
+                        }
+                        
+                        return {
+                            ...b,
+                            initials: initials,
+                            color: color,
+                            display_date: dateStr,
+                            department: deptMap[b.id]
+                        };
+                    });
+                } else {
+                    this.state.employee_birthday = [];
+                }
+                
+                // Fetch HR Reminders
+                let reminderData = await rpc('/hr_reminder/all_reminder');
+                
+                // Fetch Personal To-Dos (project.task)
+                let todoData = await this.orm.searchRead(
+                    'project.task',
+                    [['user_ids', 'in', user.userId], ['project_id', '=', false], ['state', 'not in', ['1_done', '1_canceled']]],
+                    ['id', 'name', 'date_deadline', 'state'],
+                    { limit: 5, order: 'date_deadline ASC' }
+                );
+                
+                let combined = [];
+                
+                if (reminderData && reminderData.length > 0) {
+                    reminderData.forEach(rem => {
+                        combined.push({
+                            type: 'reminder',
+                            id: rem.id,
+                            title: rem.name || 'Reminder',
+                            date_deadline: new Date().toISOString().split('T')[0], // Always "Today" for active reminders
+                            is_done: false
+                        });
+                    });
+                }
+                
+                if (todoData && todoData.length > 0) {
+                    todoData.forEach(todo => {
+                        combined.push({
+                            type: 'todo',
+                            id: todo.id,
+                            title: todo.name || 'To-do',
+                            date_deadline: todo.date_deadline,
+                            is_done: false
+                        });
+                    });
+                }
+                
+                // Sort chronologically
+                combined.sort((a, b) => {
+                    let dateA = a.date_deadline ? new Date(a.date_deadline) : new Date(8640000000000000);
+                    let dateB = b.date_deadline ? new Date(b.date_deadline) : new Date(8640000000000000);
+                    return dateA - dateB;
+                });
+                
+                // Limit to 4 items initially
+                combined = combined.slice(0, 4);
+                
+                let todayMs = new Date();
+                todayMs.setHours(0,0,0,0);
+                
+                const monthNamesShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                
+                this.state.activities = combined.map(item => {
+                    let dateStr = '';
+                    let badgeClass = 'badge-gray';
+                    
+                    if (item.date_deadline) {
+                        let deadline = new Date(item.date_deadline);
+                        let deadlineMs = new Date(item.date_deadline);
+                        deadlineMs.setHours(0,0,0,0);
+                        
+                        if (deadlineMs.getTime() === todayMs.getTime()) {
+                            dateStr = 'Today';
+                            badgeClass = 'badge-yellow';
+                        } else if (deadlineMs.getTime() < todayMs.getTime()) {
+                            dateStr = 'Overdue';
+                            badgeClass = 'badge-red';
+                        } else {
+                            dateStr = monthNamesShort[deadline.getMonth()] + ' ' + String(deadline.getDate()).padStart(2, '0');
+                            badgeClass = 'badge-gray';
+                        }
+                    } else {
+                        dateStr = 'No date';
+                        badgeClass = 'badge-gray';
+                    }
+                    
+                    return {
+                        ...item,
+                        date_str: dateStr,
+                        badge_class: badgeClass
+                    };
+                });
+            }
+            var projectTaskDetails = await this.orm.call('hr.employee', 'get_employee_project_tasks', [])
+            if (projectTaskDetails) {
+                this.state.login_employee['project_task_lines'] = projectTaskDetails;
+            }
+            if (this.state.is_manager) {
+                var pendingLeaves = await this.orm.searchRead('hr.leave', [['state', 'in', ['confirm', 'validate1']]], ['employee_id', 'holiday_status_id', 'request_date_from', 'request_date_to', 'number_of_days']);
+                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                const colors = ['#14b8a6', '#ef4444', '#10b981', '#f59e0b', '#1B5298', '#8b5cf6'];
+                
+                this.state.pending_approvals = pendingLeaves.map((l, i) => {
+                    let empName = l.employee_id ? l.employee_id[1] : 'Unknown';
+                    let initials = empName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                    let color = colors[i % colors.length];
+                    
+                    let fromDate = new Date(l.request_date_from);
+                    let toDate = new Date(l.request_date_to);
+                    let fromStr = monthNames[fromDate.getMonth()] + ' ' + String(fromDate.getDate()).padStart(2, '0');
+                    let toStr = monthNames[toDate.getMonth()] + ' ' + String(toDate.getDate()).padStart(2, '0');
+                    
+                    let type = l.holiday_status_id ? l.holiday_status_id[1] : 'Leave';
+                    
+                    return {
+                        id: l.id,
+                        name: empName,
+                        initials: initials,
+                        color: color,
+                        subtitle: `${type} · ${fromStr}-${toStr} · ${l.number_of_days}d`
+                    };
+                });
+                
+                // Fetch Expiring Documents
+                let todayStr = new Date().toISOString().split('T')[0];
+                let expiringDocs = await this.orm.searchRead(
+                    'hr.employee.document', 
+                    [['expiry_date', '!=', false], ['expiry_date', '>=', todayStr]], 
+                    ['employee_ref_id', 'document_type_id', 'expiry_date'],
+                    { limit: 4, order: 'expiry_date ASC' }
+                );
+                
+                let urgentCount = 0;
+                this.state.expiring_documents = expiringDocs.map((doc, i) => {
+                    let empName = doc.employee_ref_id ? doc.employee_ref_id[1] : 'Unknown';
+                    let initials = empName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                    let typeName = doc.document_type_id ? doc.document_type_id[1] : 'Document';
+                    
+                    let expDate = new Date(doc.expiry_date);
+                    let today = new Date();
+                    // Strip time for accurate day calc
+                    expDate.setHours(0,0,0,0);
+                    today.setHours(0,0,0,0);
+                    
+                    let diffTime = Math.abs(expDate - today);
+                    let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    let isUrgent = diffDays <= 14;
+                    if (isUrgent) {
+                        urgentCount++;
+                    }
+                    
+                    return {
+                        id: doc.id,
+                        name: empName,
+                        initials: initials,
+                        type: typeName,
+                        days_left: diffDays,
+                        is_urgent: isUrgent,
+                        color: colors[i % colors.length]
+                    };
+                });
+                this.state.urgent_count = urgentCount;
+            }
+        });
+        onMounted(() => {
+            this.title = 'Dashboard'
+            this.render_graphs();
+            const oContent = document.querySelector('.o_content');
+            if (oContent) {
+                oContent.style.setProperty('padding', '0', 'important');
+                oContent.style.setProperty('margin', '0', 'important');
+                
+                // Firefox ESR compatibility: strip padding from ALL wrappers between o_content and o_action_manager
+                let parent = oContent.parentElement;
+                while (parent && !parent.classList.contains('o_action_manager')) {
+                    parent.style.setProperty('padding', '0', 'important');
+                    parent.style.setProperty('margin', '0', 'important');
+                    parent = parent.parentElement;
+                }
+                
+                // Also strip o_action_manager itself
+                if (parent && parent.classList.contains('o_action_manager')) {
+                    parent.style.setProperty('padding-left', '0', 'important');
+                    parent.style.setProperty('padding-right', '0', 'important');
+                    parent.style.setProperty('padding-bottom', '0', 'important');
+                    parent.style.setProperty('padding-top', '0', 'important');
+                }
+            }
+        });
+        onWillUnmount(() => {
+            const oContent = document.querySelector('.o_content');
+            if (oContent) {
+                oContent.style.removeProperty('padding');
+                oContent.style.removeProperty('margin');
+                oContent.style.removeProperty('overflow');
+            }
+        });
+    }
+    add_project_task() {
+            console.log("add_project_task:", user)
+                this.action.doAction({
+                    name: _t("Project Task"),
+                    type: 'ir.actions.act_window',
+                    res_model: 'project.task',
+                    view_mode: 'form',
+                    views: [[false, 'form']],
+                    target: 'new',
+                    context: {
+                        'default_user_ids': [user.userId]
+                    }
+                });
+            }
+    view_project_tasks() {
+                this.action.doAction({
+                    name: _t("My Tasks"),
+                    type: 'ir.actions.act_window',
+                    res_model: 'project.task',
+                    view_mode: 'tree,form,kanban',
+                    views: [[false, 'list'],[false, 'form'],[false, 'kanban']],
+                    domain: [['user_ids','in', user.userId]],
+                    target: 'current'
+                });
+            }
+    view_birthdays() {
+        this.action.doAction({
+            name: _t("Birthdays"),
+            type: 'ir.actions.act_window',
+            res_model: 'hr.employee',
+            view_mode: 'tree,form,kanban',
+            views: [[false, 'list'],[false, 'form'],[false, 'kanban']],
+            domain: [['birthday', '!=', false]],
+            target: 'current'
+        });
+    }
+    view_event_record(ev) {
+        let event_id = parseInt(ev.currentTarget.dataset.id);
+        this.action.doAction({
+            type: 'ir.actions.act_window',
+            res_model: 'event.event',
+            res_id: event_id,
+            view_mode: 'form',
+            views: [[false, 'form']],
+            target: 'current'
+        });
+    }
+    view_events() {
+        let nowStr = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        this.action.doAction({
+            name: _t("Upcoming Events"),
+            type: 'ir.actions.act_window',
+            res_model: 'event.event',
+            view_mode: 'kanban,tree,form',
+            views: [[false, 'kanban'], [false, 'list'], [false, 'form']],
+            domain: [['date_begin', '>=', nowStr]],
+            target: 'current'
+        });
+    }
+    view_announcements() {
+        this.action.doAction({
+            name: _t("Announcements"),
+            type: 'ir.actions.act_window',
+            res_model: 'hr.announcement',
+            view_mode: 'tree,form',
+            views: [[false, 'list'], [false, 'form']],
+            domain: [['state', '=', 'approved']],
+            target: 'current'
+        });
+    }
+    view_reminders() {
+        this.action.doAction('hr_reminder.hr_reminder_action');
+    }
+    view_activities() {
+        this.action.doAction('project_todo.project_task_action_todo');
+    }
+    
+    // Request Navigation Methods
+    open_loan_requests() {
+        if (this.state.open_hrms_requests['loan'] === false) {
+            this.notification.add(_t("The Loan Management module is not installed."), { type: 'warning' });
+            return;
+        }
+        this.action.doAction({
+            name: _t("Loan Requests"),
+            type: 'ir.actions.act_window',
+            res_model: 'hr.loan',
+            view_mode: 'tree,form',
+            views: [[false, 'list'], [false, 'form']],
+            domain: [['state', 'in', ['draft', 'waiting_approval_1']]],
+            target: 'current'
+        });
+    }
+    open_salary_advance() {
+        if (this.state.open_hrms_requests['salary_advance'] === false) {
+            this.notification.add(_t("The Salary Advance module is not installed."), { type: 'warning' });
+            return;
+        }
+        this.action.doAction({
+            name: _t("Salary Advance"),
+            type: 'ir.actions.act_window',
+            res_model: 'salary.advance',
+            view_mode: 'tree,form',
+            views: [[false, 'list'], [false, 'form']],
+            domain: [['state', 'in', ['draft', 'submit', 'waiting_approval']]],
+            target: 'current'
+        });
+    }
+    open_resignations() {
+        if (this.state.open_hrms_requests['resignation'] === false) {
+            this.notification.add(_t("The Resignation module is not installed."), { type: 'warning' });
+            return;
+        }
+        this.action.doAction({
+            name: _t("Resignations"),
+            type: 'ir.actions.act_window',
+            res_model: 'hr.resignation',
+            view_mode: 'tree,form',
+            views: [[false, 'list'], [false, 'form']],
+            domain: [['state', 'in', ['draft', 'confirm']]],
+            target: 'current'
+        });
+    }
+    open_transfers() {
+        if (this.state.open_hrms_requests['transfer'] === false) {
+            this.notification.add(_t("The Employee Transfer module is not installed."), { type: 'warning' });
+            return;
+        }
+        this.action.doAction({
+            name: _t("Branch Transfers"),
+            type: 'ir.actions.act_window',
+            res_model: 'employee.transfer',
+            view_mode: 'tree,form',
+            views: [[false, 'list'], [false, 'form']],
+            domain: [['state', '=', 'draft']],
+            target: 'current'
+        });
+    }
+    open_service_requests() {
+        if (this.state.open_hrms_requests['shift'] === false) {
+            this.notification.add(_t("The Service Request module is not installed."), { type: 'warning' });
+            return;
+        }
+        this.action.doAction({
+            name: _t("Service Requests"),
+            type: 'ir.actions.act_window',
+            res_model: 'service.request',
+            view_mode: 'tree,form',
+            views: [[false, 'list'], [false, 'form']],
+            domain: [['state', '=', 'draft']],
+            target: 'current'
+        });
+    }
+
+    
+    async mark_activity_done(ev) {
+        let type = ev.currentTarget.dataset.type;
+        let activity_id = parseInt(ev.currentTarget.dataset.id);
+        
+        let item = this.state.activities.find(a => a.id === activity_id && a.type === type);
+        if (!item) return;
+        
+        // Mark as done visually
+        item.is_done = true;
+        
+        // Re-sort: unchecked first, checked at bottom
+        this.state.activities.sort((a, b) => {
+            if (a.is_done === b.is_done) return 0;
+            return a.is_done ? 1 : -1;
+        });
+        
+        // Backend update (non-blocking)
+        if (type === 'todo') {
+            this.orm.write('project.task', [activity_id], { 'state': '1_done' });
+        }
+        // If type === 'reminder', we don't update the backend because it's a global rule.
+    }
+    view_expiring_document(ev) {
+        let doc_id = parseInt(ev.currentTarget.dataset.id);
+        this.action.doAction({
+            name: _t("Document"),
+            type: 'ir.actions.act_window',
+            res_model: 'hr.employee.document',
+            res_id: doc_id,
+            view_mode: 'form',
+            views: [[false, 'form']],
+            target: 'current'
+        });
+    }
+    async approve_leave(ev) {
+        let leave_id = parseInt(ev.currentTarget.dataset.id);
+        await this.orm.call('hr.leave', 'action_approve', [[leave_id]]);
+        // Filter it out from UI temporarily
+        this.state.pending_approvals = this.state.pending_approvals.filter(l => l.id !== leave_id);
+    }
+    async reject_leave(ev) {
+        let leave_id = parseInt(ev.currentTarget.dataset.id);
+        await this.orm.call('hr.leave', 'action_refuse', [[leave_id]]);
+        // Filter it out from UI temporarily
+        this.state.pending_approvals = this.state.pending_approvals.filter(l => l.id !== leave_id);
+    }
+    render_graphs(){
+        var self = this;
+        if (this.state.login_employee){
+            if (this.state.is_manager) {
+             self.render_department_employee();
+                self.render_leave_graph();
+                self.update_join_resign_trends();
+                self.update_monthly_attrition();
+            }
+            self.update_leave_trend();
+            self.render_employee_skill();
+        }
+    }
+    async render_department_employee() {
+        const colors = [
+            '#8b5cf6', '#1B5298', '#10b981', '#f59e0b', '#ef4444',
+            '#6366f1', '#ec4899', '#14b8a6', '#f97316', '#06b6d4',
+            '#84cc16', '#eab308'
+        ];
+        const data = await this.orm.call('hr.employee', 'get_dept_employee', []);
+        if (data) {
+            const labels = data.map(d => d.label);
+            const values = data.map(d => d.value);
+            const pieCtx = document.getElementById('employeePieChart').getContext('2d');
+            
+            // Chart.js v2 & v3 compatible center text plugin
+            Chart.pluginService = Chart.pluginService || Chart.plugins;
+            const centerTextPlugin = {
+                id: 'centerText',
+                beforeDraw: function(chart) {
+                    var ctx = chart.ctx || chart.chart.ctx;
+                    var width = chart.width || chart.chart.width;
+                    var height = chart.height || chart.chart.height;
+                    ctx.restore();
+                    
+                    let mainText, subText;
+                    let hoveredIndex = chart.options && chart.options.hoveredIndex !== undefined ? chart.options.hoveredIndex : null;
+                    if (hoveredIndex !== null) {
+                        mainText = chart.data.datasets[0].data[hoveredIndex].toString();
+                        subText = chart.data.labels[hoveredIndex];
+                    } else {
+                        mainText = chart.data.datasets[0].data.reduce((a, b) => a + b, 0).toString();
+                        subText = "Employees";
+                    }
+
+                    var fontSize = (height / 100).toFixed(2);
+                    ctx.font = "bold " + fontSize + "em sans-serif";
+                    ctx.textBaseline = "middle";
+                    ctx.fillStyle = "#1E293B";
+                    var textX = Math.round((width - ctx.measureText(mainText).width) / 2),
+                        textY = height / 2 - 10;
+                    ctx.fillText(mainText, textX, textY);
+                    
+                    ctx.font = "600 " + (fontSize * 0.35).toFixed(2) + "em sans-serif";
+                    ctx.fillStyle = "#64748B";
+                    var text2X = Math.round((width - ctx.measureText(subText).width) / 2),
+                        text2Y = height / 2 + 15;
+                    ctx.fillText(subText, text2X, text2Y);
+                    ctx.save();
+                }
+            };
+
+            const pieChart = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: values,
+                        backgroundColor: colors,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    layout: { padding: 12 },
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    cutoutPercentage: 75, // For Chart.js v2
+                    legend: { display: false }, // For Chart.js v2
+                    onHover: function(event, elements) {
+                        const chart = this;
+                        if (chart.options && chart.options.isLegendHover) return; // Prevent reset from legend hover
+                        let activeIndex = null;
+                        if (elements && elements.length > 0) {
+                            activeIndex = elements[0].index !== undefined ? elements[0].index : elements[0]._index;
+                        }
+                        let currentHovered = chart.options && chart.options.hoveredIndex !== undefined ? chart.options.hoveredIndex : null;
+                        if (currentHovered !== activeIndex) {
+                            if (!chart.options) chart.options = {};
+                            chart.options.hoveredIndex = activeIndex;
+                            chart.update();
+                            const legendContainer = document.getElementById('employeePieLegend');
+                            if (legendContainer) {
+                                const legendItems = legendContainer.querySelectorAll('.legend-item');
+                                legendItems.forEach((item, idx) => {
+                                    item.style.opacity = (activeIndex === null || idx === activeIndex) ? '1' : '0.4';
+                                });
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }, // For Chart.js v3+
+                        tooltip: {
+                            callbacks: {
+                                label: function (tooltipItem, data) {
+                                    // Handle both v2 and v3 tooltip arguments
+                                    let label, value;
+                                    if (data) { // v2
+                                        label = data.labels[tooltipItem.index] || '';
+                                        value = data.datasets[0].data[tooltipItem.index] || 0;
+                                    } else { // v3
+                                        label = tooltipItem.label || '';
+                                        value = tooltipItem.raw || 0;
+                                    }
+                                    const percentage = (value / values.reduce((a, b) => a + b, 0) * 100).toFixed(2);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    },
+                    // Tooltip fallback for v2
+                    tooltips: {
+                        callbacks: {
+                            label: function (tooltipItem, data) {
+                                const label = data.labels[tooltipItem.index] || '';
+                                const value = data.datasets[0].data[tooltipItem.index] || 0;
+                                const percentage = (value / values.reduce((a, b) => a + b, 0) * 100).toFixed(2);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                plugins: [centerTextPlugin]
+            });
+
+            // Generate custom HTML legend
+            const legendContainer = document.getElementById('employeePieLegend');
+            if (legendContainer) {
+                let legendHTML = '<div style="display: flex; flex-direction: column; gap: 12px; padding-left: 20px;">';
+                labels.forEach((label, i) => {
+                    const color = colors[i % colors.length];
+                    const val = values[i];
+                    legendHTML += `
+                        <div class="legend-item" data-index="${i}" style="display: flex; align-items: center; justify-content: space-between; font-size: 13px; cursor: pointer; transition: opacity 0.2s ease;">
+                            <div style="display: flex; align-items: center;">
+                                <span style="width: 10px; height: 10px; border-radius: 3px; background-color: ${color}; display: inline-block; margin-right: 12px;"></span>
+                                <span style="color: #334155; font-weight: 500;">${label}</span>
+                            </div>
+                            <span style="color: #64748B; font-weight: 600;">${val}</span>
+                        </div>
+                    `;
+                });
+                legendHTML += '</div>';
+                legendContainer.innerHTML = legendHTML;
+                
+                const legendItems = legendContainer.querySelectorAll('.legend-item');
+                legendItems.forEach(item => {
+                    item.addEventListener('mouseenter', function() {
+                        const idx = parseInt(this.getAttribute('data-index'));
+                        if (!pieChart.options) pieChart.options = {};
+                        pieChart.options.hoveredIndex = idx;
+                        pieChart.options.isLegendHover = true;
+                        
+                        // In Chart.js v3+, we can programmatically hover the segment to make it "pop"
+                        if (pieChart.setActiveElements) {
+                            pieChart.setActiveElements([{datasetIndex: 0, index: idx}]);
+                            pieChart.update();
+                        } else {
+                            // Chart.js v2 fallback for native pop expansion
+                            const meta = pieChart.getDatasetMeta(0);
+                            const arc = meta.data[idx];
+                            if (arc) {
+                                if (pieChart.updateHoverStyle) pieChart.updateHoverStyle([arc], null, true);
+                                if (!arc._popped) {
+                                    arc._model.outerRadius += 10;
+                                    arc._view.outerRadius += 10;
+                                    arc._popped = true;
+                                }
+                                pieChart.draw(); // draw instead of update to preserve hover styles
+                            }
+                        }
+                        
+                        legendItems.forEach((l, i) => {
+                            l.style.opacity = i === idx ? '1' : '0.4';
+                        });
+                    });
+                    item.addEventListener('mouseleave', function() {
+                        if (!pieChart.options) pieChart.options = {};
+                        pieChart.options.hoveredIndex = null;
+                        pieChart.options.isLegendHover = false;
+                        
+                        if (pieChart.setActiveElements) {
+                            pieChart.setActiveElements([]);
+                            pieChart.update();
+                        } else {
+                            const meta = pieChart.getDatasetMeta(0);
+                            if (meta.data) {
+                                meta.data.forEach(arc => {
+                                    if (arc._popped) {
+                                        arc._model.outerRadius -= 10;
+                                        arc._view.outerRadius -= 10;
+                                        arc._popped = false;
+                                    }
+                                });
+                            }
+                            if (pieChart.updateHoverStyle) pieChart.updateHoverStyle(meta.data, null, false);
+                            pieChart.draw();
+                        }
+                        
+                        legendItems.forEach(l => {
+                            l.style.opacity = '1';
+                        });
+                    });
+                });
+            }
+        }
+    }
+    async render_leave_graph() {
+        const colors = [
+            '#8b5cf6', '#f59e0b', '#1B5298', '#10b981', '#ef4444', '#6366f1',
+            '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16',
+            '#eab308', '#d946ef'
+        ];
+        const data = await this.orm.call('hr.employee', 'get_department_leave', []);
+        if (data) {
+            const fData = data[0];
+            const dept = data[1];
+            const id = this.leave_graph.el;
+            fData.forEach(function (d) {
+                let total = 0;
+                for (const dpt in dept) {
+                    total += d.leave[dept[dpt]];
+                }
+                d.total = total;
+            });
+            // Extract 3-letter month abbreviations (e.g., "Jan 2026" -> "Jan")
+            const labels = fData.map(d => d.l_month ? d.l_month.split(' ')[0] : d.l_month);
+            const barData = fData.map(d => d.total);
+            
+            // Mock visual parity data (75% Approved, 25% Pending)
+            const approvedData = barData.map(v => Math.round(v * 0.75));
+            const pendingData = barData.map((v, i) => v - approvedData[i]);
+
+            const barCtx = document.getElementById('leave_barChart').getContext('2d');
+            const barChart = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Approved',
+                            data: approvedData,
+                            backgroundColor: '#8b5cf6',
+                            barPercentage: 0.5,
+                            categoryPercentage: 0.8
+                        },
+                        {
+                            label: 'Pending',
+                            data: pendingData,
+                            backgroundColor: '#f59e0b',
+                            barPercentage: 0.5,
+                            categoryPercentage: 0.8
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    legend: { // v2
+                        display: true,
+                        position: 'bottom',
+                        labels: {
+                            usePointStyle: true,
+                            boxWidth: 8,
+                            padding: 20,
+                            fontColor: '#64748B'
+                        }
+                    },
+                    plugins: { // v3
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                usePointStyle: true,
+                                boxWidth: 8,
+                                boxHeight: 8,
+                                padding: 20,
+                                color: '#64748B',
+                                font: { size: 12, weight: '500' }
+                            }
+                        }
+                    },
+                    scales: {
+                        xAxes: [{ // v2
+                            gridLines: { display: false, drawBorder: false },
+                            ticks: { fontColor: '#64748B' }
+                        }],
+                        yAxes: [{ // v2
+                            display: false,
+                            gridLines: { display: false },
+                            ticks: { display: false }
+                        }],
+                        x: { // v3
+                            grid: { display: false, drawBorder: false },
+                            ticks: { color: '#64748B', font: { size: 12 } },
+                            border: { display: false }
+                        },
+                        y: { // v3
+                            display: false,
+                            grid: { display: false },
+                            ticks: { display: false }
+                        }
+                    },
+                    tooltips: { // v2
+                        callbacks: {
+                            label: function (tooltipItem, data) {
+                                const st = fData[tooltipItem.index];
+                                if(st && st.leave) {
+                                    const nD = Object.keys(st.leave).map(key => ({
+                                        type: key,
+                                        leave: st.leave[key]
+                                    }));
+                                    updatePieChart(nD);
+                                }
+                                return `${data.datasets[tooltipItem.datasetIndex].label}: ${tooltipItem.yLabel}`;
+                            }
+                        }
+                    }
+                }
+            });
+             const pieData = dept.map(d => ({
+                type: d,
+                leave: fData.reduce((acc, t) => acc + (t.leave[d] || 0), 0)
+            }));
+            const pieCtx = document.getElementById('leave_doughnutChart').getContext('2d');
+            
+            // Re-use centerTextPlugin from department employee
+            Chart.pluginService = Chart.pluginService || Chart.plugins;
+            const centerTextPlugin = {
+                id: 'centerText2',
+                beforeDraw: function(chart) {
+                    var ctx = chart.ctx || chart.chart.ctx;
+                    var width = chart.width || chart.chart.width;
+                    var height = chart.height || chart.chart.height;
+                    ctx.restore();
+                    
+                    let mainText, subText;
+                    if (chart.hoveredIndex !== undefined && chart.hoveredIndex !== null) {
+                        mainText = chart.data.datasets[0].data[chart.hoveredIndex].toString();
+                        subText = chart.data.labels[chart.hoveredIndex];
+                    } else {
+                        mainText = chart.data.datasets[0].data.reduce((a, b) => a + b, 0).toString();
+                        subText = "of leaves";
+                    }
+
+                    var fontSize = (height / 100).toFixed(2);
+                    ctx.font = "bold " + fontSize + "em sans-serif";
+                    ctx.textBaseline = "middle";
+                    ctx.fillStyle = "#1E293B";
+                    var textX = Math.round((width - ctx.measureText(mainText).width) / 2),
+                        textY = height / 2 - 10;
+                    ctx.fillText(mainText, textX, textY);
+                    
+                    ctx.font = "600 " + (fontSize * 0.35).toFixed(2) + "em sans-serif";
+                    ctx.fillStyle = "#64748B";
+                    var text2X = Math.round((width - ctx.measureText(subText).width) / 2),
+                        text2Y = height / 2 + 15;
+                    ctx.fillText(subText, text2X, text2Y);
+                    ctx.save();
+                }
+            };
+
+            const pieChart = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: pieData.map(d => d.type),
+                    datasets: [{
+                        data: pieData.map(d => d.leave),
+                        backgroundColor: colors,
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    layout: { padding: 12 },
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%',
+                    cutoutPercentage: 75,
+                    legend: { display: false },
+                    onHover: function(event, elements) {
+                        const chart = this;
+                        if (chart.options && chart.options.isLegendHover) return;
+                        let activeIndex = null;
+                        if (elements && elements.length > 0) {
+                            activeIndex = elements[0].index !== undefined ? elements[0].index : elements[0]._index;
+                        }
+                        let currentHovered = chart.options && chart.options.hoveredIndex !== undefined ? chart.options.hoveredIndex : null;
+                        if (currentHovered !== activeIndex) {
+                            if (!chart.options) chart.options = {};
+                            chart.options.hoveredIndex = activeIndex;
+                            chart.update();
+                            const legendContainer = document.getElementById('leaveDoughnutLegend');
+                            if (legendContainer) {
+                                const legendItems = legendContainer.querySelectorAll('.legend-item');
+                                legendItems.forEach((item, idx) => {
+                                    item.style.opacity = (activeIndex === null || idx === activeIndex) ? '1' : '0.4';
+                                });
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    let label, value;
+                                    if (context.labels) { // v2
+                                        label = pieData[context.index].type;
+                                        value = pieData[context.index].leave;
+                                    } else { // v3
+                                        label = context.label || '';
+                                        value = context.raw || 0;
+                                    }
+                                    const percentage = (value / pieData.reduce((acc, d) => acc + d.leave, 0) * 100).toFixed(2);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    },
+                    tooltips: {
+                        callbacks: {
+                            label: function (tooltipItem, data) {
+                                const label = pieData[tooltipItem.index].type;
+                                const value = pieData[tooltipItem.index].leave;
+                                const percentage = (value / pieData.reduce((acc, d) => acc + d.leave, 0) * 100).toFixed(2);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                plugins: [centerTextPlugin]
+            });
+            function updatePieChart(newData) {
+                pieChart.data.datasets[0].data = newData.map(d => d.leave);
+                pieChart.data.labels = newData.map(d => d.type);
+                pieChart.update();
+            }
+
+            // Generate custom HTML legend
+            const legendContainer = document.getElementById('leaveDoughnutLegend');
+            if (legendContainer) {
+                let legendHTML = '<div style="display: flex; flex-direction: column; gap: 12px; padding-left: 20px;">';
+                pieData.forEach((d, i) => {
+                    const color = colors[i % colors.length];
+                    const val = d.leave;
+                    legendHTML += `
+                        <div class="legend-item" data-index="${i}" style="display: flex; align-items: center; justify-content: space-between; font-size: 13px; cursor: pointer; transition: opacity 0.2s ease;">
+                            <div style="display: flex; align-items: center;">
+                                <span style="width: 10px; height: 10px; border-radius: 3px; background-color: ${color}; display: inline-block; margin-right: 12px;"></span>
+                                <span style="color: #334155; font-weight: 500;">${d.type}</span>
+                            </div>
+                            <span style="color: #64748B; font-weight: 600;">${val}</span>
+                        </div>
+                    `;
+                });
+                legendHTML += '</div>';
+                legendContainer.innerHTML = legendHTML;
+                
+                const legendItems = legendContainer.querySelectorAll('.legend-item');
+                legendItems.forEach(item => {
+                    item.addEventListener('mouseenter', function() {
+                        const idx = parseInt(this.getAttribute('data-index'));
+                        if (!pieChart.options) pieChart.options = {};
+                        pieChart.options.hoveredIndex = idx;
+                        pieChart.options.isLegendHover = true;
+                        
+                        if (pieChart.setActiveElements) {
+                            pieChart.setActiveElements([{datasetIndex: 0, index: idx}]);
+                            pieChart.update();
+                        } else {
+                            const meta = pieChart.getDatasetMeta(0);
+                            const arc = meta.data[idx];
+                            if (arc) {
+                                if (pieChart.updateHoverStyle) pieChart.updateHoverStyle([arc], null, true);
+                                if (!arc._popped) {
+                                    arc._model.outerRadius += 10;
+                                    arc._view.outerRadius += 10;
+                                    arc._popped = true;
+                                }
+                                pieChart.draw();
+                            }
+                        }
+                        
+                        legendItems.forEach((l, i) => {
+                            l.style.opacity = i === idx ? '1' : '0.4';
+                        });
+                    });
+                    item.addEventListener('mouseleave', function() {
+                        if (!pieChart.options) pieChart.options = {};
+                        pieChart.options.hoveredIndex = null;
+                        pieChart.options.isLegendHover = false;
+                        
+                        if (pieChart.setActiveElements) {
+                            pieChart.setActiveElements([]);
+                            pieChart.update();
+                        } else {
+                            const meta = pieChart.getDatasetMeta(0);
+                            if (meta.data) {
+                                meta.data.forEach(arc => {
+                                    if (arc._popped) {
+                                        arc._model.outerRadius -= 10;
+                                        arc._view.outerRadius -= 10;
+                                        arc._popped = false;
+                                    }
+                                });
+                            }
+                            if (pieChart.updateHoverStyle) pieChart.updateHoverStyle(meta.data, null, false);
+                            pieChart.draw();
+                        }
+                        
+                        legendItems.forEach(l => {
+                            l.style.opacity = '1';
+                        });
+                    });
+                });
+            }
+        }
+    }
+    async update_join_resign_trends() {
+        const colors = ['#10b981', '#ef4444', '#1B5298', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16', '#eab308', '#d946ef'];
+        const data = await this.orm.call('hr.employee', 'join_resign_trends', []);
+        if (data) {
+            const labels = data[0].values.map(d => d.l_month.substring(0, 3)); // Use short month names
+            const datasets = data.map((dataset, index) => {
+                const isJoin = dataset.name.toLowerCase().includes('join');
+                const isResign = dataset.name.toLowerCase().includes('resign');
+                const lineColor = isJoin ? '#10b981' : (isResign ? '#ef4444' : colors[index % colors.length]);
+                const labelName = isJoin ? 'Joined' : (isResign ? 'Resigned' : dataset.name);
+                
+                return {
+                    label: labelName,
+                    data: dataset.values.map(d => d.count),
+                    borderColor: lineColor,
+                    backgroundColor: '#ffffff',
+                    fill: false,
+                    cubicInterpolationMode: 'monotone',
+                    tension: 0.4,
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointBorderColor: lineColor,
+                    pointHoverRadius: 6
+                };
+            });
+            const ctx = document.getElementById('lineChart').getContext('2d');
+            const lineChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false } // Chart.js 3+
+                    },
+                    legend: { display: false }, // Chart.js 2
+                    scales: {
+                        x: {
+                            display: true,
+                            grid: { display: false, drawBorder: false },
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { size: 12 }
+                            },
+                            border: { display: false }
+                        },
+                        y: {
+                            display: true,
+                            beginAtZero: true,
+                            grid: {
+                                color: '#f1f5f9',
+                                borderDash: [5, 5],
+                                drawBorder: false,
+                                tickLength: 0
+                            },
+                            ticks: { display: false },
+                            border: { display: false }
+                        },
+                        // Chart.js 2 format fallback
+                        xAxes: [{
+                            display: true,
+                            gridLines: { display: false, drawBorder: false },
+                            ticks: { fontColor: '#94a3b8', fontSize: 12 }
+                        }],
+                        yAxes: [{
+                            display: true,
+                            gridLines: {
+                                color: '#f1f5f9',
+                                borderDash: [5, 5],
+                                drawBorder: false,
+                                tickLength: 0
+                            },
+                            ticks: { display: false, beginAtZero: true }
+                        }]
+                    }
+                }
+            });
+
+            // Generate custom legend
+            const legendContainer = document.getElementById('joinResignLegend');
+            if (legendContainer) {
+                let legendHTML = '';
+                datasets.forEach(ds => {
+                    legendHTML += `
+                        <div style="display: flex; align-items: center;">
+                            <span style="width: 12px; height: 3px; background-color: ${ds.borderColor}; display: inline-block; margin-right: 8px; border-radius: 2px;"></span>
+                            <span>${ds.label}</span>
+                        </div>
+                    `;
+                });
+                legendContainer.innerHTML = legendHTML;
+            }
+        }
+    }
+    async update_monthly_attrition() {
+        const colors = ['#10b981', '#1B5298', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16', '#eab308', '#d946ef'];
+        const data = await this.orm.call('hr.employee', 'get_attrition_rate', []);
+        if (data && data.length > 0) {
+            // Reverse the data to show oldest month on the left, newest on the right
+            data.reverse();
+            
+            // Get the most recent attrition rate
+            const latestAttrition = data[data.length - 1].attrition_rate;
+            const avgAttrition = (data.reduce((a, b) => a + b.attrition_rate, 0) / data.length).toFixed(1);
+            
+            // Update badges
+            const latestMonth = data[data.length - 1].month.substring(0, 3);
+            const attrTextEl = document.getElementById('attritionRateText');
+            if (attrTextEl) attrTextEl.innerText = `${latestMonth} Attrition: ${latestAttrition}%`;
+            
+            const avgAttrTextEl = document.getElementById('avgAttritionRateText');
+            if (avgAttrTextEl) avgAttrTextEl.innerText = `Avg ${avgAttrition}%`;
+
+            const labels = data.map(d => d.month.substring(0, 3)); // short month
+            const attritionData = data.map(d => d.attrition_rate);
+            
+            const ctx = document.getElementById('attritionRateChart').getContext('2d');
+            const attritionRateChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Attrition Rate',
+                        data: attritionData,
+                        borderColor: colors[0],
+                        backgroundColor: '#ffffff',
+                        fill: false,
+                        cubicInterpolationMode: 'monotone',
+                        tension: 0.4,
+                        borderWidth: 2,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointBorderColor: colors[0],
+                        pointHoverRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    legend: { display: false },
+                    scales: {
+                        x: {
+                            display: true,
+                            grid: { display: false, drawBorder: false },
+                            ticks: { color: '#94a3b8', font: { size: 12 } },
+                            border: { display: false }
+                        },
+                        y: {
+                            display: true,
+                            beginAtZero: true,
+                            grid: {
+                                color: '#f1f5f9',
+                                borderDash: [5, 5],
+                                drawBorder: false,
+                                tickLength: 0
+                            },
+                            ticks: { display: false },
+                            border: { display: false }
+                        },
+                        xAxes: [{
+                            display: true,
+                            gridLines: { display: false, drawBorder: false },
+                            ticks: { fontColor: '#94a3b8', fontSize: 12 }
+                        }],
+                        yAxes: [{
+                            display: true,
+                            gridLines: {
+                                color: '#f1f5f9',
+                                borderDash: [5, 5],
+                                drawBorder: false,
+                                tickLength: 0
+                            },
+                            ticks: { display: false, beginAtZero: true }
+                        }]
+                    }
+                }
+            });
+
+            const legendContainer = document.getElementById('attritionLegend');
+            if (legendContainer) {
+                legendContainer.innerHTML = `
+                    <div style="display: flex; align-items: center;">
+                        <span style="width: 12px; height: 3px; background-color: ${colors[0]}; display: inline-block; margin-right: 8px; border-radius: 2px;"></span>
+                        <span>Attrition Rate</span>
+                    </div>
+                `;
+            }
+        }
+    }
+    async update_leave_trend() {
+        const data = await this.orm.call('hr.employee', 'employee_leave_trend', []);
+        if (data) {
+            const labels = data.map(d => d.l_month);
+            const leaveData = data.map(d => d.leave);
+            const ctx = document.getElementById('leaveTrendChart').getContext('2d');
+            
+            // Create vibrant gradient fill matching reference
+            const gradient = ctx.createLinearGradient(0, 0, 0, 250);
+            gradient.addColorStop(0, 'rgba(27, 82, 152, 0.4)');
+            gradient.addColorStop(1, 'rgba(27, 82, 152, 0.0)');
+
+            const leaveTrendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Leaves',
+                        data: leaveData,
+                        backgroundColor: gradient,
+                        borderColor: '#1B5298',
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#1B5298',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointHoverRadius: 7,
+                        borderWidth: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    legend: { display: false },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    return `Leaves: ${context.raw}`;
+                                }
+                            }
+                        },
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            grid: { display: false, drawBorder: false },
+                            ticks: {
+                                color: '#94a3b8',
+                                font: { size: 12 }
+                            },
+                            border: { display: false }
+                        },
+                        y: {
+                            display: true,
+                            beginAtZero: true,
+                            grid: {
+                                color: '#f1f5f9',
+                                borderDash: [5, 5],
+                                drawBorder: false,
+                                tickLength: 0
+                            },
+                            ticks: {
+                                display: false
+                            },
+                            border: { display: false }
+                        },
+                        xAxes: [{
+                            display: true,
+                            gridLines: { display: false, drawBorder: false },
+                            ticks: { fontColor: '#94a3b8', fontSize: 12 }
+                        }],
+                        yAxes: [{
+                            display: true,
+                            gridLines: {
+                                color: '#f1f5f9',
+                                borderDash: [5, 5],
+                                drawBorder: false,
+                                tickLength: 0
+                            },
+                            ticks: { display: false, beginAtZero: true }
+                        }]
+                    }
+                }
+            });
+        }
+    }
+
+    async render_employee_skill() {
+        const colors = ['#8b5cf6', '#1B5298', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16', '#eab308', '#d946ef'];
+        const data = await this.orm.call('hr.employee', 'get_employee_skill', []);
+        if (data) {
+            const labels = data.map(d => d.skills);
+            const skillData = data.map(d => d.progress);
+            const canvas = document.getElementById('skillChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const skillChart = new Chart(ctx, {
+                type: 'polarArea',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Skill ',
+                        data: skillData,
+                        backgroundColor: colors,
+                        borderColor: ['white'],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    return `Skill: ${context.raw}`;
+                                }
+                            }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'right',
+                            labels: {
+                                color: 'black'
+                            }
+                        }
+                    },
+                   scales: {
+                    r: {
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
+                    }
+                }
+            }
+            });
+        }
+    }
+    // EVENT METHODS
+    updateTimer() {
+        if (this.state.login_employee && this.state.login_employee.attendance_state === 'checked_in' && this.state.login_employee.last_check_in) {
+            let checkInDate = new Date(this.state.login_employee.last_check_in.replace(' ', 'T') + 'Z');
+            let now = new Date();
+            let diffMs = now - checkInDate;
+            if (diffMs > 0) {
+                let diffSecs = Math.floor(diffMs / 1000);
+                let hours = Math.floor(diffSecs / 3600);
+                let mins = Math.floor((diffSecs % 3600) / 60);
+                let secs = diffSecs % 60;
+                this.state.checkin_time_str = 
+                    String(hours).padStart(2, '0') + ':' + 
+                    String(mins).padStart(2, '0') + ':' + 
+                    String(secs).padStart(2, '0');
+                
+                // Format "Since 09:02 AM today"
+                let cHours = checkInDate.getHours();
+                let cMins = String(checkInDate.getMinutes()).padStart(2, '0');
+                let ampm = cHours >= 12 ? 'PM' : 'AM';
+                cHours = cHours % 12;
+                cHours = cHours ? cHours : 12;
+                this.state.checkin_since_str = `Since ${String(cHours).padStart(2, '0')}:${cMins} ${ampm} today`;
+                this.state.checkin_hm_str = `${hours}h ${mins}m`;
+            } else {
+                this.state.checkin_time_str = '00:00:00';
+                this.state.checkin_since_str = 'Tap to start your day';
+                this.state.checkin_hm_str = '0h 0m';
+            }
+        } else {
+            this.state.checkin_time_str = '00:00:00';
+            this.state.checkin_since_str = 'Tap to start your day';
+            this.state.checkin_hm_str = '0h 0m';
+        }
+    }
+
+    export_dashboard_pdf(ev) {
+        window.print();
+    }
+
+    add_attendance() {
+        this.action.doAction({
+            name: _t("Attendances"),
+            type: 'ir.actions.act_window',
+            res_model: 'hr.attendance',
+            view_mode: 'form',
+            views: [[false, 'form']],
+            target: 'new'
+        });
+    }
+    add_leave() {
+        this.action.doAction({
+            name: _t("Leave Request"),
+            type: 'ir.actions.act_window',
+            res_model: 'hr.leave',
+            view_mode: 'form',
+            views: [[false, 'form']],
+            target: 'new'
+        });
+    }
+    add_leave() {
+        this.action.doAction({
+            name: _t("Leave Request"),
+            type: 'ir.actions.act_window',
+            res_model: 'hr.leave',
+            view_mode: 'form',
+            views: [[false, 'form']],
+            target: 'new'
+        });
+    }
+    add_expense() {
+        this.action.doAction({
+            name: _t("Expense"),
+            type: 'ir.actions.act_window',
+            res_model: 'hr.expense',
+            view_mode: 'form',
+            views: [[false, 'form']],
+            target: 'new'
+        });
+    }
+    leaves_to_approve() {
+        this.action.doAction({
+            name: _t("Leave Request"),
+            type: 'ir.actions.act_window',
+            res_model: 'hr.leave',
+            view_mode: 'tree,form,calendar',
+            views: [[false, 'list'],[false, 'form']],
+            domain: [['state','in',['confirm','validate1']]],
+            target: 'current'
+        });
+    }
+    leave_allocations_to_approve() {
+        this.action.doAction({
+            name: _t("Leave Allocation Request"),
+            type: 'ir.actions.act_window',
+            res_model: 'hr.leave.allocation',
+            view_mode: 'tree,form,calendar',
+            views: [[false, 'list'],[false, 'form']],
+            domain: [['state','in',['confirm', 'validate1']]],
+            target: 'current'
+        })
+    }
+    job_applications_to_approve(){
+        this.action.doAction({
+            name: _t("Applications"),
+            type: 'ir.actions.act_window',
+            res_model: 'hr.applicant',
+            view_mode: 'tree,kanban,form,pivot,graph,calendar',
+            views: [[false, 'list'],[false, 'kanban'],[false, 'form'],
+                    [false, 'pivot'],[false, 'graph'],[false, 'calendar']],
+            context: {},
+            target: 'current'
+        })
+    }
+    leaves_request_today() {
+        var date = new Date();
+        this.action.doAction({
+            name: _t("Leaves Today"),
+            type: 'ir.actions.act_window',
+            res_model: 'hr.leave',
+            view_mode: 'tree,form,calendar',
+            views: [[false, 'list'],[false, 'form']],
+            domain: [['date_from','<=', date], ['date_to', '>=', date], ['state','=','validate']],
+            target: 'current'
+        })
+    }
+    leaves_request_month() {
+        var date = new Date();
+        var firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+        var lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+        var fday = firstDay.toJSON().slice(0,10).replace(/-/g,'-');
+        var lday = lastDay.toJSON().slice(0,10).replace(/-/g,'-');
+        this.action.doAction({
+            name: _t("This Month Leaves"),
+            type: 'ir.actions.act_window',
+            res_model: 'hr.leave',
+            view_mode: 'tree,form,calendar',
+            views: [[false, 'list'],[false, 'form']],
+            domain: [['date_from','>', fday],['state','=','validate'],['date_from','<', lday]],
+            target: 'current'
+        })
+    }
+    hr_payslip() {
+        this.action.doAction({
+            name: _t("Employee Payslips"),
+            type: 'ir.actions.act_window',
+            res_model: 'hr.payslip',
+            view_mode: 'tree,form,calendar',
+            views: [[false, 'list'],[false, 'form']],
+            domain: [['employee_id','=', this.state.login_employee.id]],
+            target: 'current'
+        });
+    }
+   async hr_contract() {
+        console.log("this:", this)
+        if (this.isHrManager) {
+
+            // Call the Python function to get the view ID
+            const view_id = await this.orm.call(
+                'hr.version',
+                'get_hr_version_list_view_id',
+                []
+            );
+            this.action.doAction({
+                name: _t("Contracts"),
+                type: 'ir.actions.act_window',
+                res_model: 'hr.version',
+                view_mode: 'tree,form,graph,pivot',
+                views: [
+                    [view_id, 'list'],
+                    [false, 'graph'],
+                    [false, 'pivot'],
+                ],
+                context: {
+                    'search_default_employee_id': this.state.login_employee.id,
+                },
+                target: 'current'
+            });
+        }
+   }
+
+    hr_timesheets() {
+        this.action.doAction({
+            name: _t("Timesheets"),
+            type: 'ir.actions.act_window',
+            res_model: 'account.analytic.line',
+            view_mode: 'tree,form',
+            views: [[false, 'list'], [false, 'form']],
+            context: {
+                'search_default_month': true,
+            },
+            domain: [['employee_id','=', this.state.login_employee.id]],
+            target: 'current'
+        })
+    }
+    employee_broad_factor() {
+        var today = new Date();
+        var dd = String(today.getDate()).padStart(2, '0');
+        var mm = String(today.getMonth() + 1).padStart(2, '0');
+        var yyyy = today.getFullYear();
+        this.action.doAction({
+            name: _t("Leave Request"),
+            type: 'ir.actions.act_window',
+            res_model: 'hr.leave',
+            view_mode: 'tree,form,calendar',
+            views: [[false, 'list'],[false, 'form']],
+            domain: [['state','in',['validate']],['employee_id','=', this.state.login_employee.id],['date_to','<=',today]],
+            target: 'current',
+            context:{'order':'duration_display'}
+        })
+    }
+     attendance_sign_in_out() {
+        if (this.state.login_employee['attendance_state'] == 'checked_out') {
+            this.state.login_employee['attendance_state'] = 'checked_in';
+            // Set last_check_in to current UTC string
+            this.state.login_employee['last_check_in'] = new Date().toISOString().replace('T', ' ').substring(0, 19);
+        }
+        else{
+            if (this.state.login_employee['attendance_state'] == 'checked_in') {
+                this.state.login_employee['attendance_state'] = 'checked_out';
+            }
+        }
+        this.updateTimer();
+        this.update_attendance();
+    }
+    async update_attendance() {
+        var self = this;
+        var result = await this.orm.call('hr.employee', 'attendance_manual',[[this.state.login_employee.id]])
+        if (result) {
+            var attendance_state = this.state.login_employee.attendance_state;
+            var message = ''
+            if (attendance_state == 'checked_in'){
+                message = 'Checked In'
+                this.env.bus.trigger('signin_signout', {
+                    mode: "checked_in",
+                });
+            }
+            else if (attendance_state == 'checked_out'){
+                message = 'Checked Out'
+                this.env.bus.trigger('signin_signout', {
+                    mode: false,
+                });
+            }
+            this.effect.add({
+                message: _t("Successfully " + message),
+                type: 'rainbow_man',
+                fadeout: "fast",
+            })
+        }
+    }
+
+    // --- Profile Dropdown Actions ---
+    toggleProfileDropdown() {
+        this.state.show_profile_dropdown = !this.state.show_profile_dropdown;
+    }
+    
+    closeProfileDropdown() {
+        this.state.show_profile_dropdown = false;
+    }
+    
+    action_my_profile() {
+        this.closeProfileDropdown();
+        if (this.state.login_employee && this.state.login_employee.id) {
+            this.action.doAction({
+                type: 'ir.actions.act_window',
+                name: _t('My Profile'),
+                res_model: 'hr.employee',
+                res_id: this.state.login_employee.id,
+                views: [[false, 'form']],
+                target: 'current'
+            });
+        }
+    }
+    
+    action_my_payslips() {
+        this.closeProfileDropdown();
+        if (this.state.login_employee && this.state.login_employee.id) {
+            this.action.doAction({
+                type: 'ir.actions.act_window',
+                name: _t('My Payslips'),
+                res_model: 'hr.payslip',
+                views: [[false, 'list'], [false, 'form']],
+                domain: [['employee_id', '=', this.state.login_employee.id]],
+                target: 'current'
+            });
+        }
+    }
+    
+    action_preferences() {
+        this.closeProfileDropdown();
+        this.action.doAction('base.action_res_users_my');
+    }
+    
+    action_sign_out() {
+        window.location.href = '/web/session/logout';
+    }
+    
+    // --- Date Filter Dropdown Actions ---
+    toggleDateDropdown() {
+        this.state.show_date_dropdown = !this.state.show_date_dropdown;
+        if (this.state.show_date_dropdown) {
+            this.state.date_dropdown_view = 'list';
+        }
+    }
+    
+    closeDateDropdown() {
+        this.state.show_date_dropdown = false;
+        this.state.date_dropdown_view = 'list';
+    }
+    
+    setDateFilter(range) {
+        if (range === 'custom_trigger') {
+            this.state.date_dropdown_view = 'custom';
+            return;
+        }
+        this.state.date_range = range;
+        this.closeDateDropdown();
+    }
+    
+    applyCustomDateFilter() {
+        if (!this.state.custom_date_from || !this.state.custom_date_to) {
+            return; // Simple validation
+        }
+        this.state.date_range = 'custom';
+        this.closeDateDropdown();
+    }
+    
+    backToDateList() {
+        this.state.date_dropdown_view = 'list';
+    }
+}
+registry.category("actions").add("hr_dashboard", HrDashboard)
+
+patch(ActivityMenu.prototype, {
+    setup() {
+        super.setup();
+        var self = this
+        onMounted(() => {
+            this.env.bus.addEventListener('signin_signout', ({
+                detail
+            }) => {
+                if (detail.mode == 'checked_in') {
+                    self.state.checkedIn = detail.mode
+                } else {
+                    self.state.checkedIn = false
+                }
+            })
+        })
+    },
+})

@@ -22,7 +22,7 @@
 #############################################################################
 {
     'name': "Open HRMS HR Dashboard",
-    'version': '19.0.1.0.0',
+    'version': '19.0.2.0.0',
     'summary': """Comprehensive Dashboard for Managing HR Activities in Open HRMS""",
     'description': """Provides a dashboard to view key HR information such as attendance, leaves, payroll, and more. Helps HR teams track activities in one place.""",
     'category': 'Generic Modules/Human Resources',

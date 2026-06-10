@@ -43,6 +43,7 @@ export class HrDashboard extends Component{
             checkin_since_str: 'Tap to start your day',
             checkin_hm_str: '0h 0m',
             show_profile_dropdown: false,
+            show_notifications_dropdown: false,
             show_date_dropdown: false,
             date_dropdown_view: 'list',
             custom_date_from: '',
@@ -70,286 +71,7 @@ export class HrDashboard extends Component{
             else {
                 this.state.is_manager = false
             }
-            var empDetails = await this.orm.call('hr.employee', 'get_user_employee_details', [])
-            if ( empDetails ){
-                this.state.login_employee = empDetails[0];
-            }
-            
-            // Fetch Open HRMS Requests
-            this.state.open_hrms_requests = await this.orm.call('hr.employee', 'get_open_hrms_requests', []);
-            
-            var res = await this.orm.call('hr.employee', 'get_upcoming', [])
-            if ( res ) {
-                // Process Upcoming Events
-                if (res['event'] && res['event'].length > 0) {
-                    const eventMonthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-                    this.state.upcoming_events = res['event'].slice(0, 4).map((e, index) => {
-                        let dateObj = new Date(e.date_begin.replace(' ', 'T') + 'Z');
-                        let monthStr = eventMonthNames[dateObj.getMonth()];
-                        let dayStr = String(dateObj.getDate()).padStart(2, '0');
-                        let yearStr = dateObj.getFullYear();
-                        
-                        let hours = dateObj.getHours();
-                        let minutes = String(dateObj.getMinutes()).padStart(2, '0');
-                        let ampm = hours >= 12 ? 'PM' : 'AM';
-                        hours = hours % 12;
-                        hours = hours ? hours : 12;
-                        let timeStr = hours + ':' + minutes + ' ' + ampm;
-                        
-                        const colors = ['#1B5298', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
-                        let iconColor = colors[index % colors.length];
-
-                        return {
-                            ...e,
-                            event_month: monthStr,
-                            event_day: dayStr,
-                            event_year: yearStr,
-                            event_time: timeStr,
-                            icon_color: iconColor
-                        };
-                    });
-                } else {
-                    this.state.upcoming_events = [];
-                }
-                
-                // Process Announcements
-                if (res['announcement'] && res['announcement'].length > 0) {
-                    const annIds = res['announcement'].map(a => a.id);
-                    let annDetails = await this.orm.searchRead('hr.announcement', [['id', 'in', annIds]], ['id', 'create_date', 'create_uid']);
-                    let annMap = {};
-                    annDetails.forEach(d => annMap[d.id] = d);
-                    
-                    let now = new Date();
-                    
-                    this.state.announcements = res['announcement'].map(a => {
-                        let detail = annMap[a.id];
-                        let author = detail && detail.create_uid ? detail.create_uid[1] : 'HR Team';
-                        // Clean author name if it's a long internal name
-                        if (author && author.includes('OdooBot')) author = 'System';
-                        else if (author && author.includes('Administrator')) author = 'HR Team';
-                        
-                        let cDate = detail && detail.create_date ? new Date(detail.create_date + 'Z') : new Date(a.date_start);
-                        
-                        let diffMs = now - cDate;
-                        let diffMins = Math.floor(diffMs / 60000);
-                        let diffHours = Math.floor(diffMs / 3600000);
-                        let diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-                        
-                        let timeAgo = '';
-                        if (diffMins < 60) {
-                            timeAgo = diffMins <= 0 ? 'Just now' : `${diffMins}m ago`;
-                        } else if (diffHours < 24) {
-                            timeAgo = `${diffHours}h ago`;
-                        } else if (diffDays === 1) {
-                            timeAgo = 'Yesterday';
-                        } else {
-                            timeAgo = `${diffDays} days ago`;
-                        }
-                        
-                        return {
-                            ...a,
-                            author: author,
-                            time_ago: timeAgo
-                        };
-                    });
-                } else {
-                    this.state.announcements = [];
-                }
-                
-                // Process Birthdays
-                if (res['birthday'] && res['birthday'].length > 0) {
-                    const bdayIds = res['birthday'].map(b => b.id);
-                    const bdayColors = ['#1B5298', '#ec4899', '#0ea5e9', '#8b5cf6', '#14b8a6', '#f59e0b'];
-                    const bdayMonthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                    
-                    let depts = await this.orm.searchRead('hr.employee', [['id', 'in', bdayIds]], ['id', 'department_id']);
-                    let deptMap = {};
-                    depts.forEach(d => deptMap[d.id] = d.department_id ? d.department_id[1] : 'Employee');
-                    
-                    this.state.employee_birthday = res['birthday'].map((b, i) => {
-                        let initials = b.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-                        let color = bdayColors[i % bdayColors.length];
-                        
-                        let dateStr = '';
-                        if (b.is_birthday) {
-                            dateStr = 'Today';
-                        } else if (b.days === 1) {
-                            dateStr = 'Tomorrow';
-                        } else {
-                            let dateObj = new Date(b.birthday);
-                            dateStr = bdayMonthNames[dateObj.getMonth()] + ' ' + String(dateObj.getDate()).padStart(2, '0');
-                        }
-                        
-                        return {
-                            ...b,
-                            initials: initials,
-                            color: color,
-                            display_date: dateStr,
-                            department: deptMap[b.id]
-                        };
-                    });
-                } else {
-                    this.state.employee_birthday = [];
-                }
-                
-                // Fetch HR Reminders
-                let reminderData = await rpc('/hr_reminder/all_reminder');
-                
-                // Fetch Personal To-Dos (project.task)
-                let todoData = await this.orm.searchRead(
-                    'project.task',
-                    [['user_ids', 'in', user.userId], ['project_id', '=', false], ['state', 'not in', ['1_done', '1_canceled']]],
-                    ['id', 'name', 'date_deadline', 'state'],
-                    { limit: 5, order: 'date_deadline ASC' }
-                );
-                
-                let combined = [];
-                
-                if (reminderData && reminderData.length > 0) {
-                    reminderData.forEach(rem => {
-                        combined.push({
-                            type: 'reminder',
-                            id: rem.id,
-                            title: rem.name || 'Reminder',
-                            date_deadline: new Date().toISOString().split('T')[0], // Always "Today" for active reminders
-                            is_done: false
-                        });
-                    });
-                }
-                
-                if (todoData && todoData.length > 0) {
-                    todoData.forEach(todo => {
-                        combined.push({
-                            type: 'todo',
-                            id: todo.id,
-                            title: todo.name || 'To-do',
-                            date_deadline: todo.date_deadline,
-                            is_done: false
-                        });
-                    });
-                }
-                
-                // Sort chronologically
-                combined.sort((a, b) => {
-                    let dateA = a.date_deadline ? new Date(a.date_deadline) : new Date(8640000000000000);
-                    let dateB = b.date_deadline ? new Date(b.date_deadline) : new Date(8640000000000000);
-                    return dateA - dateB;
-                });
-                
-                // Limit to 4 items initially
-                combined = combined.slice(0, 4);
-                
-                let todayMs = new Date();
-                todayMs.setHours(0,0,0,0);
-                
-                const monthNamesShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                
-                this.state.activities = combined.map(item => {
-                    let dateStr = '';
-                    let badgeClass = 'badge-gray';
-                    
-                    if (item.date_deadline) {
-                        let deadline = new Date(item.date_deadline);
-                        let deadlineMs = new Date(item.date_deadline);
-                        deadlineMs.setHours(0,0,0,0);
-                        
-                        if (deadlineMs.getTime() === todayMs.getTime()) {
-                            dateStr = 'Today';
-                            badgeClass = 'badge-yellow';
-                        } else if (deadlineMs.getTime() < todayMs.getTime()) {
-                            dateStr = 'Overdue';
-                            badgeClass = 'badge-red';
-                        } else {
-                            dateStr = monthNamesShort[deadline.getMonth()] + ' ' + String(deadline.getDate()).padStart(2, '0');
-                            badgeClass = 'badge-gray';
-                        }
-                    } else {
-                        dateStr = 'No date';
-                        badgeClass = 'badge-gray';
-                    }
-                    
-                    return {
-                        ...item,
-                        date_str: dateStr,
-                        badge_class: badgeClass
-                    };
-                });
-            }
-            var projectTaskDetails = await this.orm.call('hr.employee', 'get_employee_project_tasks', [])
-            if (projectTaskDetails) {
-                this.state.login_employee['project_task_lines'] = projectTaskDetails;
-            }
-            if (this.state.is_manager) {
-                var pendingLeaves = await this.orm.searchRead('hr.leave', [['state', 'in', ['confirm', 'validate1']]], ['employee_id', 'holiday_status_id', 'request_date_from', 'request_date_to', 'number_of_days']);
-                const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                const colors = ['#14b8a6', '#ef4444', '#10b981', '#f59e0b', '#1B5298', '#8b5cf6'];
-                
-                this.state.pending_approvals = pendingLeaves.map((l, i) => {
-                    let empName = l.employee_id ? l.employee_id[1] : 'Unknown';
-                    let initials = empName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-                    let color = colors[i % colors.length];
-                    
-                    let fromDate = new Date(l.request_date_from);
-                    let toDate = new Date(l.request_date_to);
-                    let fromStr = monthNames[fromDate.getMonth()] + ' ' + String(fromDate.getDate()).padStart(2, '0');
-                    let toStr = monthNames[toDate.getMonth()] + ' ' + String(toDate.getDate()).padStart(2, '0');
-                    
-                    let type = l.holiday_status_id ? l.holiday_status_id[1] : 'Leave';
-                    
-                    return {
-                        id: l.id,
-                        name: empName,
-                        initials: initials,
-                        color: color,
-                        subtitle: `${type} · ${fromStr}-${toStr} · ${l.number_of_days}d`
-                    };
-                });
-                
-                // Fetch Expiring Documents
-                let todayStr = new Date().toISOString().split('T')[0];
-                let expiringDocs = await this.orm.searchRead(
-                    'hr.employee.document', 
-                    [['expiry_date', '!=', false], ['expiry_date', '>=', todayStr]], 
-                    ['employee_ref_id', 'document_type_id', 'expiry_date'],
-                    { limit: 4, order: 'expiry_date ASC' }
-                );
-                
-                let urgentCount = 0;
-                this.state.expiring_documents = expiringDocs.map((doc, i) => {
-                    let empName = doc.employee_ref_id ? doc.employee_ref_id[1] : 'Unknown';
-                    let initials = empName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-                    let typeName = doc.document_type_id ? doc.document_type_id[1] : 'Document';
-                    
-                    let expDate = new Date(doc.expiry_date);
-                    let today = new Date();
-                    // Strip time for accurate day calc
-                    expDate.setHours(0,0,0,0);
-                    today.setHours(0,0,0,0);
-                    
-                    let diffTime = Math.abs(expDate - today);
-                    let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    
-                    let isUrgent = diffDays <= 14;
-                    if (isUrgent) {
-                        urgentCount++;
-                    }
-                    
-                    return {
-                        id: doc.id,
-                        name: empName,
-                        initials: initials,
-                        type: typeName,
-                        days_left: diffDays,
-                        is_urgent: isUrgent,
-                        color: colors[i % colors.length]
-                    };
-                });
-                this.state.urgent_count = urgentCount;
-            }
-        });
-        onMounted(() => {
-            this.title = 'Dashboard'
-            this.render_graphs();
+            await this.fetch_data();
             const oContent = document.querySelector('.o_content');
             if (oContent) {
                 oContent.style.setProperty('padding', '0', 'important');
@@ -379,6 +101,10 @@ export class HrDashboard extends Component{
                 oContent.style.removeProperty('margin');
                 oContent.style.removeProperty('overflow');
             }
+        });
+        onMounted(() => {
+            this.title = 'Dashboard'
+            this.render_graphs();
         });
     }
     add_project_task() {
@@ -451,6 +177,11 @@ export class HrDashboard extends Component{
             target: 'current'
         });
     }
+    get pending_activities_count() {
+        if (!this.state.activities) return 0;
+        return this.state.activities.filter(a => !a.is_done).length;
+    }
+
     view_reminders() {
         this.action.doAction('hr_reminder.hr_reminder_action');
     }
@@ -570,17 +301,80 @@ export class HrDashboard extends Component{
             target: 'current'
         });
     }
+    
+    async send_document_reminder(ev) {
+        ev.stopPropagation();
+        let doc_id = parseInt(ev.currentTarget.dataset.id);
+        const result = await this.orm.call('hr.employee.document', 'action_send_manual_reminder', [[doc_id]]);
+        if (result) {
+            this.showCustomToast(_t("Reminder sent successfully!").toString(), "success");
+        } else {
+            this.showCustomToast(_t("Failed to send reminder.").toString(), "danger");
+        }
+    }
+    showCustomToast(message, type = "success") {
+        let toast = document.createElement('div');
+        toast.style.position = 'fixed';
+        toast.style.bottom = '24px';
+        toast.style.right = '24px';
+        toast.style.backgroundColor = '#ffffff';
+        toast.style.padding = '12px 16px';
+        toast.style.borderRadius = '12px';
+        toast.style.boxShadow = '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)';
+        toast.style.display = 'flex';
+        toast.style.alignItems = 'center';
+        toast.style.gap = '12px';
+        toast.style.zIndex = '9999';
+        toast.style.transition = 'all 0.3s ease-in-out';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(20px)';
+        toast.style.border = '1px solid #e2e8f0';
+        
+        let iconHtml = '';
+        if (type === 'success') {
+            iconHtml = `<div style="width: 24px; height: 24px; border-radius: 50%; background-color: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center;"><i class="fa fa-check" style="font-size: 12px;"></i></div>`;
+        } else {
+            iconHtml = `<div style="width: 24px; height: 24px; border-radius: 50%; background-color: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center;"><i class="fa fa-times" style="font-size: 12px;"></i></div>`;
+        }
+        
+        toast.innerHTML = `
+            ${iconHtml}
+            <span style="font-size: 14px; font-weight: 500; color: #1e293b;">${message}</span>
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Trigger animation
+        setTimeout(() => {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+        }, 10);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                if (toast.parentNode) {
+                    toast.parentNode.removeChild(toast);
+                }
+            }, 300);
+        }, 3000);
+    }
+
     async approve_leave(ev) {
         let leave_id = parseInt(ev.currentTarget.dataset.id);
         await this.orm.call('hr.leave', 'action_approve', [[leave_id]]);
         // Filter it out from UI temporarily
         this.state.pending_approvals = this.state.pending_approvals.filter(l => l.id !== leave_id);
+        this.showCustomToast("Leave request approved.", "success");
     }
     async reject_leave(ev) {
         let leave_id = parseInt(ev.currentTarget.dataset.id);
         await this.orm.call('hr.leave', 'action_refuse', [[leave_id]]);
         // Filter it out from UI temporarily
         this.state.pending_approvals = this.state.pending_approvals.filter(l => l.id !== leave_id);
+        this.showCustomToast("Leave request rejected.", "danger");
     }
     render_graphs(){
         var self = this;
@@ -596,16 +390,24 @@ export class HrDashboard extends Component{
         }
     }
     async render_department_employee() {
+        let [dFrom, dTo] = this.getDateRange();
         const colors = [
             '#8b5cf6', '#1B5298', '#10b981', '#f59e0b', '#ef4444',
             '#6366f1', '#ec4899', '#14b8a6', '#f97316', '#06b6d4',
             '#84cc16', '#eab308'
         ];
-        const data = await this.orm.call('hr.employee', 'get_dept_employee', []);
+        const data = await this.orm.call('hr.employee', 'get_dept_employee', [], { date_from: dFrom, date_to: dTo });
         if (data) {
             const labels = data.map(d => d.label);
             const values = data.map(d => d.value);
-            const pieCtx = document.getElementById('employeePieChart').getContext('2d');
+            let canvas_pieCtx = document.getElementById('employeePieChart');
+        if (!canvas_pieCtx) return;
+        let parent_pieCtx = canvas_pieCtx.parentNode;
+        canvas_pieCtx.remove();
+        let newCanvas_pieCtx = document.createElement('canvas');
+        newCanvas_pieCtx.id = 'employeePieChart';
+        parent_pieCtx.appendChild(newCanvas_pieCtx);
+        const pieCtx = newCanvas_pieCtx.getContext('2d');
             
             // Chart.js v2 & v3 compatible center text plugin
             Chart.pluginService = Chart.pluginService || Chart.plugins;
@@ -800,13 +602,15 @@ export class HrDashboard extends Component{
         }
     }
     async render_leave_graph() {
+        let [dFrom, dTo] = this.getDateRange();
         const colors = [
             '#8b5cf6', '#f59e0b', '#1B5298', '#10b981', '#ef4444', '#6366f1',
             '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16',
             '#eab308', '#d946ef'
         ];
-        const data = await this.orm.call('hr.employee', 'get_department_leave', []);
-        if (data) {
+        const data = await this.orm.call('hr.employee', 'get_department_leave', [], { date_from: dFrom, date_to: dTo });
+        const trendData = await this.orm.call('hr.employee', 'get_monthly_leave_status_trend', [], { date_from: dFrom, date_to: dTo });
+        if (data && trendData) {
             const fData = data[0];
             const dept = data[1];
             const id = this.leave_graph.el;
@@ -818,14 +622,21 @@ export class HrDashboard extends Component{
                 d.total = total;
             });
             // Extract 3-letter month abbreviations (e.g., "Jan 2026" -> "Jan")
-            const labels = fData.map(d => d.l_month ? d.l_month.split(' ')[0] : d.l_month);
-            const barData = fData.map(d => d.total);
+            const labels = trendData.map(d => d.l_month ? d.l_month.split(' ')[0] : d.l_month);
             
-            // Mock visual parity data (75% Approved, 25% Pending)
-            const approvedData = barData.map(v => Math.round(v * 0.75));
-            const pendingData = barData.map((v, i) => v - approvedData[i]);
+            // Use real backend data
+            const approvedData = trendData.map(d => d.Approved);
+            const pendingData = trendData.map(d => d.Pending);
+            const rejectedData = trendData.map(d => d.Rejected);
 
-            const barCtx = document.getElementById('leave_barChart').getContext('2d');
+            let canvas_barCtx = document.getElementById('leave_barChart');
+        if (!canvas_barCtx) return;
+        let parent_barCtx = canvas_barCtx.parentNode;
+        canvas_barCtx.remove();
+        let newCanvas_barCtx = document.createElement('canvas');
+        newCanvas_barCtx.id = 'leave_barChart';
+        parent_barCtx.appendChild(newCanvas_barCtx);
+        const barCtx = newCanvas_barCtx.getContext('2d');
             const barChart = new Chart(barCtx, {
                 type: 'bar',
                 data: {
@@ -835,15 +646,22 @@ export class HrDashboard extends Component{
                             label: 'Approved',
                             data: approvedData,
                             backgroundColor: '#8b5cf6',
-                            barPercentage: 0.5,
-                            categoryPercentage: 0.8
+                            barPercentage: 0.9,
+                            categoryPercentage: 0.5
                         },
                         {
                             label: 'Pending',
                             data: pendingData,
                             backgroundColor: '#f59e0b',
-                            barPercentage: 0.5,
-                            categoryPercentage: 0.8
+                            barPercentage: 0.9,
+                            categoryPercentage: 0.5
+                        },
+                        {
+                            label: 'Rejected',
+                            data: rejectedData,
+                            backgroundColor: '#ef4444',
+                            barPercentage: 0.9,
+                            categoryPercentage: 0.5
                         }
                     ]
                 },
@@ -916,7 +734,14 @@ export class HrDashboard extends Component{
                 type: d,
                 leave: fData.reduce((acc, t) => acc + (t.leave[d] || 0), 0)
             }));
-            const pieCtx = document.getElementById('leave_doughnutChart').getContext('2d');
+            let canvas_pieCtx = document.getElementById('leave_doughnutChart');
+        if (!canvas_pieCtx) return;
+        let parent_pieCtx = canvas_pieCtx.parentNode;
+        canvas_pieCtx.remove();
+        let newCanvas_pieCtx = document.createElement('canvas');
+        newCanvas_pieCtx.id = 'leave_doughnutChart';
+        parent_pieCtx.appendChild(newCanvas_pieCtx);
+        const pieCtx = newCanvas_pieCtx.getContext('2d');
             
             // Re-use centerTextPlugin from department employee
             Chart.pluginService = Chart.pluginService || Chart.plugins;
@@ -1111,8 +936,9 @@ export class HrDashboard extends Component{
         }
     }
     async update_join_resign_trends() {
+        let [dFrom, dTo] = this.getDateRange();
         const colors = ['#10b981', '#ef4444', '#1B5298', '#f59e0b', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16', '#eab308', '#d946ef'];
-        const data = await this.orm.call('hr.employee', 'join_resign_trends', []);
+        const data = await this.orm.call('hr.employee', 'join_resign_trends', [], { date_from: dFrom, date_to: dTo });
         if (data) {
             const labels = data[0].values.map(d => d.l_month.substring(0, 3)); // Use short month names
             const datasets = data.map((dataset, index) => {
@@ -1137,7 +963,14 @@ export class HrDashboard extends Component{
                     pointHoverRadius: 6
                 };
             });
-            const ctx = document.getElementById('lineChart').getContext('2d');
+            let canvas_ctx = document.getElementById('lineChart');
+        if (!canvas_ctx) return;
+        let parent_ctx = canvas_ctx.parentNode;
+        canvas_ctx.remove();
+        let newCanvas_ctx = document.createElement('canvas');
+        newCanvas_ctx.id = 'lineChart';
+        parent_ctx.appendChild(newCanvas_ctx);
+        const ctx = newCanvas_ctx.getContext('2d');
             const lineChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -1210,8 +1043,9 @@ export class HrDashboard extends Component{
         }
     }
     async update_monthly_attrition() {
+        let [dFrom, dTo] = this.getDateRange();
         const colors = ['#10b981', '#1B5298', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16', '#eab308', '#d946ef'];
-        const data = await this.orm.call('hr.employee', 'get_attrition_rate', []);
+        const data = await this.orm.call('hr.employee', 'get_attrition_rate', [], { date_from: dFrom, date_to: dTo });
         if (data && data.length > 0) {
             // Reverse the data to show oldest month on the left, newest on the right
             data.reverse();
@@ -1231,7 +1065,14 @@ export class HrDashboard extends Component{
             const labels = data.map(d => d.month.substring(0, 3)); // short month
             const attritionData = data.map(d => d.attrition_rate);
             
-            const ctx = document.getElementById('attritionRateChart').getContext('2d');
+            let canvas_ctx = document.getElementById('attritionRateChart');
+        if (!canvas_ctx) return;
+        let parent_ctx = canvas_ctx.parentNode;
+        canvas_ctx.remove();
+        let newCanvas_ctx = document.createElement('canvas');
+        newCanvas_ctx.id = 'attritionRateChart';
+        parent_ctx.appendChild(newCanvas_ctx);
+        const ctx = newCanvas_ctx.getContext('2d');
             const attritionRateChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -1309,11 +1150,19 @@ export class HrDashboard extends Component{
         }
     }
     async update_leave_trend() {
-        const data = await this.orm.call('hr.employee', 'employee_leave_trend', []);
+        let [dFrom, dTo] = this.getDateRange();
+        const data = await this.orm.call('hr.employee', 'employee_attendance_trend', [], { date_from: dFrom, date_to: dTo });
         if (data) {
             const labels = data.map(d => d.l_month);
-            const leaveData = data.map(d => d.leave);
-            const ctx = document.getElementById('leaveTrendChart').getContext('2d');
+            const leaveData = data.map(d => d.attendance);
+            let canvas_ctx = document.getElementById('leaveTrendChart');
+        if (!canvas_ctx) return;
+        let parent_ctx = canvas_ctx.parentNode;
+        canvas_ctx.remove();
+        let newCanvas_ctx = document.createElement('canvas');
+        newCanvas_ctx.id = 'leaveTrendChart';
+        parent_ctx.appendChild(newCanvas_ctx);
+        const ctx = newCanvas_ctx.getContext('2d');
             
             // Create vibrant gradient fill matching reference
             const gradient = ctx.createLinearGradient(0, 0, 0, 250);
@@ -1325,7 +1174,7 @@ export class HrDashboard extends Component{
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: 'Leaves',
+                        label: 'Attendance',
                         data: leaveData,
                         backgroundColor: gradient,
                         borderColor: '#1B5298',
@@ -1342,12 +1191,17 @@ export class HrDashboard extends Component{
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
+                    layout: {
+                        padding: {
+                            bottom: 24
+                        }
+                    },
                     legend: { display: false },
                     plugins: {
                         tooltip: {
                             callbacks: {
                                 label: function (context) {
-                                    return `Leaves: ${context.raw}`;
+                                    return `Attendance: ${context.raw}`;
                                 }
                             }
                         },
@@ -1401,8 +1255,9 @@ export class HrDashboard extends Component{
     }
 
     async render_employee_skill() {
+        let [dFrom, dTo] = this.getDateRange();
         const colors = ['#8b5cf6', '#1B5298', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#ec4899', '#14b8a6', '#f97316', '#06b6d4', '#84cc16', '#eab308', '#d946ef'];
-        const data = await this.orm.call('hr.employee', 'get_employee_skill', []);
+        const data = await this.orm.call('hr.employee', 'get_employee_skill', [], { date_from: dFrom, date_to: dTo });
         if (data) {
             const labels = data.map(d => d.skills);
             const skillData = data.map(d => d.progress);
@@ -1695,17 +1550,25 @@ export class HrDashboard extends Component{
                     mode: false,
                 });
             }
-            this.effect.add({
-                message: _t("Successfully " + message),
-                type: 'rainbow_man',
-                fadeout: "fast",
-            })
+            this.showCustomToast(_t("Successfully " + message).toString(), "success");
         }
     }
 
     // --- Profile Dropdown Actions ---
+    toggleNotificationsDropdown() {
+        this.state.show_notifications_dropdown = !this.state.show_notifications_dropdown;
+        if (this.state.show_notifications_dropdown) {
+            this.state.show_profile_dropdown = false; // close the other dropdown
+        }
+    }
+    closeNotificationsDropdown() {
+        this.state.show_notifications_dropdown = false;
+    }
     toggleProfileDropdown() {
         this.state.show_profile_dropdown = !this.state.show_profile_dropdown;
+        if (this.state.show_profile_dropdown) {
+            this.state.show_notifications_dropdown = false; // close the other dropdown
+        }
     }
     
     closeProfileDropdown() {
@@ -1769,6 +1632,7 @@ export class HrDashboard extends Component{
         }
         this.state.date_range = range;
         this.closeDateDropdown();
+        this.fetch_data();
     }
     
     applyCustomDateFilter() {
@@ -1777,10 +1641,341 @@ export class HrDashboard extends Component{
         }
         this.state.date_range = 'custom';
         this.closeDateDropdown();
+        this.fetch_data();
     }
     
     backToDateList() {
         this.state.date_dropdown_view = 'list';
+    }
+
+    getDateRange() {
+        let fromDate = null;
+        let toDate = null;
+        let now = new Date();
+        
+        if (this.state.date_range === 'today') {
+            fromDate = new Date(now.setHours(0,0,0,0)).toISOString().split('T')[0];
+            toDate = new Date(now.setHours(23,59,59,999)).toISOString().split('T')[0];
+        } else if (this.state.date_range === 'week') {
+            let first = now.getDate() - now.getDay();
+            let last = first + 6;
+            let d1 = new Date(now.setDate(first));
+            let d2 = new Date(now.setDate(last));
+            fromDate = d1.toISOString().split('T')[0];
+            toDate = d2.toISOString().split('T')[0];
+        } else if (this.state.date_range === 'month') {
+            fromDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+            toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+        } else if (this.state.date_range === 'quarter') {
+            let quarter = Math.floor((now.getMonth() / 3));
+            fromDate = new Date(now.getFullYear(), quarter * 3, 1).toISOString().split('T')[0];
+            toDate = new Date(now.getFullYear(), quarter * 3 + 3, 0).toISOString().split('T')[0];
+        } else if (this.state.date_range === 'year') {
+            fromDate = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
+            toDate = new Date(now.getFullYear(), 11, 31).toISOString().split('T')[0];
+        } else if (this.state.date_range === 'custom') {
+            fromDate = this.state.custom_date_from;
+            toDate = this.state.custom_date_to;
+        }
+        return [fromDate, toDate];
+    }
+    
+    async fetch_data() {
+        let [dFrom, dTo] = this.getDateRange();
+        var empDetails = await this.orm.call('hr.employee', 'get_user_employee_details', [], { date_from: dFrom, date_to: dTo })
+        if ( empDetails ){
+            this.state.login_employee = empDetails[0];
+        }
+        
+        // Fetch Open HRMS Requests
+        this.state.open_hrms_requests = await this.orm.call('hr.employee', 'get_open_hrms_requests', [], { date_from: dFrom, date_to: dTo });
+        
+        var res = await this.orm.call('hr.employee', 'get_upcoming', [], { date_from: dFrom, date_to: dTo })
+        if ( res ) {
+            // Process Upcoming Events
+            if (res['event'] && res['event'].length > 0) {
+                const eventMonthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+                this.state.upcoming_events = res['event'].slice(0, 4).map((e, index) => {
+                let dateObj = new Date(e.date_begin.replace(' ', 'T') + 'Z');
+                let monthStr = eventMonthNames[dateObj.getMonth()];
+                let dayStr = String(dateObj.getDate()).padStart(2, '0');
+                let yearStr = dateObj.getFullYear();
+                
+                let hours = dateObj.getHours();
+                let minutes = String(dateObj.getMinutes()).padStart(2, '0');
+                let ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12;
+                hours = hours ? hours : 12;
+                let timeStr = hours + ':' + minutes + ' ' + ampm;
+                
+                const colors = ['#1B5298', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
+                let iconColor = colors[index % colors.length];
+
+                return {
+                    ...e,
+                    event_month: monthStr,
+                    event_day: dayStr,
+                    event_year: yearStr,
+                    event_time: timeStr,
+                    icon_color: iconColor
+                };
+                });
+            } else {
+                this.state.upcoming_events = [];
+            }
+            
+            // Process Announcements
+            if (res['announcement'] && res['announcement'].length > 0) {
+                const annIds = res['announcement'].map(a => a.id);
+                let annDetails = await this.orm.searchRead('hr.announcement', [['id', 'in', annIds]], ['id', 'create_date', 'create_uid']);
+                let annMap = {};
+                annDetails.forEach(d => annMap[d.id] = d);
+                
+                let now = new Date();
+                
+                this.state.announcements = res['announcement'].map(a => {
+                let detail = annMap[a.id];
+                let author = detail && detail.create_uid ? detail.create_uid[1] : 'HR Team';
+                // Clean author name if it's a long internal name
+                if (author && author.includes('OdooBot')) author = 'System';
+                else if (author && author.includes('Administrator')) author = 'HR Team';
+                
+                let cDate = detail && detail.create_date ? new Date(detail.create_date + 'Z') : new Date(a.date_start);
+                
+                let diffMs = now - cDate;
+                let diffMins = Math.floor(diffMs / 60000);
+                let diffHours = Math.floor(diffMs / 3600000);
+                let diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                
+                let timeAgo = '';
+                if (diffMins < 60) {
+                    timeAgo = diffMins <= 0 ? 'Just now' : `${diffMins}m ago`;
+                } else if (diffHours < 24) {
+                    timeAgo = `${diffHours}h ago`;
+                } else if (diffDays === 1) {
+                    timeAgo = 'Yesterday';
+                } else {
+                    timeAgo = `${diffDays} days ago`;
+                }
+                
+                return {
+                    ...a,
+                    author: author,
+                    time_ago: timeAgo
+                };
+                });
+            } else {
+                this.state.announcements = [];
+            }
+            
+            // Process Birthdays
+            if (res['birthday'] && res['birthday'].length > 0) {
+                const bdayIds = res['birthday'].map(b => b.id);
+                const bdayColors = ['#1B5298', '#ec4899', '#0ea5e9', '#8b5cf6', '#14b8a6', '#f59e0b'];
+                const bdayMonthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                
+                // Department is now provided by the backend 'get_upcoming'
+                let deptMap = {};
+                res['birthday'].forEach(d => deptMap[d.id] = d.department_id ? d.department_id[1] : 'Employee');
+                
+                this.state.employee_birthday = res['birthday'].map((b, i) => {
+                let initials = b.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                let color = bdayColors[i % bdayColors.length];
+                
+                let dateStr = '';
+                if (b.is_birthday) {
+                    dateStr = 'Today';
+                } else if (b.days === 1) {
+                    dateStr = 'Tomorrow';
+                } else {
+                    let dateObj = new Date(b.birthday);
+                    dateStr = bdayMonthNames[dateObj.getMonth()] + ' ' + String(dateObj.getDate()).padStart(2, '0');
+                }
+                
+                return {
+                    ...b,
+                    initials: initials,
+                    color: color,
+                    display_date: dateStr,
+                    department: deptMap[b.id]
+                };
+                });
+            } else {
+                this.state.employee_birthday = [];
+            }
+            
+            // Fetch HR Reminders
+            let reminderData = await rpc('/hr_reminder/all_reminder');
+            
+            // Fetch Personal To-Dos (project.task)
+            let todoDomain = [['user_ids', 'in', user.userId], ['project_id', '=', false], ['state', 'not in', ['1_done', '1_canceled']]];
+            if (dFrom) {
+                todoDomain.push(['date_deadline', '>=', dFrom]);
+            }
+            if (dTo) {
+                todoDomain.push(['date_deadline', '<=', dTo]);
+            }
+            let todoData = await this.orm.searchRead(
+                'project.task',
+                todoDomain,
+                ['id', 'name', 'date_deadline', 'state'],
+                { limit: 5, order: 'date_deadline ASC' }
+            );
+            
+            let combined = [];
+            
+            if (reminderData && reminderData.length > 0) {
+                reminderData.forEach(rem => {
+                combined.push({
+                    type: 'reminder',
+                    id: rem.id,
+                    title: rem.name || 'Reminder',
+                    date_deadline: new Date().toISOString().split('T')[0], // Always "Today" for active reminders
+                    is_done: false
+                });
+                });
+            }
+            
+            if (todoData && todoData.length > 0) {
+                todoData.forEach(todo => {
+                combined.push({
+                    type: 'todo',
+                    id: todo.id,
+                    title: todo.name || 'To-do',
+                    date_deadline: todo.date_deadline,
+                    is_done: false
+                });
+                });
+            }
+            
+            // Sort chronologically
+            combined.sort((a, b) => {
+                let dateA = a.date_deadline ? new Date(a.date_deadline) : new Date(8640000000000000);
+                let dateB = b.date_deadline ? new Date(b.date_deadline) : new Date(8640000000000000);
+                return dateA - dateB;
+            });
+            
+            // Limit to 4 items initially
+            combined = combined.slice(0, 4);
+            
+            let todayMs = new Date();
+            todayMs.setHours(0,0,0,0);
+            
+            const monthNamesShort = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            
+            this.state.activities = combined.map(item => {
+                let dateStr = '';
+                let badgeClass = 'badge-gray';
+                
+                if (item.date_deadline) {
+                let deadline = new Date(item.date_deadline);
+                let deadlineMs = new Date(item.date_deadline);
+                deadlineMs.setHours(0,0,0,0);
+                
+                if (deadlineMs.getTime() === todayMs.getTime()) {
+                    dateStr = 'Today';
+                    badgeClass = 'badge-yellow';
+                } else if (deadlineMs.getTime() < todayMs.getTime()) {
+                    dateStr = 'Overdue';
+                    badgeClass = 'badge-red';
+                } else {
+                    dateStr = monthNamesShort[deadline.getMonth()] + ' ' + String(deadline.getDate()).padStart(2, '0');
+                    badgeClass = 'badge-gray';
+                }
+                } else {
+                dateStr = 'No date';
+                badgeClass = 'badge-gray';
+                }
+                
+                return {
+                ...item,
+                date_str: dateStr,
+                badge_class: badgeClass
+                };
+            });
+        }
+        var projectTaskDetails = await this.orm.call('hr.employee', 'get_employee_project_tasks', [], { date_from: dFrom, date_to: dTo })
+        if (projectTaskDetails) {
+            this.state.login_employee['project_task_lines'] = projectTaskDetails;
+        }
+        if (this.state.is_manager) {
+            var pendingLeaves = await this.orm.searchRead('hr.leave', [['state', 'in', ['confirm', 'validate1']]], ['employee_id', 'holiday_status_id', 'request_date_from', 'request_date_to', 'number_of_days']);
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const colors = ['#14b8a6', '#ef4444', '#10b981', '#f59e0b', '#1B5298', '#8b5cf6'];
+            
+            this.state.pending_approvals = pendingLeaves.map((l, i) => {
+                let empName = l.employee_id ? l.employee_id[1] : 'Unknown';
+                let initials = empName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                let color = colors[i % colors.length];
+                
+                let fromDate = new Date(l.request_date_from);
+                let toDate = new Date(l.request_date_to);
+                let fromStr = monthNames[fromDate.getMonth()] + ' ' + String(fromDate.getDate()).padStart(2, '0');
+                let toStr = monthNames[toDate.getMonth()] + ' ' + String(toDate.getDate()).padStart(2, '0');
+                
+                let type = l.holiday_status_id ? l.holiday_status_id[1] : 'Leave';
+                
+                return {
+                id: l.id,
+                name: empName,
+                initials: initials,
+                color: color,
+                subtitle: `${type} · ${fromStr}-${toStr} · ${l.number_of_days}d`
+                };
+            });
+            
+            // Fetch Expiring Documents
+            let todayStr = new Date().toISOString().split('T')[0];
+            let docsDomain = [['expiry_date', '!=', false]];
+            if (dFrom) {
+                docsDomain.push(['expiry_date', '>=', dFrom]);
+            } else {
+                docsDomain.push(['expiry_date', '>=', todayStr]);
+            }
+            if (dTo) {
+                docsDomain.push(['expiry_date', '<=', dTo]);
+            }
+            
+            let expiringDocs = await this.orm.searchRead(
+                'hr.employee.document', 
+                docsDomain, 
+                ['employee_ref_id', 'document_type_id', 'expiry_date'],
+                { limit: 4, order: 'expiry_date ASC' }
+            );
+            
+            let urgentCount = 0;
+            this.state.expiring_documents = expiringDocs.map((doc, i) => {
+                let empName = doc.employee_ref_id ? doc.employee_ref_id[1] : 'Unknown';
+                let initials = empName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                let typeName = doc.document_type_id ? doc.document_type_id[1] : 'Document';
+                
+                let expDate = new Date(doc.expiry_date);
+                let today = new Date();
+                // Strip time for accurate day calc
+                expDate.setHours(0,0,0,0);
+                today.setHours(0,0,0,0);
+                
+                let diffTime = Math.abs(expDate - today);
+                let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                let isUrgent = diffDays <= 14;
+                if (isUrgent) {
+                urgentCount++;
+                }
+                
+                return {
+                id: doc.id,
+                name: empName,
+                initials: initials,
+                type: typeName,
+                days_left: diffDays,
+                is_urgent: isUrgent,
+                color: colors[i % colors.length]
+                };
+            });
+            this.state.urgent_count = urgentCount;
+        }
+        this.render_graphs();
     }
 }
 registry.category("actions").add("hr_dashboard", HrDashboard)

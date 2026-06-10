@@ -1,15 +1,48 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <templates id="template" xml:space="preserve">
     <t t-name="HrDashboardMain">
+        <style>
+            .oh_dashboards, .stat-card-title, .stat-card-subtitle, .stat-card-value, .info-label, .info-value {
+                font-family: 'Roboto', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+            }
+            .stat-card-title { color: #000000 !important; }
+            @media print {
+                @page { margin: 0 !important; }
+                body { padding: 10mm !important; }
+                .top-bar-btn { display: inline-flex !important; border: none !important; background: transparent !important; padding: 0 !important; font-size: 18px !important; color: #000 !important; }
+                .top-bar-btn svg { display: none !important; }
+                .top-bar-right { display: none !important; }
+            }
+            @media (max-width: 768px) {
+                .dashboard-top-bar {
+                    padding: 16px 16px !important;
+                    flex-direction: column !important;
+                    align-items: flex-start !important;
+                    gap: 16px !important;
+                    height: auto !important;
+                }
+                .top-bar-left, .top-bar-right {
+                    width: 100% !important;
+                    justify-content: flex-start !important;
+                    flex-wrap: wrap !important;
+                    gap: 12px !important;
+                }
+            }
+        </style>
         <div class="oh_dashboards">
             <div class="o_hr_dashboard_custom">
                 
                 <!-- TOP BAR -->
-                <div class="dashboard-top-bar">
+                <div class="dashboard-top-bar" style="top: 0px !important; padding: 16px 56px !important;">
                     <div class="top-bar-left">
                         <div style="position: relative;">
-                            <button class="top-bar-btn outline-btn date-filter-btn" style="border-radius: 8px; color: #0F172A; padding: 8px 12px; border-color: #E2E8F0; background-color: #F1F5F9;" t-on-click="toggleDateDropdown">
-                                <i class="fa fa-calendar-o" style="margin-right: 8px; color: #64748B;"/>
+                            <button class="top-bar-btn outline-btn date-filter-btn" style="display:inline-flex; align-items:center; gap:8px; border-radius:8px; color:#154580; padding:8px 14px; border:1px solid #E2E8F0; background-color:#F8FAFC; font-size:14px; cursor:pointer;" t-on-click="toggleDateDropdown">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                    <line x1="16" y1="2" x2="16" y2="6"/>
+                                    <line x1="8" y1="2" x2="8" y2="6"/>
+                                    <line x1="3" y1="10" x2="21" y2="10"/>
+                                </svg>
                                 <span style="font-weight: 600;">
                                     <t t-if="this.state.date_range == 'today'">Today</t>
                                     <t t-elif="this.state.date_range == 'week'">This week</t>
@@ -19,9 +52,11 @@
                                     <t t-elif="this.state.date_range == 'custom'">Custom range</t>
                                     <t t-else="">This month</t>
                                 </span>
-                                <i class="fa fa-chevron-down" style="margin-left: 8px; color: #64748B; font-size: 10px;"/>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0; margin-left:4px; opacity: 0.8;">
+                                    <polyline points="6 9 12 15 18 9"/>
+                                </svg>
                             </button>
-                            
+
                             <!-- Date Filter Dropdown Menu -->
                             <t t-if="this.state.show_date_dropdown">
                                 <div class="profile-dropdown-backdrop" t-on-click="closeDateDropdown"></div>
@@ -55,7 +90,7 @@
                                             <i class="fa fa-chevron-right"/>
                                         </div>
                                     </t>
-                                    
+
                                     <!-- Custom View -->
                                     <t t-if="this.state.date_dropdown_view == 'custom'">
                                         <div class="custom-range-header">
@@ -84,20 +119,81 @@
                         </div>
                     </div>
                     <div class="top-bar-right">
-                        <button class="top-bar-btn outline-btn export-btn" style="border-radius: 8px;" t-on-click="export_dashboard_pdf">
-                            <i class="fa fa-download" style="margin-right: 8px;"/> Export
+                        <!-- Export Button -->
+                        <button t-on-click="export_dashboard_pdf" style="display:inline-flex; align-items:center; gap:7px; padding:8px 16px; border-radius:8px; border:1px solid #BFDBFE; background:#FFFFFF; color:#154580; font-size:14px; font-weight:400; cursor:pointer;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            Export
                         </button>
-                        <button class="top-bar-btn action-btn-danger" t-on-click="attendance_sign_in_out" style="border-radius: 8px; font-weight: 600;">
-                            <t t-if="this.state.login_employee['attendance_state'] =='checked_in'">
-                                <i class="fa fa-sign-out" style="margin-right: 8px;"/> Check Out
+
+                        <t t-if="this.state.login_employee['attendance_state'] == 'checked_in'">
+                            <button t-on-click="attendance_sign_in_out" style="display:inline-flex; align-items:center; gap:7px; padding:8px 16px; border-radius:8px; border:none; background:#FEE2E2; color:#991B1B; font-size:14px; font-weight:400; cursor:pointer;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                                    <polyline points="16 17 21 12 16 7"/>
+                                    <line x1="21" y1="12" x2="9" y2="12"/>
+                                </svg>
+                                Check Out
+                            </button>
+                        </t>
+                        <t t-else="">
+                            <button t-on-click="attendance_sign_in_out" style="display:inline-flex; align-items:center; gap:7px; padding:8px 18px; border-radius:8px; border:none; background:#1B5298; color:#FFFFFF; font-size:14px; font-weight:400; cursor:pointer;">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
+                                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+                                    <polyline points="10 17 15 12 10 7"/>
+                                    <line x1="15" y1="12" x2="3" y2="12"/>
+                                </svg>
+                                Check In
+                            </button>
+                        </t>
+
+                        <div style="position: relative;">
+                            <div class="top-bar-icon-btn" style="cursor: pointer;" t-on-click="toggleNotificationsDropdown" title="Notifications">
+                                <i class="fa fa-bell-o"/>
+                                <t t-if="this.pending_activities_count > 0">
+                                    <span class="notification-badge"><t t-esc="this.pending_activities_count"/></span>
+                                </t>
+                            </div>
+                            <!-- Notifications Dropdown Menu -->
+                            <t t-if="this.state.show_notifications_dropdown">
+                                <div class="profile-dropdown-backdrop" t-on-click="closeNotificationsDropdown"></div>
+                                <div class="profile-dropdown-menu" style="width: 320px; right: -20px; padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+                                    <div style="font-size: 15px; font-weight: 700; color: #1e293b;">Notifications</div>
+                                    <div style="display: flex; flex-direction: column; gap: 16px; max-height: 350px; overflow-y: auto; overflow-x: hidden;">
+                                        <t t-if="this.state.activities and this.state.activities.length > 0">
+                                            <t t-foreach="this.state.activities.slice(0, 4)" t-as="act" t-key="act.id + act.type">
+                                                <div style="display: flex; gap: 12px; align-items: flex-start; cursor: pointer;" t-on-click="view_activities">
+                                                    <t t-if="act.type == 'reminder'">
+                                                        <div style="width: 36px; height: 36px; border-radius: 10px; background-color: #f1f5f9; color: #3b82f6; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                                            <i class="fa fa-bell-o"/>
+                                                        </div>
+                                                    </t>
+                                                    <t t-else="">
+                                                        <div style="width: 36px; height: 36px; border-radius: 10px; background-color: #f1f5f9; color: #3b82f6; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                                                            <i class="fa fa-plane"/>
+                                                        </div>
+                                                    </t>
+                                                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                                                        <span style="font-size: 13px; font-weight: 500; color: #1e293b; line-height: 1.4;"><t t-esc="act.title"/></span>
+                                                        <span style="font-size: 11px; font-weight: 500; color: #94a3b8;"><t t-esc="act.date_str"/></span>
+                                                    </div>
+                                                </div>
+                                            </t>
+                                        </t>
+                                        <t t-else="">
+                                            <div style="font-size: 13px; color: #94a3b8; text-align: center; padding: 16px 0;">No new notifications</div>
+                                        </t>
+                                    </div>
+                                    <t t-if="this.state.activities and this.state.activities.length > 4">
+                                        <div style="border-top: 1px solid #f1f5f9; padding-top: 12px; text-align: center;">
+                                            <span t-on-click="view_activities" style="color: #3b82f6; font-size: 13px; font-weight: 600; cursor: pointer;">View All</span>
+                                        </div>
+                                    </t>
+                                </div>
                             </t>
-                            <t t-else="">
-                                <i class="fa fa-sign-in" style="margin-right: 8px;"/> Check In
-                            </t>
-                        </button>
-                        <div class="top-bar-icon-btn">
-                            <i class="fa fa-bell-o"/>
-                            <span class="notification-badge">3</span>
                         </div>
                         <div style="position: relative;">
                             <div class="profile-dropdown-wrapper" style="display: flex; align-items: center; gap: 10px; cursor: pointer;" t-on-click="toggleProfileDropdown">
@@ -108,7 +204,7 @@
                                 </div>
                                 <i class="fa fa-chevron-down" style="color: #64748B; font-size: 10px;"/>
                             </div>
-                            
+
                             <!-- Profile Dropdown Menu -->
                             <t t-if="this.state.show_profile_dropdown">
                                 <div class="profile-dropdown-backdrop" t-on-click="closeProfileDropdown"></div>
@@ -168,7 +264,7 @@
     <!-- LoginEmployeeDetails (Top Stats + Checkin Card + Profile Card + Attendance Trend) -->
     <t t-name="LoginEmployeeDetails">
         <link rel="stylesheet" href="/hrms_dashboard/static/src/css/dashboard.css"/>
-        
+
         <!-- Row 1: Top Row (Payslips, Timesheets, Contracts, Broad Factor, Check-In) -->
         <div class="dashboard-grid-5">
             <div class="modern-card top-stat-card clickable hr_payslip" t-on-click="hr_payslip">
@@ -182,9 +278,9 @@
                     </div>
                 </div>
                 <div class="stat-card-value"><t t-esc="this.state.login_employee['payslip_count']"/></div>
-                <div class="sparkline-container" style="position: absolute; bottom: 16px; left: 20px; width: calc(100% - 40px); height: 32px; z-index: 1; opacity: 0.8; background: url('data:image/svg+xml;utf8,&lt;svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 20\' preserveAspectRatio=\'none\'&gt;&lt;defs&gt;&lt;linearGradient id=\'g1\' x1=\'0\' y1=\'0\' x2=\'0\' y2=\'1\'&gt;&lt;stop offset=\'0%\' stop-color=\'%238A2BE2\' stop-opacity=\'0.4\'/&gt;&lt;stop offset=\'100%\' stop-color=\'%238A2BE2\' stop-opacity=\'0\'/&gt;&lt;/linearGradient&gt;&lt;/defs&gt;&lt;path d=\'M0,15 L20,12 L40,16 L60,8 L80,10 L100,5 L100,20 L0,20 Z\' fill=\'url(%23g1)\' stroke=\'none\'/&gt;&lt;path d=\'M0,15 L20,12 L40,16 L60,8 L80,10 L100,5\' fill=\'none\' stroke=\'%238A2BE2\' stroke-width=\'1.5\'/&gt;&lt;/svg&gt;') no-repeat center bottom; background-size: 100% 100%;"></div>
+                <div class="sparkline-container" style="position: absolute; bottom: 16px; left: 20px; width: calc(100% - 40px); height: 32px; z-index: 1; opacity: 0.8; background: url('data:image/svg+xml;utf8,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'&gt;&lt;defs&gt;&lt;linearGradient id='g1' x1='0' y1='0' x2='0' y2='1'&gt;&lt;stop offset='0%' stop-color='%238A2BE2' stop-opacity='0.4'/&gt;&lt;stop offset='100%' stop-color='%238A2BE2' stop-opacity='0'/&gt;&lt;/linearGradient&gt;&lt;/defs&gt;&lt;path d='M0,15 L20,12 L40,16 L60,8 L80,10 L100,5 L100,20 L0,20 Z' fill='url(%23g1)' stroke='none'/&gt;&lt;path d='M0,15 L20,12 L40,16 L60,8 L80,10 L100,5' fill='none' stroke='%238A2BE2' stroke-width='1.5'/&gt;&lt;/svg&gt;') no-repeat center bottom; background-size: 100% 100%;"></div>
             </div>
-            
+
             <div class="modern-card top-stat-card clickable hr_timesheets" t-on-click="hr_timesheets">
                 <div class="stat-card-header">
                     <div class="stat-card-icon bg-blue-light">
@@ -196,9 +292,9 @@
                     </div>
                 </div>
                 <div class="stat-card-value"><t t-esc="this.state.login_employee['emp_timesheets']"/></div>
-                <div class="sparkline-container" style="position: absolute; bottom: 16px; left: 20px; width: calc(100% - 40px); height: 32px; z-index: 1; opacity: 0.8; background: url('data:image/svg+xml;utf8,&lt;svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 20\' preserveAspectRatio=\'none\'&gt;&lt;defs&gt;&lt;linearGradient id=\'g2\' x1=\'0\' y1=\'0\' x2=\'0\' y2=\'1\'&gt;&lt;stop offset=\'0%\' stop-color=\'%233B82F6\' stop-opacity=\'0.4\'/&gt;&lt;stop offset=\'100%\' stop-color=\'%233B82F6\' stop-opacity=\'0\'/&gt;&lt;/linearGradient&gt;&lt;/defs&gt;&lt;path d=\'M0,5 L25,12 L50,10 L75,16 L100,12 L100,20 L0,20 Z\' fill=\'url(%23g2)\' stroke=\'none\'/&gt;&lt;path d=\'M0,5 L25,12 L50,10 L75,16 L100,12\' fill=\'none\' stroke=\'%233B82F6\' stroke-width=\'1.5\'/&gt;&lt;/svg&gt;') no-repeat center bottom; background-size: 100% 100%;"></div>
+                <div class="sparkline-container" style="position: absolute; bottom: 16px; left: 20px; width: calc(100% - 40px); height: 32px; z-index: 1; opacity: 0.8; background: url('data:image/svg+xml;utf8,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'&gt;&lt;defs&gt;&lt;linearGradient id='g2' x1='0' y1='0' x2='0' y2='1'&gt;&lt;stop offset='0%' stop-color='%233B82F6' stop-opacity='0.4'/&gt;&lt;stop offset='100%' stop-color='%233B82F6' stop-opacity='0'/&gt;&lt;/linearGradient&gt;&lt;/defs&gt;&lt;path d='M0,5 L25,12 L50,10 L75,16 L100,12 L100,20 L0,20 Z' fill='url(%23g2)' stroke='none'/&gt;&lt;path d='M0,5 L25,12 L50,10 L75,16 L100,12' fill='none' stroke='%233B82F6' stroke-width='1.5'/&gt;&lt;/svg&gt;') no-repeat center bottom; background-size: 100% 100%;"></div>
             </div>
-            
+
             <div class="modern-card top-stat-card clickable hr_contract" t-on-click="hr_contract">
                 <div class="stat-card-header">
                     <div class="stat-card-icon bg-teal-light">
@@ -210,9 +306,9 @@
                     </div>
                 </div>
                 <div class="stat-card-value"><t t-esc="this.state.login_employee['contracts_count']"/></div>
-                <div class="sparkline-container" style="position: absolute; bottom: 16px; left: 20px; width: calc(100% - 40px); height: 32px; z-index: 1; opacity: 0.8; background: url('data:image/svg+xml;utf8,&lt;svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 20\' preserveAspectRatio=\'none\'&gt;&lt;defs&gt;&lt;linearGradient id=\'g3\' x1=\'0\' y1=\'0\' x2=\'0\' y2=\'1\'&gt;&lt;stop offset=\'0%\' stop-color=\'%2314B8A6\' stop-opacity=\'0.4\'/&gt;&lt;stop offset=\'100%\' stop-color=\'%2314B8A6\' stop-opacity=\'0\'/&gt;&lt;/linearGradient&gt;&lt;/defs&gt;&lt;path d=\'M0,15 L30,14 L60,10 L80,12 L100,5 L100,20 L0,20 Z\' fill=\'url(%23g3)\' stroke=\'none\'/&gt;&lt;path d=\'M0,15 L30,14 L60,10 L80,12 L100,5\' fill=\'none\' stroke=\'%2314B8A6\' stroke-width=\'1.5\'/&gt;&lt;/svg&gt;') no-repeat center bottom; background-size: 100% 100%;"></div>
+                <div class="sparkline-container" style="position: absolute; bottom: 16px; left: 20px; width: calc(100% - 40px); height: 32px; z-index: 1; opacity: 0.8; background: url('data:image/svg+xml;utf8,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'&gt;&lt;defs&gt;&lt;linearGradient id='g3' x1='0' y1='0' x2='0' y2='1'&gt;&lt;stop offset='0%' stop-color='%2314B8A6' stop-opacity='0.4'/&gt;&lt;stop offset='100%' stop-color='%2314B8A6' stop-opacity='0'/&gt;&lt;/linearGradient&gt;&lt;/defs&gt;&lt;path d='M0,15 L30,14 L60,10 L80,12 L100,5 L100,20 L0,20 Z' fill='url(%23g3)' stroke='none'/&gt;&lt;path d='M0,15 L30,14 L60,10 L80,12 L100,5' fill='none' stroke='%2314B8A6' stroke-width='1.5'/&gt;&lt;/svg&gt;') no-repeat center bottom; background-size: 100% 100%;"></div>
             </div>
-            
+
             <div class="modern-card top-stat-card clickable login_broad_factor" t-on-click="employee_broad_factor">
                 <div class="stat-card-header">
                     <div class="stat-card-icon bg-orange-light">
@@ -224,7 +320,7 @@
                     </div>
                 </div>
                 <div class="stat-card-value"><t t-esc="this.state.login_employee['broad_factor']"/></div>
-                <div class="sparkline-container" style="position: absolute; bottom: 16px; left: 20px; width: calc(100% - 40px); height: 32px; z-index: 1; opacity: 0.8; background: url('data:image/svg+xml;utf8,&lt;svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 20\' preserveAspectRatio=\'none\'&gt;&lt;defs&gt;&lt;linearGradient id=\'g4\' x1=\'0\' y1=\'0\' x2=\'0\' y2=\'1\'&gt;&lt;stop offset=\'0%\' stop-color=\'%23F97316\' stop-opacity=\'0.4\'/&gt;&lt;stop offset=\'100%\' stop-color=\'%23F97316\' stop-opacity=\'0\'/&gt;&lt;/linearGradient&gt;&lt;/defs&gt;&lt;path d=\'M0,8 L20,12 L40,8 L60,15 L80,14 L100,18 L100,20 L0,20 Z\' fill=\'url(%23g4)\' stroke=\'none\'/&gt;&lt;path d=\'M0,8 L20,12 L40,8 L60,15 L80,14 L100,18\' fill=\'none\' stroke=\'%23F97316\' stroke-width=\'1.5\'/&gt;&lt;/svg&gt;') no-repeat center bottom; background-size: 100% 100%;"></div>
+                <div class="sparkline-container" style="position: absolute; bottom: 16px; left: 20px; width: calc(100% - 40px); height: 32px; z-index: 1; opacity: 0.8; background: url('data:image/svg+xml;utf8,&lt;svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'&gt;&lt;defs&gt;&lt;linearGradient id='g4' x1='0' y1='0' x2='0' y2='1'&gt;&lt;stop offset='0%' stop-color='%23F97316' stop-opacity='0.4'/&gt;&lt;stop offset='100%' stop-color='%23F97316' stop-opacity='0'/&gt;&lt;/linearGradient&gt;&lt;/defs&gt;&lt;path d='M0,8 L20,12 L40,8 L60,15 L80,14 L100,18 L100,20 L0,20 Z' fill='url(%23g4)' stroke='none'/&gt;&lt;path d='M0,8 L20,12 L40,8 L60,15 L80,14 L100,18' fill='none' stroke='%23F97316' stroke-width='1.5'/&gt;&lt;/svg&gt;') no-repeat center bottom; background-size: 100% 100%;"></div>
             </div>
 
             <!-- CHECK-IN CARD -->
@@ -273,9 +369,9 @@
             <!-- Profile Card -->
             <div class="modern-card profile-card employee_prof">
                 <div class="profile-header-bg" style="background: linear-gradient(135deg, #0d2d5e 0%, #1B5298 60%, #1e6bb5 100%) !important;"></div>
-                
+
                 <div class="profile-active-dot" t-attf-style="background-color: #{this.state.login_employee['attendance_state'] == 'checked_in' ? '#22c55e' : '#cbd5e1'};"></div>
-                
+
                 <div class="profile-avatar-wrapper">
                     <t t-if="this.state.login_employee['image_1920']">
                         <img class="profile-avatar" t-att-src="'data:image/png;base64,'+this.state.login_employee['image_1920']" alt="Profile"/>
@@ -286,7 +382,7 @@
                         </div>
                     </t>
                 </div>
-                
+
                 <div class="profile-details">
                     <div class="profile-name"><t t-esc="this.state.login_employee['name']"/></div>
                     <div class="profile-job">
@@ -296,7 +392,7 @@
                             · <t t-esc="this.state.login_employee['department_id'][1]"/>
                         </t>
                     </div>
-                    
+
                     <div class="profile-grid-info">
                         <div class="info-block">
                             <span class="info-label">Position</span>
@@ -315,7 +411,7 @@
                         <div class="info-block">
                             <span class="info-label">Joined</span>
                             <span class="info-value">
-                                <t t-if="this.state.login_employee['experience']"><t t-esc="this.state.login_employee['experience']"/> Ago</t>
+                                <t t-if="this.state.login_employee['experience']"><t t-esc="this.state.login_employee['experience']"/></t>
                                 <t t-else="">-</t>
                             </span>
                         </div>
@@ -342,7 +438,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div t-attf-class="profile-status-box #{this.state.login_employee['attendance_state'] == 'checked_in' ? 'status-in' : 'status-out'}">
                     <div class="profile-status-text">
                         <i class="fa fa-clock-o"/>
@@ -365,8 +461,7 @@
             <!-- Attendance Trend -->
             <div class="modern-card chart-card user_attendance_trend">
                 <div class="chart-header">
-                    <span>Attendance trend</span>
-                    <span class="badge badge-this-week"><i class="fa fa-circle" style="font-size: 8px; margin-right: 4px; color: #3B82F6;"></i>This week</span>
+                    <span style="font-size: 15px; font-weight: 700; color: #1e293b;">Attendance trend</span>
                 </div>
                 <div class="chart-wrapper trend-graph" t-ref="leave_trend">
                     <canvas id="leaveTrendChart"></canvas>
@@ -388,7 +483,7 @@
                     <div class="manager-title">Leave Requests</div>
                 </div>
             </div>
-            
+
             <div class="modern-card manager-stat-card clickable hr_leave_allocations_approve" t-on-click="leave_allocations_to_approve">
                 <div class="manager-icon-wrap bg-sky-light">
                     <i class="fa fa-calendar-plus-o"/>
@@ -398,7 +493,7 @@
                     <div class="manager-title">Leave Allocations</div>
                 </div>
             </div>
-            
+
             <div class="modern-card manager-stat-card clickable hr_job_application_approve" t-on-click="job_applications_to_approve">
                 <div class="manager-icon-wrap bg-indigo-light">
                     <i class="fa fa-suitcase"/>
@@ -421,7 +516,7 @@
                     <div id="employeePieLegend" class="custom-pie-legend" style="width: 45%; max-height: 250px; overflow-y: auto;"></div>
                 </div>
             </div>
-            
+
             <div class="modern-card chart-card monthly_leave_graph_view">
                 <div class="chart-header">
                     <span>Monthly leave analysis</span>
@@ -451,7 +546,7 @@
                 </div>
                 <!-- Divider -->
                 <div style="width: 1px; height: 40px; background-color: #e2e8f0;"/>
-                
+
                 <!-- Item 2 -->
                 <div class="request-item-card" style="display: flex; align-items: center; gap: 16px; min-width: 150px; flex: 1; cursor: pointer;" t-on-click="open_salary_advance">
                     <div style="width: 48px; height: 48px; border-radius: 12px; background-color: #3b82f6; box-shadow: 0 8px 16px -4px rgba(59, 130, 246, 0.5); color: white; display: flex; align-items: center; justify-content: center;">
@@ -545,7 +640,7 @@
                 </div>
                 <div id="joinResignLegend" style="display: flex; justify-content: center; gap: 24px; margin-top: 16px; font-size: 13px; font-weight: 600; color: #64748B;"></div>
             </div>
-            
+
             <div class="modern-card chart-card department_leave_doughnut">
                 <div class="chart-header">
                     <span>Department-wise leave</span>
@@ -574,7 +669,7 @@
                 </div>
                 <div id="attritionLegend" style="display: flex; justify-content: center; gap: 24px; margin-top: 16px; font-size: 13px; font-weight: 600; color: #64748B;"></div>
             </div>
-            
+
             <!-- Upcoming Events -->
             <div class="modern-card notification-card" style="height: 100%; max-height: unset; display: flex; flex-direction: column;">
                 <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -605,6 +700,7 @@
                     </t>
                 </div>
             </div>
+
         </div>
 
         <!-- Documents & Reminders Row -->
@@ -649,7 +745,7 @@
                                             <i class="fa fa-circle" style="font-size: 6px; margin-right: 4px; vertical-align: middle;"/> in <t t-esc="doc.days_left"/> days
                                         </span>
                                     </t>
-                                    <div t-on-click="view_expiring_document" t-att-data-id="doc.id" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; color: #64748b; cursor: pointer;">
+                                    <div t-on-click="send_document_reminder" t-att-data-id="doc.id" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; color: #64748b; cursor: pointer;" title="Send Reminder">
                                         <i class="fa fa-bell-o"/>
                                     </div>
                                 </div>
@@ -669,8 +765,8 @@
                 <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
                     <span>Reminders &amp; to-do</span>
                     <div style="display: flex; gap: 12px;">
-                        <a href="#" t-on-click="view_reminders" style="color: #64748b; font-size: 13px; font-weight: 600; text-decoration: none;">Reminders <i class="fa fa-angle-right"/></a>
-                        <a href="#" t-on-click="view_activities" style="color: #3b82f6; font-size: 13px; font-weight: 600; text-decoration: none;">To-dos <i class="fa fa-angle-right"/></a>
+                        <a href="#" t-on-click="view_reminders" style="color: #8b5cf6; font-size: 13px; font-weight: 600; text-decoration: none;">Reminders <i class="fa fa-angle-right"/></a>
+                        <a href="#" t-on-click="view_activities" style="color: #14b8a6; font-size: 13px; font-weight: 600; text-decoration: none;">To-dos <i class="fa fa-angle-right"/></a>
                     </div>
                 </div>
                 <div style="display: flex; flex-direction: column; gap: 16px;">
@@ -679,15 +775,15 @@
                             <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9;">
                                 <div style="display: flex; align-items: center; gap: 12px;">
                                     <t t-if="act.is_done">
-                                        <div style="width: 20px; height: 20px; border-radius: 6px; background-color: #22c55e; color: white; display: flex; align-items: center; justify-content: center;">
+                                        <div t-attf-style="width: 20px; height: 20px; border-radius: 6px; background-color: #{act.type == 'reminder' ? '#8b5cf6' : '#14b8a6'}; color: white; display: flex; align-items: center; justify-content: center;">
                                             <i class="fa fa-check" style="font-size: 12px;"/>
                                         </div>
                                         <span style="font-size: 13px; font-weight: 500; color: #94a3b8; text-decoration: line-through;"><t t-esc="act.title"/></span>
                                     </t>
                                     <t t-else="">
-                                        <div t-on-click="mark_activity_done" t-att-data-id="act.id" t-att-data-type="act.type" style="width: 20px; height: 20px; border-radius: 6px; border: 2px solid #cbd5e1; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Mark as done">
+                                        <div t-on-click="mark_activity_done" t-att-data-id="act.id" t-att-data-type="act.type" t-attf-style="width: 20px; height: 20px; border-radius: 6px; border: 2px solid #{act.type == 'reminder' ? '#8b5cf6' : '#14b8a6'}; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Mark as done">
                                         </div>
-                                        <span style="font-size: 13px; font-weight: 500; color: #1e293b;"><t t-esc="act.title"/></span>
+                                        <span t-attf-style="font-size: 13px; font-weight: 600; color: #{act.type == 'reminder' ? '#8b5cf6' : '#14b8a6'};"><t t-esc="act.title"/></span>
                                     </t>
                                 </div>
                                 <t t-if="act.badge_class == 'badge-yellow'">
@@ -710,6 +806,7 @@
                 </div>
             </div>
         </div>
+
 
         <!-- Action items Row -->
         <div class="dashboard-grid-3">
@@ -817,16 +914,212 @@
                     </t>
                 </div>
             </div>
-
-
-
-        </div>
+            </div>
     </t>
 
     <!-- EmployeeDashboard -->
     <t t-name="EmployeeDashboard">
+        <t t-if="!this.state.is_manager">
+        <!-- Documents & Reminders Row -->
+        <div class="dashboard-grid-2" style="grid-template-columns: 2fr 1fr;">
+            <!-- Documents expiring soon -->
+            <div class="modern-card" style="padding: 24px;">
+                <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <span>Documents expiring soon</span>
+                    <t t-if="this.state.urgent_count > 0">
+                        <span class="badge" style="background-color: #fee2e2; color: #b91c1c; border-radius: 12px; font-weight: 600; padding: 4px 12px; font-size: 11px;"><i class="fa fa-circle" style="font-size: 6px; margin-right: 4px; vertical-align: middle;"/> <t t-esc="this.state.urgent_count"/> urgent</span>
+                    </t>
+                    <t t-else="">
+                        <span class="badge" style="background-color: #f1f5f9; color: #64748b; border-radius: 12px; font-weight: 600; padding: 4px 12px; font-size: 11px;">0 urgent</span>
+                    </t>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <t t-if="this.state.expiring_documents and this.state.expiring_documents.length > 0">
+                        <t t-foreach="this.state.expiring_documents" t-as="doc" t-key="doc.id">
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div t-attf-style="width: 36px; height: 36px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; background-color: #{doc.color};">
+                                        <t t-esc="doc.initials"/>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 600; color: #1e293b; font-size: 14px;"><t t-esc="doc.name"/></div>
+                                        <div style="color: #64748b; font-size: 12px;"><t t-esc="doc.type"/></div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <t t-if="doc.is_urgent">
+                                        <span class="badge" style="background-color: #fee2e2; color: #b91c1c; border-radius: 12px; font-weight: 600; padding: 4px 12px; font-size: 11px;">
+                                            <i class="fa fa-circle" style="font-size: 6px; margin-right: 4px; vertical-align: middle;"/> in <t t-esc="doc.days_left"/> days
+                                        </span>
+                                    </t>
+                                    <t t-elif="doc.days_left &lt;= 30">
+                                        <span class="badge" style="background-color: #fef3c7; color: #b45309; border-radius: 12px; font-weight: 600; padding: 4px 12px; font-size: 11px;">
+                                            <i class="fa fa-circle" style="font-size: 6px; margin-right: 4px; vertical-align: middle;"/> in <t t-esc="doc.days_left"/> days
+                                        </span>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="badge" style="background-color: #e0f2fe; color: #0369a1; border-radius: 12px; font-weight: 600; padding: 4px 12px; font-size: 11px;">
+                                            <i class="fa fa-circle" style="font-size: 6px; margin-right: 4px; vertical-align: middle;"/> in <t t-esc="doc.days_left"/> days
+                                        </span>
+                                    </t>
+                                    <div t-on-click="send_document_reminder" t-att-data-id="doc.id" style="width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: center; color: #64748b; cursor: pointer;" title="Send Reminder">
+                                        <i class="fa fa-bell-o"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                    </t>
+                    <t t-else="">
+                        <div class="empty-state" style="padding: 24px 0; text-align: center;">
+                            <div style="color: #94a3b8; font-size: 14px;">No upcoming document expirations!</div>
+                        </div>
+                    </t>
+                </div>
+            </div>
+
+            <!-- Reminders & to-do -->
+            <div class="modern-card" style="padding: 24px;">
+                <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <span>Reminders &amp; to-do</span>
+                    <div style="display: flex; gap: 12px;">
+                        <a href="#" t-on-click="view_reminders" style="color: #8b5cf6; font-size: 13px; font-weight: 600; text-decoration: none;">Reminders <i class="fa fa-angle-right"/></a>
+                        <a href="#" t-on-click="view_activities" style="color: #14b8a6; font-size: 13px; font-weight: 600; text-decoration: none;">To-dos <i class="fa fa-angle-right"/></a>
+                    </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <t t-if="this.state.activities and this.state.activities.length > 0">
+                        <t t-foreach="this.state.activities" t-as="act" t-key="act.id + act.type">
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <t t-if="act.is_done">
+                                        <div t-attf-style="width: 20px; height: 20px; border-radius: 6px; background-color: #{act.type == 'reminder' ? '#8b5cf6' : '#14b8a6'}; color: white; display: flex; align-items: center; justify-content: center;">
+                                            <i class="fa fa-check" style="font-size: 12px;"/>
+                                        </div>
+                                        <span style="font-size: 13px; font-weight: 500; color: #94a3b8; text-decoration: line-through;"><t t-esc="act.title"/></span>
+                                    </t>
+                                    <t t-else="">
+                                        <div t-on-click="mark_activity_done" t-att-data-id="act.id" t-att-data-type="act.type" t-attf-style="width: 20px; height: 20px; border-radius: 6px; border: 2px solid #{act.type == 'reminder' ? '#8b5cf6' : '#14b8a6'}; cursor: pointer; display: flex; align-items: center; justify-content: center;" title="Mark as done">
+                                        </div>
+                                        <span t-attf-style="font-size: 13px; font-weight: 600; color: #{act.type == 'reminder' ? '#8b5cf6' : '#14b8a6'};"><t t-esc="act.title"/></span>
+                                    </t>
+                                </div>
+                                <t t-if="act.badge_class == 'badge-yellow'">
+                                    <span class="badge" style="background-color: #fef3c7; color: #b45309; border-radius: 12px; font-weight: 600; padding: 4px 10px; font-size: 11px;"><t t-esc="act.date_str"/></span>
+                                </t>
+                                <t t-elif="act.badge_class == 'badge-red'">
+                                    <span class="badge" style="background-color: #fee2e2; color: #b91c1c; border-radius: 12px; font-weight: 600; padding: 4px 10px; font-size: 11px;"><t t-esc="act.date_str"/></span>
+                                </t>
+                                <t t-else="">
+                                    <span style="font-size: 12px; color: #64748b; background-color: #f1f5f9; padding: 2px 8px; border-radius: 12px; font-weight: 500;"><t t-esc="act.date_str"/></span>
+                                </t>
+                            </div>
+                        </t>
+                    </t>
+                    <t t-else="">
+                        <div class="empty-state" style="padding: 24px 0; text-align: center;">
+                            <div style="color: #94a3b8; font-size: 14px;">You have no pending reminders!</div>
+                        </div>
+                    </t>
+                </div>
+            </div>
+        </div>
 
 
+            <div class="dashboard-grid-3">
+            <!-- Upcoming Events -->
+            <div class="modern-card notification-card" style="height: 100%; max-height: unset; display: flex; flex-direction: column;">
+                <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Upcoming Events</span>
+                    <a href="#" t-on-click="view_events" style="color: #3b82f6; font-size: 13px; font-weight: 600; text-decoration: none;">View all <i class="fa fa-angle-right"/></a>
+                </div>
+                <div class="notification-list" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; padding-top: 16px;">
+                    <t t-if="this.state.upcoming_events and this.state.upcoming_events.length > 0">
+                        <t t-foreach="this.state.upcoming_events" t-as="event" t-key="event['id']">
+                            <div class="notification-item" style="display: flex; align-items: center; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9; cursor: pointer;" t-on-click="view_event_record" t-att-data-id="event.id">
+                                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 12px; background-color: #f8fafc; border: 1px solid #e2e8f0; flex-shrink: 0;">
+                                    <span style="font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase;"><t t-esc="event.event_month"/></span>
+                                    <span t-att-style="'font-size: 16px; font-weight: 700; color: ' + event.icon_color + ';'"><t t-esc="event.event_day"/></span>
+                                </div>
+                                <div class="notif-content" style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                                    <div class="notif-title" style="font-size: 14px; font-weight: 600; color: #1e293b; line-height: 1.2;"><t t-esc="event['name']"/></div>
+                                    <div class="notif-desc" style="font-size: 12px; color: #64748b; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                                        <i class="fa fa-clock-o"/> <t t-esc="event.event_time"/> • <t t-esc="event.event_year"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </t>
+                    </t>
+                    <t t-else="">
+                        <div class="empty-state" style="padding: 24px 0; text-align: center;">
+                            <div style="color: #94a3b8; font-size: 14px;">No upcoming events</div>
+                        </div>
+                    </t>
+                </div>
+            </div>
+
+            <!-- Upcoming Birthdays -->
+            <div class="modern-card" style="padding: 24px;">
+                <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <span>Upcoming birthdays</span>
+                    <a href="#" t-on-click="view_birthdays" style="color: #3b82f6; font-size: 13px; font-weight: 600; text-decoration: none;">View all <i class="fa fa-angle-right"/></a>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <t t-if="this.state.employee_birthday and this.state.employee_birthday.length > 0">
+                        <t t-foreach="this.state.employee_birthday" t-as="bday" t-key="bday.id">
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9;">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div t-attf-style="width: 36px; height: 36px; border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; background-color: #{bday.color};">
+                                        <t t-esc="bday.initials"/>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 600; color: #1e293b; font-size: 14px;"><t t-esc="bday.name"/></div>
+                                        <div style="color: #64748b; font-size: 11px;"><t t-esc="bday.department"/></div>
+                                    </div>
+                                </div>
+                                <t t-if="bday.display_date == 'Today'">
+                                    <span class="badge" style="background-color: #e0f2fe; color: #0369a1; border-radius: 12px; font-weight: 600; padding: 4px 10px; font-size: 11px;"><t t-esc="bday.display_date"/></span>
+                                </t>
+                                <t t-else="">
+                                    <span style="font-size: 12px; color: #64748b; background-color: #f1f5f9; padding: 2px 8px; border-radius: 12px; font-weight: 500;"><t t-esc="bday.display_date"/></span>
+                                </t>
+                            </div>
+                        </t>
+                    </t>
+                    <t t-else="">
+                        <div class="empty-state" style="padding: 24px 0; text-align: center;">
+                            <div style="color: #94a3b8; font-size: 14px;">No upcoming birthdays!</div>
+                        </div>
+                    </t>
+                </div>
+            </div>
+
+            <!-- Announcements -->
+            <div class="modern-card" style="padding: 24px;">
+                <div class="chart-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <span>Announcements</span>
+                    <a href="#" t-on-click="view_announcements" style="color: #3b82f6; font-size: 13px; font-weight: 600; text-decoration: none;">View all <i class="fa fa-angle-right"/></a>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <t t-if="this.state.announcements and this.state.announcements.length > 0">
+                        <t t-foreach="this.state.announcements" t-as="ann" t-key="ann.id">
+                            <div style="display: flex; align-items: flex-start; gap: 12px; padding-bottom: 16px; border-bottom: 1px solid #f1f5f9;">
+                                <div style="width: 32px; height: 32px; border-radius: 8px; background-color: #eff6ff; color: #3b82f6; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-top: 2px;"><i class="fa fa-bullhorn"/></div>
+                                <div>
+                                    <div style="font-weight: 600; color: #1e293b; font-size: 13px; line-height: 1.4;"><t t-esc="ann.announcement_reason"/></div>
+                                    <div style="color: #94a3b8; font-size: 11px; margin-top: 2px;"><t t-esc="ann.author"/> · <t t-esc="ann.time_ago"/></div>
+                                </div>
+                            </div>
+                        </t>
+                    </t>
+                    <t t-else="">
+                        <div class="empty-state" style="padding: 24px 0; text-align: center;">
+                            <div style="color: #94a3b8; font-size: 14px;">No recent announcements!</div>
+                        </div>
+                    </t>
+                </div>
+            </div>
+            </div>
+        </t>
     </t>
 
     <!-- EmployeeWarning -->

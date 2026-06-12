@@ -4,6 +4,7 @@ import { registry } from "@web/core/registry";
 const { fuzzyLookup } = require('@web/core/utils/search');
 import { computeAppsAndMenuItems } from "@web/webclient/menus/menu_helpers";
 import { onMounted, Component, useRef, useState } from "@odoo/owl";
+import { routerBus } from "@web/core/browser/router";
 const commandProviderRegistry = registry.category("command_provider");
 import { patch } from "@web/core/utils/patch";
 patch(NavBar.prototype, {
@@ -53,12 +54,93 @@ patch(NavBar.prototype, {
                 }
             }
         });
+
+        // Ensure App Launcher closes when navigating via Systray or other non-App Launcher links
+        routerBus.addEventListener('ROUTE_CHANGE', () => {
+            const fullscreenMenu = document.querySelector(".dropdown-menu.fullscreen-menu.show");
+            if (fullscreenMenu) {
+                fullscreenMenu.classList.remove("show");
+                sessionStorage.setItem('app_launcher_open', 'false');
+                const navbar = document.querySelector('.o_main_navbar');
+                if (navbar) navbar.classList.remove('app-launcher-open');
+                document.body.classList.remove('app-launcher-open');
+            }
+        });
+
+        // Robust fallback: Close App Launcher immediately if any actionable item is clicked anywhere.
+        // Odoo 17/19 Systray dropdowns are Popovers attached to document.body, so we can't restrict by .o_menu_systray.
+        document.addEventListener('click', (ev) => {
+            const fullscreenMenu = document.querySelector(".dropdown-menu.fullscreen-menu.show");
+            if (fullscreenMenu) {
+                const isAction = ev.target.closest('.dropdown-item, .list-group-item, .btn-link, .o-mail-NotificationItem, .o-mail-ActivityGroup');
+                const inMessagingMenu = ev.target.closest('.o-mail-MessagingMenu');
+                const inChatWindow = ev.target.closest('.o-mail-ChatWindow');
+                
+                // If the click is an action but it's inside the Messaging menu OR a Chat Window, 
+                // DO NOT close the App Launcher! Chats open as floating windows on top.
+                if (isAction && !inMessagingMenu && !inChatWindow) {
+                    fullscreenMenu.classList.remove("show");
+                    sessionStorage.setItem('app_launcher_open', 'false');
+                    const navbar = document.querySelector('.o_main_navbar');
+                    if (navbar) navbar.classList.remove('app-launcher-open');
+                    document.body.classList.remove('app-launcher-open');
+                }
+            }
+
+            // --- APP TRANSITION LOADING OVERLAY ---
+            // Instantly clear the old app view when clicking a top nav entry or app launcher item to prevent the old view from "flashing".
+            const isAppNavigation = ev.target.closest('.o_app') || 
+                                   (ev.target.closest('.o_nav_entry') && !ev.target.closest('.dropdown-toggle')) || 
+                                   ev.target.closest('.o_menu_brand');
+            
+            if (isAppNavigation) {
+                // Ignore middle clicks or clicks with modifiers (which open new tabs)
+                if (ev.button === 1 || ev.ctrlKey || ev.metaKey || ev.shiftKey || (ev.target.tagName === 'A' && ev.target.target === '_blank')) {
+                    return;
+                }
+                
+                const actionManager = document.querySelector('.o_action_manager');
+                const oldContent = document.querySelector('.o_content');
+                if (actionManager && !document.getElementById('ohrms-global-loading-overlay')) {
+                    const overlay = document.createElement('div');
+                    overlay.id = 'ohrms-global-loading-overlay';
+                    overlay.style.position = 'absolute';
+                    overlay.style.top = '0';
+                    overlay.style.left = '0';
+                    overlay.style.width = '100%';
+                    overlay.style.height = '100%';
+                    overlay.style.backgroundColor = '#F8FAFC'; // Soft white background to match theme
+                    overlay.style.zIndex = '5'; // Keep below the top navbar (which is usually z-index 10 or 1030)
+                    overlay.style.display = 'flex';
+                    overlay.style.alignItems = 'center';
+                    overlay.style.justifyContent = 'center';
+                    overlay.innerHTML = '<i class="fa fa-circle-o-notch fa-spin fa-3x fa-fw" style="color: #1B5298;"></i>';
+                    
+                    // Odoo's ActionManager completely destroys and replaces its child DOM when the new view is ready.
+                    // By appending our overlay to the top-level view wrapper (actionManager.firstElementChild), 
+                    // we cover BOTH the data area AND the old control panel (search bar, buttons).
+                    const targetToMask = actionManager.firstElementChild;
+                    if (targetToMask) {
+                        // Ensure relative positioning so the absolute overlay is contained within this element
+                        const originalPosition = window.getComputedStyle(targetToMask).position;
+                        if (originalPosition === 'static') {
+                            targetToMask.style.position = 'relative';
+                        }
+                        targetToMask.appendChild(overlay);
+                    }
+                }
+            }
+        }, { capture: true });
     },
 
     _onMenuClick(ev) {
         ev.preventDefault();
         const liEl = ev.currentTarget.closest("li");
         const menuEl = liEl.querySelector(".dropdown-menu");
+        
+        // Prevent Bootstrap from natively closing the dropdown when clicking outside (e.g. on Chat icon)
+        ev.currentTarget.setAttribute('data-bs-auto-close', 'false');
+        
         menuEl.classList.toggle("show");
         const isShow = menuEl.classList.contains("show");
         sessionStorage.setItem('app_launcher_open', isShow);
@@ -102,6 +184,7 @@ patch(NavBar.prototype, {
                 sessionStorage.setItem('app_launcher_open', 'false');
                 const navbar = document.querySelector('.o_main_navbar');
                 if (navbar) navbar.classList.remove('app-launcher-open');
+                document.body.classList.remove('app-launcher-open');
             }
         }
     },

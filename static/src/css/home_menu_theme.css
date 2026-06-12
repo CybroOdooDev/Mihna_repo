@@ -7,11 +7,13 @@
 
 /* 2. Style the App Launcher Container */
 .dropdown-menu.fullscreen-menu .app-menu {
-    display: flex !important;
-    flex-wrap: wrap !important;
+    display: grid !important;
+    grid-template-columns: repeat(5, 130px) !important;
     justify-content: center !important;
     gap: 20px !important;
     padding-top: 40px !important;
+    max-width: 100% !important;
+    margin: 0 auto !important;
 }
 
 /* 3. Style each individual App */

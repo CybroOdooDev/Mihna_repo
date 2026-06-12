@@ -309,3 +309,135 @@ body.o_dark {
 .o_ohrms_core_ticket_notification {
     min-width: 340px;
 }
+
+/* Resize the standard bell icon in the systray to match other icons */
+.o_menu_systray i.fa-bell {
+    font-size: 1.15rem !important;
+}
+
+/* Make all standard Systray dropdowns beautifully rounded */
+.o_menu_systray .dropdown-menu {
+    border-radius: 1rem !important;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    margin-top: 10px !important;
+    overflow: hidden !important;
+}
+
+/* ============================================================================
+   APP LAUNCHER OVERRIDES
+   Ensure the floating Chat Window is always visible and floats on top 
+   of the App Launcher. Overrides any potential XML template caching issues.
+============================================================================ */
+
+/* 1. Prevent action manager and content from clipping chat windows */
+body.app-launcher-open div.o_action_manager,
+body.app-launcher-open div.o_content {
+    overflow: visible !important;
+}
+
+/* 2. Elevate the chat window and chat bubbles above the App Launcher (1040) */
+body.app-launcher-open div.o-mail-ChatWindow,
+body.app-launcher-open div.o-mail-ChatHub-bubbles {
+    z-index: 1150 !important;
+}
+
+/* ============================================================================
+   GLOBAL THEME COLOR OVERRIDES (PURPLE TO BLUE)
+   Forces the OpenHRMS Navy Blue (#1B5298) without requiring a module upgrade.
+============================================================================ */
+
+/* 1. CSS Variables for Bootstrap 5 and Odoo Components */
+:root, .o_web_client, body {
+    --bs-primary: #1B5298 !important;
+    --bs-primary-rgb: 27, 82, 152 !important;
+    --o-brand-odoo: #1B5298 !important;
+    --o-brand-primary: #1B5298 !important;
+    --primary: #1B5298 !important;
+}
+
+/* 2. Primary Buttons */
+.btn-primary,
+.o_form_view .o_statusbar_status .o_arrow_button.btn-primary.disabled {
+    background-color: #1B5298 !important;
+    border-color: #1B5298 !important;
+    color: #ffffff !important;
+}
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active, .btn-primary.active {
+    background-color: #0d2d5e !important;
+    border-color: #0d2d5e !important;
+}
+
+/* 3. Outline Buttons */
+.btn-outline-primary {
+    color: #1B5298 !important;
+    border-color: #1B5298 !important;
+}
+.btn-outline-primary:hover, .btn-outline-primary:focus, .btn-outline-primary:active, .btn-outline-primary.active {
+    background-color: #1B5298 !important;
+    color: #ffffff !important;
+}
+
+/* 4. Text & Background Utilities */
+.text-primary, .text-odoo {
+    color: #1B5298 !important;
+}
+.bg-primary {
+    background-color: #1B5298 !important;
+}
+
+/* 5. Navigation Bar Active/Hover States */
+/* Ensure menu items don't have a solid background that obscures the navbar's beautiful gradient */
+.o_main_navbar {
+    --NavBar-entry-backgroundColor: transparent !important;
+    --NavBar-entry-backgroundColor--hover: rgba(255, 255, 255, 0.1) !important;
+    --NavBar-entry-backgroundColor--active: rgba(255, 255, 255, 0.15) !important;
+    --NavBar-entry-backgroundColor--focus: rgba(255, 255, 255, 0.1) !important;
+}
+.o_main_navbar .o_menu_brand,
+.o_main_navbar .o_menu_sections .o_nav_entry,
+.o_main_navbar .o_menu_sections .dropdown-toggle {
+    background: transparent !important;
+}
+.o_main_navbar .o_menu_sections .o_nav_entry.active,
+.o_main_navbar .o_menu_sections .dropdown-toggle.active {
+    background: var(--NavBar-entry-backgroundColor--active) !important;
+}
+.o_main_navbar .o_menu_sections .dropdown.show.dropdown-toggle {
+    background: var(--NavBar-entry-backgroundColor--active) !important;
+}
+
+/* 6. Systray Dropdowns (Messaging, Profile, Activities) */
+/* Unify the shape of all systray dropdowns to match the fully rounded, modern look of the Reminders dropdown. */
+/* We target .o-mail-DiscussSystray specifically because Owl renders these outside the navbar DOM. */
+.o_main_navbar .o_menu_systray .dropdown-menu,
+.o_main_navbar .o_user_menu .dropdown-menu,
+.dropdown-menu.o-mail-DiscussSystray {
+    border-radius: 1rem !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    border: 1px solid rgba(0, 0, 0, 0.15) !important;
+    overflow: hidden !important;
+}
+
+
+/* 6. Form Checkboxes & Switches */
+.form-check-input:checked {
+    background-color: #1B5298 !important;
+    border-color: #1B5298 !important;
+}
+
+/* 7. Search View / Filter Active Tokens */
+.o_searchview {
+    padding-left: 1rem !important;
+}
+.o_searchview .o_searchview_icon {
+    margin-right: 0.5rem !important;
+}
+.o_searchview .o_searchview_facet .o_searchview_facet_label {
+    background-color: #1B5298 !important;
+    color: #ffffff !important;
+}
+.o_searchview .o_searchview_facet {
+    border-color: #1B5298 !important;
+    background-color: rgba(27, 82, 152, 0.1) !important;
+}

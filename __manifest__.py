@@ -72,6 +72,9 @@
         'wizard/ohrms_core_support_views.xml',
     ],
     'assets': {
+        'web._assets_primary_variables': [
+            ('prepend', 'ohrms_core/static/src/scss/primary_variables.scss'),
+        ],
         'web.assets_backend': [
             'ohrms_core/static/src/css/menu_order_alphabets.css',
             'ohrms_core/static/src/css/ohrms_core_support.css',

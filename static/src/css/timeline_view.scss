@@ -22,8 +22,19 @@
         padding-top: 15px;
         
         .timeline-item {
+            .timeline-vertical-line {
+                top: 0;
+                bottom: -1rem !important; /* Bridge the mb-3 gap */
+            }
+            &:first-child .timeline-vertical-line {
+                top: 50% !important;
+            }
             &:last-child .timeline-vertical-line {
-                display: none; // Hide vertical line for last item
+                bottom: 50% !important;
+                display: block !important;
+            }
+            &:first-child:last-child .timeline-vertical-line {
+                display: none !important;
             }
         }
     }

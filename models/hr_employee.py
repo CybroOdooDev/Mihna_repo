@@ -65,7 +65,20 @@ class HrEmployee(models.Model):
     def _onchange_hourly_cost(self):
         """Create a record in 'hourly.cost' when the 'hourly_cost' field
         changes."""
+        if not self._origin.id:
+            return
         employee_id = self.env['hr.employee'].browse(self._origin.id)
+        
+        # If no history exists, record the initial value first
+        existing = self.env['hourly.cost'].sudo().search_count([('employee_id', '=', self._origin.id)])
+        if existing == 0 and self._origin.hourly_cost:
+            self.env['hourly.cost'].sudo().create({
+                'employee': self._origin.id,
+                'employee_name': employee_id.name,
+                'updated_date': employee_id.create_date or fields.Datetime.now(),
+                'current_value': self._origin.hourly_cost
+            })
+
         self.env['hourly.cost'].sudo().create({
             'employee': self._origin.id,
             'employee_name': employee_id.name,
@@ -157,8 +170,9 @@ class HrEmployee(models.Model):
                 'author_name': s.create_uid.name if s.create_uid else 'System',
                 'author_id': s.create_uid.id if s.create_uid else False,
                 'icon': 'fa-dollar',
-                'color': '#10b981', # Bright Emerald Green
-                'light_color': '#dcfce7', # Visible light green
+                'color': '#22c55e', # Professional Green
+                'light_color': '#dcfce7', # Very light green
+                'gradient': 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
             })
             prev_salary_val = s.current_value
 
@@ -195,8 +209,9 @@ class HrEmployee(models.Model):
                 'author_name': h.create_uid.name if h.create_uid else 'System',
                 'author_id': h.create_uid.id if h.create_uid else False,
                 'icon': 'fa-clock-o',
-                'color': '#8b5cf6', # Bright Purple
-                'light_color': '#ede9fe', # Visible light purple
+                'color': '#a855f7', # Professional Purple
+                'light_color': '#f3e8ff', # Very light purple
+                'gradient': 'linear-gradient(135deg, #a855f7 0%, #9333ea 100%)',
             })
             prev_hourly_val = h.current_value
 
@@ -218,8 +233,9 @@ class HrEmployee(models.Model):
                 'author_name': c.create_uid.name if c.create_uid else 'System',
                 'author_id': c.create_uid.id if c.create_uid else False,
                 'icon': 'fa-file-text-o',
-                'color': '#f97316', # Bright Orange
-                'light_color': '#ffedd5', # Visible light orange
+                'color': '#f97316', # Professional Orange
+                'light_color': '#ffedd5', # Very light orange
+                'gradient': 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
             })
             contract_prevs[field] = c.current_value
 
@@ -241,8 +257,9 @@ class HrEmployee(models.Model):
                 'author_name': d.create_uid.name if d.create_uid else 'System',
                 'author_id': d.create_uid.id if d.create_uid else False,
                 'icon': 'fa-briefcase',
-                'color': '#3b82f6', # Bright Blue
-                'light_color': '#dbeafe', # Visible light blue
+                'color': '#3b82f6', # Professional Blue
+                'light_color': '#dbeafe', # Very light blue
+                'gradient': 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
             })
             dep_prevs[field] = d.current_value
 

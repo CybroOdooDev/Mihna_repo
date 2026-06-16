@@ -38,6 +38,9 @@ class ContractHistory(models.Model):
 
     @api.depends('employee')
     def _compute_employee_id(self):
+        """
+        Compute the actual hr.employee record from the stored employee ID string.
+        """
         for rec in self:
             if rec.employee and rec.employee.isdigit():
                 rec.employee_id = int(rec.employee)

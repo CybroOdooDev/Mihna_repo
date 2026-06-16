@@ -57,6 +57,7 @@ class ReportOverdue(models.AbstractModel):
 
     @api.model
     def get_report_values(self, docids=None, data=None):
+        """Retrieve the broad factor report values for rendering the template."""
         sql = """select * from hr_employee_broad_factor"""
         self.env.cr.execute(sql)
         lines = self.env.cr.dictfetchall()

@@ -25,6 +25,7 @@ from collections import defaultdict
 from datetime import timedelta, datetime, date
 from dateutil.relativedelta import relativedelta
 from odoo import api, fields, models, _
+from odoo.exceptions import UserError
 from odoo.http import request
 from odoo.tools import float_utils
 from odoo.tools import format_duration
@@ -43,7 +44,9 @@ class HrEmployee(models.Model):
     def attendance_manual(self):
         """Create and update an attendance for the user employee"""
         employee = request.env['hr.employee'].sudo().browse(
-            self.env.user.employee_id.id)
+            self.env.user.sudo().employee_id.id)
+        if not employee:
+            raise UserError(_('You must be linked to an employee to record attendance.'))
         latitude = request.geoip.location.latitude
         longitude = request.geoip.location.longitude
         if latitude and longitude:
@@ -86,6 +89,29 @@ class HrEmployee(models.Model):
         uid = request.session.uid
         employee = self.env['hr.employee'].sudo().search_read(
             [('user_id', '=', uid)], limit=1)
+            
+        if not employee:
+            return [{
+                'id': False,
+                'name': request.env.user.name,
+                'job_title': 'No Profile Linked',
+                'image_1920': False,
+                'broad_factor': 0,
+                'leaves_to_approve': 0,
+                'leaves_today': [],
+                'leaves_this_month': [],
+                'leaves_alloc_req': 0,
+                'emp_timesheets': 0,
+                'contracts_count': 0,
+                'job_applications': 0,
+                'timesheet_view_id': False,
+                'experience': False,
+                'age': False,
+                'attendance_lines': [],
+                'leave_lines': [],
+                'expense_lines': [],
+                'project_task_lines': [],
+            }]
         
         attendance_domain = [('employee_id', '=', employee[0]['id'])]
         if date_from: attendance_domain.append(('check_in', '>=', date_from))
@@ -322,6 +348,7 @@ class HrEmployee(models.Model):
         }
         
         def _get_domain(base_domain):
+            """Appends standard date filters to the provided base domain."""
             d = list(base_domain)
             if date_from: d.append(('create_date', '>=', date_from))
             if date_to: d.append(('create_date', '<=', date_to + ' 23:59:59'))
@@ -343,12 +370,12 @@ class HrEmployee(models.Model):
             result['resignation'] = False
             
         if 'employee.transfer' in self.env and self.env['employee.transfer'].check_access_rights('read', raise_exception=False):
-            result['transfer'] = self.env['employee.transfer'].search_count(_get_domain([('state', '=', 'draft')]))
+            result['transfer'] = self.env['employee.transfer'].search_count(_get_domain([('state', 'in', ['draft', 'transfer'])]))
         else:
             result['transfer'] = False
             
         if 'service.request' in self.env and self.env['service.request'].check_access_rights('read', raise_exception=False):
-            result['shift'] = self.env['service.request'].search_count(_get_domain([('state', '=', 'draft')]))
+            result['shift'] = self.env['service.request'].search_count(_get_domain([('state', 'in', ['draft', 'requested'])]))
         else:
             result['shift'] = False
             
@@ -385,18 +412,12 @@ class HrEmployee(models.Model):
         where_clause = "state in ('validate', 'confirm', 'validate1', 'refuse')"
         
         sql = f"""
-        SELECT h.id, h.employee_id, h.state
-             , to_char(y, 'FMMon YYYY') as month_year
-             , GREATEST(y                    , h.date_from) AS date_from
-             , LEAST   (y + interval '1 month', h.date_to)   AS date_to
-        FROM  (select * from hr_leave where {where_clause}) h
-             , generate_series(date_trunc('month', date_from::timestamp)
-                             , date_trunc('month', date_to::timestamp)
-                             , interval '1 month') y
-        where date_trunc('month', GREATEST(y , h.date_from)) >= 
-        date_trunc('month', now()) - interval '6 month' and
-        date_trunc('month', GREATEST(y , h.date_from)) <= 
-        date_trunc('month', now())
+        SELECT state, count(id) as counts,
+               to_char(date_from, 'FMMon YYYY') as month_year
+        FROM hr_leave
+        WHERE {where_clause}
+        AND date_from >= date_trunc('month', now()) - interval '5 month'
+        GROUP BY state, to_char(date_from, 'FMMon YYYY')
         """
         self.env.cr.execute(sql)
         results = self.env.cr.dictfetchall()
@@ -404,20 +425,16 @@ class HrEmployee(models.Model):
         trend = {m: {'Approved': 0, 'Pending': 0, 'Rejected': 0} for m in month_list}
         
         for line in results:
-            employee = self.browse(line['employee_id'])
-            from_dt = fields.Datetime.from_string(line['date_from'])
-            to_dt = fields.Datetime.from_string(line['date_to'])
-            days = employee.get_work_days_dashboard(from_dt, to_dt)
-            
             m_year = line['month_year'].strip()
             if m_year in trend:
                 state = line['state']
+                counts = line['counts'] or 0
                 if state == 'validate':
-                    trend[m_year]['Approved'] += days
+                    trend[m_year]['Approved'] += counts
                 elif state in ('confirm', 'validate1'):
-                    trend[m_year]['Pending'] += days
+                    trend[m_year]['Pending'] += counts
                 elif state == 'refuse':
-                    trend[m_year]['Rejected'] += days
+                    trend[m_year]['Rejected'] += counts
                     
         result_list = []
         for m in month_list:
@@ -482,7 +499,7 @@ class HrEmployee(models.Model):
         results = self.env.cr.dictfetchall()
         leave_lines = []
         for line in results:
-            employee = self.browse(line['employee_id'])
+            employee = self.sudo().browse(line['employee_id'])
             from_dt = fields.Datetime.from_string(line['date_from'])
             to_dt = fields.Datetime.from_string(line['date_to'])
             days = employee.get_work_days_dashboard(from_dt, to_dt)
@@ -584,7 +601,7 @@ class HrEmployee(models.Model):
         self.env.cr.execute(sql, (employee[0]['id'],))
         results = self.env.cr.dictfetchall()
         for line in results:
-            employee = self.browse(line['employee_id'])
+            employee = self.sudo().browse(line['employee_id'])
             from_dt = fields.Datetime.from_string(line['date_from'])
             to_dt = fields.Datetime.from_string(line['date_to'])
             days = employee.get_work_days_dashboard(from_dt, to_dt)

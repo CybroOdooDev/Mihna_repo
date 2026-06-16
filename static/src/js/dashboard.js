@@ -72,34 +72,40 @@ export class HrDashboard extends Component{
                 this.state.is_manager = false
             }
             await this.fetch_data();
-            const oContent = document.querySelector('.o_content');
-            if (oContent) {
-                oContent.style.setProperty('padding', '0', 'important');
-                oContent.style.setProperty('margin', '0', 'important');
-                
-                // Firefox ESR compatibility: strip padding from ALL wrappers between o_content and o_action_manager
-                let parent = oContent.parentElement;
-                while (parent && !parent.classList.contains('o_action_manager')) {
-                    parent.style.setProperty('padding', '0', 'important');
-                    parent.style.setProperty('margin', '0', 'important');
-                    parent = parent.parentElement;
+            try {
+                const oContent = document.querySelector('.o_content');
+                if (oContent) {
+                    oContent.style.setProperty('padding', '0', 'important');
+                    oContent.style.setProperty('margin', '0', 'important');
+
+                    let parent = oContent.parentElement;
+                    while (parent && !parent.classList.contains('o_action_manager')) {
+                        parent.style.setProperty('padding', '0', 'important');
+                        parent.style.setProperty('margin', '0', 'important');
+                        parent = parent.parentElement;
+                    }
+
+                    if (parent && parent.classList.contains('o_action_manager')) {
+                        parent.style.setProperty('padding-left', '0', 'important');
+                        parent.style.setProperty('padding-right', '0', 'important');
+                        parent.style.setProperty('padding-bottom', '0', 'important');
+                        parent.style.setProperty('padding-top', '0', 'important');
+                    }
                 }
-                
-                // Also strip o_action_manager itself
-                if (parent && parent.classList.contains('o_action_manager')) {
-                    parent.style.setProperty('padding-left', '0', 'important');
-                    parent.style.setProperty('padding-right', '0', 'important');
-                    parent.style.setProperty('padding-bottom', '0', 'important');
-                    parent.style.setProperty('padding-top', '0', 'important');
-                }
+            } catch (e) {
+                console.error("Dashboard onWillStart DOM manipulation failed", e);
             }
         });
         onWillUnmount(() => {
-            const oContent = document.querySelector('.o_content');
-            if (oContent) {
-                oContent.style.removeProperty('padding');
-                oContent.style.removeProperty('margin');
-                oContent.style.removeProperty('overflow');
+            try {
+                const oContent = document.querySelector('.o_content');
+                if (oContent) {
+                    oContent.style.removeProperty('padding');
+                    oContent.style.removeProperty('margin');
+                    oContent.style.removeProperty('overflow');
+                }
+            } catch (e) {
+                console.error("Dashboard onWillUnmount DOM manipulation failed", e);
             }
         });
         onMounted(() => {
@@ -246,7 +252,7 @@ export class HrDashboard extends Component{
             res_model: 'employee.transfer',
             view_mode: 'tree,form',
             views: [[false, 'list'], [false, 'form']],
-            domain: [['state', '=', 'draft']],
+            domain: [['state', 'in', ['draft', 'transfer']]],
             target: 'current'
         });
     }
@@ -261,7 +267,7 @@ export class HrDashboard extends Component{
             res_model: 'service.request',
             view_mode: 'tree,form',
             views: [[false, 'list'], [false, 'form']],
-            domain: [['state', '=', 'draft']],
+            domain: [['state', 'in', ['draft', 'requested']]],
             target: 'current'
         });
     }
@@ -402,12 +408,10 @@ export class HrDashboard extends Component{
             const values = data.map(d => d.value);
             let canvas_pieCtx = document.getElementById('employeePieChart');
         if (!canvas_pieCtx) return;
-        let parent_pieCtx = canvas_pieCtx.parentNode;
-        canvas_pieCtx.remove();
-        let newCanvas_pieCtx = document.createElement('canvas');
-        newCanvas_pieCtx.id = 'employeePieChart';
-        parent_pieCtx.appendChild(newCanvas_pieCtx);
-        const pieCtx = newCanvas_pieCtx.getContext('2d');
+        if (this.employeePieChartInstance) {
+            this.employeePieChartInstance.destroy();
+        }
+        const pieCtx = canvas_pieCtx.getContext('2d');
             
             // Chart.js v2 & v3 compatible center text plugin
             Chart.pluginService = Chart.pluginService || Chart.plugins;
@@ -446,7 +450,7 @@ export class HrDashboard extends Component{
                 }
             };
 
-            const pieChart = new Chart(pieCtx, {
+            this.employeePieChartInstance = new Chart(pieCtx, {
                 type: 'doughnut',
                 data: {
                     labels: labels,
@@ -463,18 +467,20 @@ export class HrDashboard extends Component{
                     cutout: '75%',
                     cutoutPercentage: 75, // For Chart.js v2
                     legend: { display: false }, // For Chart.js v2
-                    onHover: function(event, elements) {
-                        const chart = this;
-                        if (chart.options && chart.options.isLegendHover) return; // Prevent reset from legend hover
+                    onHover: function(event, elements, chartInstance) {
+                        const chart = chartInstance || this;
+                        if (chart && chart.options && chart.options.isLegendHover) return; // Prevent reset from legend hover
                         let activeIndex = null;
                         if (elements && elements.length > 0) {
                             activeIndex = elements[0].index !== undefined ? elements[0].index : elements[0]._index;
                         }
-                        let currentHovered = chart.options && chart.options.hoveredIndex !== undefined ? chart.options.hoveredIndex : null;
+                        let currentHovered = chart && chart.options && chart.options.hoveredIndex !== undefined ? chart.options.hoveredIndex : null;
                         if (currentHovered !== activeIndex) {
-                            if (!chart.options) chart.options = {};
-                            chart.options.hoveredIndex = activeIndex;
-                            chart.update();
+                            if (chart) {
+                                if (!chart.options) chart.options = {};
+                                chart.options.hoveredIndex = activeIndex;
+                                chart.update();
+                            }
                             const legendContainer = document.getElementById('employeePieLegend');
                             if (legendContainer) {
                                 const legendItems = legendContainer.querySelectorAll('.legend-item');
@@ -540,29 +546,32 @@ export class HrDashboard extends Component{
                 legendContainer.innerHTML = legendHTML;
                 
                 const legendItems = legendContainer.querySelectorAll('.legend-item');
+                const comp = this;
                 legendItems.forEach(item => {
                     item.addEventListener('mouseenter', function() {
                         const idx = parseInt(this.getAttribute('data-index'));
-                        if (!pieChart.options) pieChart.options = {};
-                        pieChart.options.hoveredIndex = idx;
-                        pieChart.options.isLegendHover = true;
+                        const chart = comp.employeePieChartInstance;
+                        if (!chart) return;
+                        if (!chart.options) chart.options = {};
+                        chart.options.hoveredIndex = idx;
+                        chart.options.isLegendHover = true;
                         
                         // In Chart.js v3+, we can programmatically hover the segment to make it "pop"
-                        if (pieChart.setActiveElements) {
-                            pieChart.setActiveElements([{datasetIndex: 0, index: idx}]);
-                            pieChart.update();
+                        if (chart.setActiveElements) {
+                            chart.setActiveElements([{datasetIndex: 0, index: idx}]);
+                            chart.update();
                         } else {
                             // Chart.js v2 fallback for native pop expansion
-                            const meta = pieChart.getDatasetMeta(0);
+                            const meta = chart.getDatasetMeta(0);
                             const arc = meta.data[idx];
                             if (arc) {
-                                if (pieChart.updateHoverStyle) pieChart.updateHoverStyle([arc], null, true);
+                                if (chart.updateHoverStyle) chart.updateHoverStyle([arc], null, true);
                                 if (!arc._popped) {
                                     arc._model.outerRadius += 10;
                                     arc._view.outerRadius += 10;
                                     arc._popped = true;
                                 }
-                                pieChart.draw(); // draw instead of update to preserve hover styles
+                                chart.draw(); // draw instead of update to preserve hover styles
                             }
                         }
                         
@@ -571,15 +580,17 @@ export class HrDashboard extends Component{
                         });
                     });
                     item.addEventListener('mouseleave', function() {
-                        if (!pieChart.options) pieChart.options = {};
-                        pieChart.options.hoveredIndex = null;
-                        pieChart.options.isLegendHover = false;
+                        const chart = comp.employeePieChartInstance;
+                        if (!chart) return;
+                        if (!chart.options) chart.options = {};
+                        chart.options.hoveredIndex = null;
+                        chart.options.isLegendHover = false;
                         
-                        if (pieChart.setActiveElements) {
-                            pieChart.setActiveElements([]);
-                            pieChart.update();
+                        if (chart.setActiveElements) {
+                            chart.setActiveElements([]);
+                            chart.update();
                         } else {
-                            const meta = pieChart.getDatasetMeta(0);
+                            const meta = chart.getDatasetMeta(0);
                             if (meta.data) {
                                 meta.data.forEach(arc => {
                                     if (arc._popped) {
@@ -589,8 +600,8 @@ export class HrDashboard extends Component{
                                     }
                                 });
                             }
-                            if (pieChart.updateHoverStyle) pieChart.updateHoverStyle(meta.data, null, false);
-                            pieChart.draw();
+                            if (chart.updateHoverStyle) chart.updateHoverStyle(meta.data, null, false);
+                            chart.draw();
                         }
                         
                         legendItems.forEach(l => {
@@ -613,7 +624,6 @@ export class HrDashboard extends Component{
         if (data && trendData) {
             const fData = data[0];
             const dept = data[1];
-            const id = this.leave_graph.el;
             fData.forEach(function (d) {
                 let total = 0;
                 for (const dpt in dept) {
@@ -631,13 +641,11 @@ export class HrDashboard extends Component{
 
             let canvas_barCtx = document.getElementById('leave_barChart');
         if (!canvas_barCtx) return;
-        let parent_barCtx = canvas_barCtx.parentNode;
-        canvas_barCtx.remove();
-        let newCanvas_barCtx = document.createElement('canvas');
-        newCanvas_barCtx.id = 'leave_barChart';
-        parent_barCtx.appendChild(newCanvas_barCtx);
-        const barCtx = newCanvas_barCtx.getContext('2d');
-            const barChart = new Chart(barCtx, {
+        if (this.leaveBarChartInstance) {
+            this.leaveBarChartInstance.destroy();
+        }
+        const barCtx = canvas_barCtx.getContext('2d');
+            this.leaveBarChartInstance = new Chart(barCtx, {
                 type: 'bar',
                 data: {
                     labels: labels,
@@ -690,6 +698,13 @@ export class HrDashboard extends Component{
                                 color: '#64748B',
                                 font: { size: 12, weight: '500' }
                             }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw}`;
+                                }
+                            }
                         }
                     },
                     scales: {
@@ -736,12 +751,10 @@ export class HrDashboard extends Component{
             }));
             let canvas_pieCtx = document.getElementById('leave_doughnutChart');
         if (!canvas_pieCtx) return;
-        let parent_pieCtx = canvas_pieCtx.parentNode;
-        canvas_pieCtx.remove();
-        let newCanvas_pieCtx = document.createElement('canvas');
-        newCanvas_pieCtx.id = 'leave_doughnutChart';
-        parent_pieCtx.appendChild(newCanvas_pieCtx);
-        const pieCtx = newCanvas_pieCtx.getContext('2d');
+        if (this.leaveDoughnutChartInstance) {
+            this.leaveDoughnutChartInstance.destroy();
+        }
+        const pieCtx = canvas_pieCtx.getContext('2d');
             
             // Re-use centerTextPlugin from department employee
             Chart.pluginService = Chart.pluginService || Chart.plugins;
@@ -779,7 +792,7 @@ export class HrDashboard extends Component{
                 }
             };
 
-            const pieChart = new Chart(pieCtx, {
+            this.leaveDoughnutChartInstance = new Chart(pieCtx, {
                 type: 'doughnut',
                 data: {
                     labels: pieData.map(d => d.type),
@@ -796,18 +809,20 @@ export class HrDashboard extends Component{
                     cutout: '75%',
                     cutoutPercentage: 75,
                     legend: { display: false },
-                    onHover: function(event, elements) {
-                        const chart = this;
-                        if (chart.options && chart.options.isLegendHover) return;
+                    onHover: function(event, elements, chartInstance) {
+                        const chart = chartInstance || this;
+                        if (chart && chart.options && chart.options.isLegendHover) return;
                         let activeIndex = null;
                         if (elements && elements.length > 0) {
                             activeIndex = elements[0].index !== undefined ? elements[0].index : elements[0]._index;
                         }
-                        let currentHovered = chart.options && chart.options.hoveredIndex !== undefined ? chart.options.hoveredIndex : null;
+                        let currentHovered = chart && chart.options && chart.options.hoveredIndex !== undefined ? chart.options.hoveredIndex : null;
                         if (currentHovered !== activeIndex) {
-                            if (!chart.options) chart.options = {};
-                            chart.options.hoveredIndex = activeIndex;
-                            chart.update();
+                            if (chart) {
+                                if (!chart.options) chart.options = {};
+                                chart.options.hoveredIndex = activeIndex;
+                                chart.update();
+                            }
                             const legendContainer = document.getElementById('leaveDoughnutLegend');
                             if (legendContainer) {
                                 const legendItems = legendContainer.querySelectorAll('.legend-item');
@@ -849,6 +864,7 @@ export class HrDashboard extends Component{
                 },
                 plugins: [centerTextPlugin]
             });
+            const pieChart = this.leaveDoughnutChartInstance;
             function updatePieChart(newData) {
                 pieChart.data.datasets[0].data = newData.map(d => d.leave);
                 pieChart.data.labels = newData.map(d => d.type);
@@ -876,27 +892,30 @@ export class HrDashboard extends Component{
                 legendContainer.innerHTML = legendHTML;
                 
                 const legendItems = legendContainer.querySelectorAll('.legend-item');
+                const comp = this;
                 legendItems.forEach(item => {
                     item.addEventListener('mouseenter', function() {
                         const idx = parseInt(this.getAttribute('data-index'));
-                        if (!pieChart.options) pieChart.options = {};
-                        pieChart.options.hoveredIndex = idx;
-                        pieChart.options.isLegendHover = true;
+                        const chart = comp.leaveDoughnutChartInstance;
+                        if (!chart) return;
+                        if (!chart.options) chart.options = {};
+                        chart.options.hoveredIndex = idx;
+                        chart.options.isLegendHover = true;
                         
-                        if (pieChart.setActiveElements) {
-                            pieChart.setActiveElements([{datasetIndex: 0, index: idx}]);
-                            pieChart.update();
+                        if (chart.setActiveElements) {
+                            chart.setActiveElements([{datasetIndex: 0, index: idx}]);
+                            chart.update();
                         } else {
-                            const meta = pieChart.getDatasetMeta(0);
+                            const meta = chart.getDatasetMeta(0);
                             const arc = meta.data[idx];
                             if (arc) {
-                                if (pieChart.updateHoverStyle) pieChart.updateHoverStyle([arc], null, true);
+                                if (chart.updateHoverStyle) chart.updateHoverStyle([arc], null, true);
                                 if (!arc._popped) {
                                     arc._model.outerRadius += 10;
                                     arc._view.outerRadius += 10;
                                     arc._popped = true;
                                 }
-                                pieChart.draw();
+                                chart.draw();
                             }
                         }
                         
@@ -905,15 +924,17 @@ export class HrDashboard extends Component{
                         });
                     });
                     item.addEventListener('mouseleave', function() {
-                        if (!pieChart.options) pieChart.options = {};
-                        pieChart.options.hoveredIndex = null;
-                        pieChart.options.isLegendHover = false;
+                        const chart = comp.leaveDoughnutChartInstance;
+                        if (!chart) return;
+                        if (!chart.options) chart.options = {};
+                        chart.options.hoveredIndex = null;
+                        chart.options.isLegendHover = false;
                         
-                        if (pieChart.setActiveElements) {
-                            pieChart.setActiveElements([]);
-                            pieChart.update();
+                        if (chart.setActiveElements) {
+                            chart.setActiveElements([]);
+                            chart.update();
                         } else {
-                            const meta = pieChart.getDatasetMeta(0);
+                            const meta = chart.getDatasetMeta(0);
                             if (meta.data) {
                                 meta.data.forEach(arc => {
                                     if (arc._popped) {
@@ -923,8 +944,8 @@ export class HrDashboard extends Component{
                                     }
                                 });
                             }
-                            if (pieChart.updateHoverStyle) pieChart.updateHoverStyle(meta.data, null, false);
-                            pieChart.draw();
+                            if (chart.updateHoverStyle) chart.updateHoverStyle(meta.data, null, false);
+                            chart.draw();
                         }
                         
                         legendItems.forEach(l => {
@@ -965,13 +986,11 @@ export class HrDashboard extends Component{
             });
             let canvas_ctx = document.getElementById('lineChart');
         if (!canvas_ctx) return;
-        let parent_ctx = canvas_ctx.parentNode;
-        canvas_ctx.remove();
-        let newCanvas_ctx = document.createElement('canvas');
-        newCanvas_ctx.id = 'lineChart';
-        parent_ctx.appendChild(newCanvas_ctx);
-        const ctx = newCanvas_ctx.getContext('2d');
-            const lineChart = new Chart(ctx, {
+        if (this.lineChartInstance) {
+            this.lineChartInstance.destroy();
+        }
+        const ctx = canvas_ctx.getContext('2d');
+            this.lineChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
@@ -1067,13 +1086,11 @@ export class HrDashboard extends Component{
             
             let canvas_ctx = document.getElementById('attritionRateChart');
         if (!canvas_ctx) return;
-        let parent_ctx = canvas_ctx.parentNode;
-        canvas_ctx.remove();
-        let newCanvas_ctx = document.createElement('canvas');
-        newCanvas_ctx.id = 'attritionRateChart';
-        parent_ctx.appendChild(newCanvas_ctx);
-        const ctx = newCanvas_ctx.getContext('2d');
-            const attritionRateChart = new Chart(ctx, {
+        if (this.attritionRateChartInstance) {
+            this.attritionRateChartInstance.destroy();
+        }
+        const ctx = canvas_ctx.getContext('2d');
+            this.attritionRateChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
@@ -1157,19 +1174,17 @@ export class HrDashboard extends Component{
             const leaveData = data.map(d => d.attendance);
             let canvas_ctx = document.getElementById('leaveTrendChart');
         if (!canvas_ctx) return;
-        let parent_ctx = canvas_ctx.parentNode;
-        canvas_ctx.remove();
-        let newCanvas_ctx = document.createElement('canvas');
-        newCanvas_ctx.id = 'leaveTrendChart';
-        parent_ctx.appendChild(newCanvas_ctx);
-        const ctx = newCanvas_ctx.getContext('2d');
+        if (this.leaveTrendChartInstance) {
+            this.leaveTrendChartInstance.destroy();
+        }
+        const ctx = canvas_ctx.getContext('2d');
             
             // Create vibrant gradient fill matching reference
             const gradient = ctx.createLinearGradient(0, 0, 0, 250);
             gradient.addColorStop(0, 'rgba(27, 82, 152, 0.4)');
             gradient.addColorStop(1, 'rgba(27, 82, 152, 0.0)');
 
-            const leaveTrendChart = new Chart(ctx, {
+            this.leaveTrendChartInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
                     labels: labels,
@@ -1263,8 +1278,11 @@ export class HrDashboard extends Component{
             const skillData = data.map(d => d.progress);
             const canvas = document.getElementById('skillChart');
             if (!canvas) return;
+            if (this.skillChartInstance) {
+                this.skillChartInstance.destroy();
+            }
             const ctx = canvas.getContext('2d');
-            const skillChart = new Chart(ctx, {
+            this.skillChartInstance = new Chart(ctx, {
                 type: 'polarArea',
                 data: {
                     labels: labels,
@@ -1377,6 +1395,7 @@ export class HrDashboard extends Component{
             target: 'new'
         });
     }
+
     add_expense() {
         this.action.doAction({
             name: _t("Expense"),

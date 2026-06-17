@@ -310,8 +310,20 @@ export class HrDashboard extends Component{
     
     async send_document_reminder(ev) {
         ev.stopPropagation();
-        let doc_id = parseInt(ev.currentTarget.dataset.id);
-        const result = await this.orm.call('hr.employee.document', 'action_send_manual_reminder', [[doc_id]]);
+        let doc_id_str = ev.currentTarget.dataset.id;
+        let result = false;
+        
+        if (doc_id_str.startsWith('emp_id_')) {
+            let emp_id = parseInt(doc_id_str.replace('emp_id_', ''));
+            result = await this.orm.call('hr.employee', 'action_send_manual_reminder_id', [[emp_id]]);
+        } else if (doc_id_str.startsWith('emp_pass_')) {
+            let emp_id = parseInt(doc_id_str.replace('emp_pass_', ''));
+            result = await this.orm.call('hr.employee', 'action_send_manual_reminder_pass', [[emp_id]]);
+        } else {
+            let doc_id = parseInt(doc_id_str);
+            result = await this.orm.call('hr.employee.document', 'action_send_manual_reminder', [[doc_id]]);
+        }
+
         if (result) {
             this.showCustomToast(_t("Reminder sent successfully!").toString(), "success");
         } else {
@@ -708,11 +720,11 @@ export class HrDashboard extends Component{
                         }
                     },
                     scales: {
-                        xAxes: [{ // v2
+                        xAxes: [{
                             gridLines: { display: false, drawBorder: false },
-                            ticks: { fontColor: '#64748B' }
+                            ticks: { fontColor: '#64748B', fontSize: 12 }
                         }],
-                        yAxes: [{ // v2
+                        yAxes: [{
                             display: false,
                             gridLines: { display: false },
                             ticks: { display: false }
@@ -1004,6 +1016,16 @@ export class HrDashboard extends Component{
                     },
                     legend: { display: false }, // Chart.js 2
                     scales: {
+                        xAxes: [{
+                            display: true,
+                            gridLines: { display: false, drawBorder: false },
+                            ticks: { fontColor: '#94a3b8', fontSize: 12 }
+                        }],
+                        yAxes: [{
+                            display: true,
+                            ticks: { beginAtZero: true, display: false },
+                            gridLines: { color: '#f1f5f9', borderDash: [5, 5], drawBorder: false, drawTicks: false }
+                        }],
                         x: {
                             display: true,
                             grid: { display: false, drawBorder: false },
@@ -1024,23 +1046,7 @@ export class HrDashboard extends Component{
                             },
                             ticks: { display: false },
                             border: { display: false }
-                        },
-                        // Chart.js 2 format fallback
-                        xAxes: [{
-                            display: true,
-                            gridLines: { display: false, drawBorder: false },
-                            ticks: { fontColor: '#94a3b8', fontSize: 12 }
-                        }],
-                        yAxes: [{
-                            display: true,
-                            gridLines: {
-                                color: '#f1f5f9',
-                                borderDash: [5, 5],
-                                drawBorder: false,
-                                tickLength: 0
-                            },
-                            ticks: { display: false, beginAtZero: true }
-                        }]
+                        }
                     }
                 }
             });
@@ -1118,6 +1124,16 @@ export class HrDashboard extends Component{
                     },
                     legend: { display: false },
                     scales: {
+                        xAxes: [{
+                            display: true,
+                            gridLines: { display: false, drawBorder: false },
+                            ticks: { fontColor: '#94a3b8', fontSize: 12 }
+                        }],
+                        yAxes: [{
+                            display: true,
+                            ticks: { beginAtZero: true, display: false },
+                            gridLines: { color: '#f1f5f9', borderDash: [5, 5], drawBorder: false, drawTicks: false }
+                        }],
                         x: {
                             display: true,
                             grid: { display: false, drawBorder: false },
@@ -1135,22 +1151,7 @@ export class HrDashboard extends Component{
                             },
                             ticks: { display: false },
                             border: { display: false }
-                        },
-                        xAxes: [{
-                            display: true,
-                            gridLines: { display: false, drawBorder: false },
-                            ticks: { fontColor: '#94a3b8', fontSize: 12 }
-                        }],
-                        yAxes: [{
-                            display: true,
-                            gridLines: {
-                                color: '#f1f5f9',
-                                borderDash: [5, 5],
-                                drawBorder: false,
-                                tickLength: 0
-                            },
-                            ticks: { display: false, beginAtZero: true }
-                        }]
+                        }
                     }
                 }
             });
@@ -1225,6 +1226,16 @@ export class HrDashboard extends Component{
                         }
                     },
                     scales: {
+                        xAxes: [{
+                            display: true,
+                            gridLines: { display: false, drawBorder: false },
+                            ticks: { fontColor: '#94a3b8', fontSize: 12 }
+                        }],
+                        yAxes: [{
+                            display: true,
+                            ticks: { beginAtZero: true, display: false },
+                            gridLines: { color: '#f1f5f9', borderDash: [5, 5], drawBorder: false, drawTicks: false }
+                        }],
                         x: {
                             display: true,
                             grid: { display: false, drawBorder: false },
@@ -1247,22 +1258,7 @@ export class HrDashboard extends Component{
                                 display: false
                             },
                             border: { display: false }
-                        },
-                        xAxes: [{
-                            display: true,
-                            gridLines: { display: false, drawBorder: false },
-                            ticks: { fontColor: '#94a3b8', fontSize: 12 }
-                        }],
-                        yAxes: [{
-                            display: true,
-                            gridLines: {
-                                color: '#f1f5f9',
-                                borderDash: [5, 5],
-                                drawBorder: false,
-                                tickLength: 0
-                            },
-                            ticks: { display: false, beginAtZero: true }
-                        }]
+                        }
                     }
                 }
             });
@@ -1508,16 +1504,24 @@ export class HrDashboard extends Component{
    }
 
     hr_timesheets() {
+        let [dFrom, dTo] = this.getDateRange();
+        let domain = [['project_id', '!=', false], ['user_id', '=', user.userId]];
+        
+        if (dFrom) {
+            domain.push(['date', '>=', dFrom]);
+        }
+        if (dTo) {
+            domain.push(['date', '<=', dTo]);
+        }
+        
         this.action.doAction({
             name: _t("Timesheets"),
             type: 'ir.actions.act_window',
             res_model: 'account.analytic.line',
             view_mode: 'tree,form',
             views: [[false, 'list'], [false, 'form']],
-            context: {
-                'search_default_month': true,
-            },
-            domain: [['employee_id','=', this.state.login_employee.id]],
+            context: {},
+            domain: domain,
             target: 'current'
         })
     }
@@ -1672,26 +1676,33 @@ export class HrDashboard extends Component{
         let toDate = null;
         let now = new Date();
         
+        const formatDate = (date) => {
+            const yyyy = date.getFullYear();
+            const mm = String(date.getMonth() + 1).padStart(2, '0');
+            const dd = String(date.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        };
+        
         if (this.state.date_range === 'today') {
-            fromDate = new Date(now.setHours(0,0,0,0)).toISOString().split('T')[0];
-            toDate = new Date(now.setHours(23,59,59,999)).toISOString().split('T')[0];
+            fromDate = formatDate(now);
+            toDate = formatDate(now);
         } else if (this.state.date_range === 'week') {
             let first = now.getDate() - now.getDay();
             let last = first + 6;
-            let d1 = new Date(now.setDate(first));
-            let d2 = new Date(now.setDate(last));
-            fromDate = d1.toISOString().split('T')[0];
-            toDate = d2.toISOString().split('T')[0];
+            let d1 = new Date(new Date().setDate(first));
+            let d2 = new Date(new Date().setDate(last));
+            fromDate = formatDate(d1);
+            toDate = formatDate(d2);
         } else if (this.state.date_range === 'month') {
-            fromDate = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-            toDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+            fromDate = formatDate(new Date(now.getFullYear(), now.getMonth(), 1));
+            toDate = formatDate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
         } else if (this.state.date_range === 'quarter') {
             let quarter = Math.floor((now.getMonth() / 3));
-            fromDate = new Date(now.getFullYear(), quarter * 3, 1).toISOString().split('T')[0];
-            toDate = new Date(now.getFullYear(), quarter * 3 + 3, 0).toISOString().split('T')[0];
+            fromDate = formatDate(new Date(now.getFullYear(), quarter * 3, 1));
+            toDate = formatDate(new Date(now.getFullYear(), quarter * 3 + 3, 0));
         } else if (this.state.date_range === 'year') {
-            fromDate = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0];
-            toDate = new Date(now.getFullYear(), 11, 31).toISOString().split('T')[0];
+            fromDate = formatDate(new Date(now.getFullYear(), 0, 1));
+            toDate = formatDate(new Date(now.getFullYear(), 11, 31));
         } else if (this.state.date_range === 'custom') {
             fromDate = this.state.custom_date_from;
             toDate = this.state.custom_date_to;
@@ -1824,7 +1835,14 @@ export class HrDashboard extends Component{
             }
             
             // Fetch HR Reminders
-            let reminderData = await rpc('/hr_reminder/all_reminder');
+            let reminderData = [];
+            if (this.state.open_hrms_requests && this.state.open_hrms_requests['hr_reminder']) {
+                try {
+                    reminderData = await rpc('/hr_reminder/all_reminder');
+                } catch (error) {
+                    // Silently ignore or just print a clean message without stack trace
+                }
+            }
             
             // Fetch Personal To-Dos (project.task)
             let todoDomain = [['user_ids', 'in', user.userId], ['project_id', '=', false], ['state', 'not in', ['1_done', '1_canceled']]];
@@ -1946,24 +1964,92 @@ export class HrDashboard extends Component{
             // Fetch Expiring Documents
             let todayStr = new Date().toISOString().split('T')[0];
             let docsDomain = [['expiry_date', '!=', false]];
+            let idDomain = [['id_expiry_date', '!=', false]];
+            let passDomain = [['passport_expiry_date', '!=', false]];
+
             if (dFrom) {
                 docsDomain.push(['expiry_date', '>=', dFrom]);
+                idDomain.push(['id_expiry_date', '>=', dFrom]);
+                passDomain.push(['passport_expiry_date', '>=', dFrom]);
             } else {
                 docsDomain.push(['expiry_date', '>=', todayStr]);
+                idDomain.push(['id_expiry_date', '>=', todayStr]);
+                passDomain.push(['passport_expiry_date', '>=', todayStr]);
             }
             if (dTo) {
                 docsDomain.push(['expiry_date', '<=', dTo]);
+                idDomain.push(['id_expiry_date', '<=', dTo]);
+                passDomain.push(['passport_expiry_date', '<=', dTo]);
             }
             
-            let expiringDocs = await this.orm.searchRead(
-                'hr.employee.document', 
-                docsDomain, 
-                ['employee_ref_id', 'document_type_id', 'expiry_date'],
-                { limit: 4, order: 'expiry_date ASC' }
-            );
+            let expiringDocs = [];
+            try {
+                expiringDocs = await this.orm.searchRead(
+                    'hr.employee.document', 
+                    docsDomain, 
+                    ['employee_ref_id', 'document_type_id', 'expiry_date'],
+                    { limit: 4, order: 'expiry_date ASC' }
+                );
+            } catch (e) {
+                // If hr.employee.document module is missing
+            }
+
+            let idDocs = [];
+            let passDocs = [];
+            try {
+                idDocs = await this.orm.searchRead(
+                    'hr.employee',
+                    idDomain,
+                    ['name', 'id_expiry_date'],
+                    { limit: 4, order: 'id_expiry_date ASC' }
+                );
+                passDocs = await this.orm.searchRead(
+                    'hr.employee',
+                    passDomain,
+                    ['name', 'passport_expiry_date'],
+                    { limit: 4, order: 'passport_expiry_date ASC' }
+                );
+            } catch (e) {
+                // If hr_employee_updation is missing
+            }
+
+            let combinedDocs = [];
+            expiringDocs.forEach(doc => {
+                combinedDocs.push({
+                    id: doc.id,
+                    real_id: doc.id,
+                    is_employee_doc: false,
+                    employee_ref_id: doc.employee_ref_id,
+                    document_type_id: doc.document_type_id,
+                    expiry_date: doc.expiry_date
+                });
+            });
+            idDocs.forEach(doc => {
+                combinedDocs.push({
+                    id: 'emp_id_' + doc.id,
+                    real_id: doc.id,
+                    is_employee_doc: true,
+                    employee_ref_id: [doc.id, doc.name || 'Unknown'],
+                    document_type_id: [0, 'Identity'],
+                    expiry_date: doc.id_expiry_date
+                });
+            });
+            passDocs.forEach(doc => {
+                combinedDocs.push({
+                    id: 'emp_pass_' + doc.id,
+                    real_id: doc.id,
+                    is_employee_doc: true,
+                    employee_ref_id: [doc.id, doc.name || 'Unknown'],
+                    document_type_id: [0, 'Passport'],
+                    expiry_date: doc.passport_expiry_date
+                });
+            });
+
+            combinedDocs.sort((a, b) => new Date(a.expiry_date) - new Date(b.expiry_date));
+            combinedDocs = combinedDocs.slice(0, 4);
             
             let urgentCount = 0;
-            this.state.expiring_documents = expiringDocs.map((doc, i) => {
+            this.state.expiring_documents = combinedDocs.map((doc, i) => {
                 let empName = doc.employee_ref_id ? doc.employee_ref_id[1] : 'Unknown';
                 let initials = empName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
                 let typeName = doc.document_type_id ? doc.document_type_id[1] : 'Document';
@@ -1989,6 +2075,7 @@ export class HrDashboard extends Component{
                 type: typeName,
                 days_left: diffDays,
                 is_urgent: isUrgent,
+                is_employee_doc: doc.is_employee_doc,
                 color: colors[i % colors.length]
                 };
             });

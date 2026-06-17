@@ -214,8 +214,16 @@ class HrEmployee(models.Model):
         if date_to: ts_domain.append(('date', '<=', date_to))
         timesheet_count = self.env['account.analytic.line'].sudo().search_count(ts_domain)
         contract_domain = [('employee_id', '=', employee[0]['id'])]
-        if date_from: contract_domain.append(('date_start', '>=', date_from))
-        if date_to: contract_domain.append(('date_start', '<=', date_to))
+        today_date = fields.Date.today()
+        if date_from:
+            contract_domain.extend(['|', ('date_end', '=', False), ('date_end', '>=', date_from)])
+        else:
+            contract_domain.extend(['|', ('date_end', '=', False), ('date_end', '>=', today_date)])
+            
+        if date_to:
+            contract_domain.append(('date_start', '<=', date_to))
+        else:
+            contract_domain.append(('date_start', '<=', today_date))
         contract_count = self.env['hr.version'].sudo().search_count(contract_domain)
         timesheet_view_id = self.env.ref(
             'hr_timesheet.hr_timesheet_line_search')
@@ -319,9 +327,10 @@ class HrEmployee(models.Model):
         announcements = self.env['hr.announcement'].search_read(
             ann_domain, fields=['announcement_reason', 'date_start', 'date_end'])
 
+        now_str = fields.Datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
         event_domain = [
-            ('date_begin', '>=', date_from if date_from else fields.Datetime.now()),
-            ('date_begin', '<=', date_to + ' 23:59:59' if date_to else '2099-12-31')
+            ('date_begin', '>=', now_str)
         ]
         events = self.env['event.event'].search_read(
             domain=event_domain,
@@ -378,6 +387,11 @@ class HrEmployee(models.Model):
             result['shift'] = self.env['service.request'].search_count(_get_domain([('state', 'in', ['draft', 'requested'])]))
         else:
             result['shift'] = False
+            
+        if 'hr.reminder' in self.env:
+            result['hr_reminder'] = True
+        else:
+            result['hr_reminder'] = False
             
         return result
 
@@ -519,7 +533,7 @@ class HrEmployee(models.Model):
                     if month.replace(' ', '') == line[0].replace(' ', ''):
                         match = list(filter(lambda d: d['l_month'] in [month],
                                             graph_result))[0]['leave']
-                        dept_name = self.env['hr.department'].browse(
+                        dept_name = self.env['hr.department'].sudo().browse(
                             line[1]).name
                         if match:
                             match[dept_name] = result_lines[line]['days']

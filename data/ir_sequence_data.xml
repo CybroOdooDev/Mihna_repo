@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Sequence for HR Insurance Policy Number -->
+        <record id="seq_hr_insurance" model="ir.sequence">
+            <field name="name">HR Insurance Policy Sequence</field>
+            <field name="code">hr.insurance.sequence</field>
+            <field name="prefix">INS/%(year)s/</field>
+            <field name="padding">4</field>
+            <field name="company_id" eval="False"/>
+        </record>
+    </data>
+</odoo>

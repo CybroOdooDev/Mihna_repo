@@ -12,6 +12,10 @@
                 <field name="name"/>
                 <field name="date_from"/>
                 <field name="date_to"/>
+                <field name="employer_cost" sum="Total"/>
+                <field name="basic_wage" sum="Total"/>
+                <field name="gross_wage" sum="Total"/>
+                <field name="net_wage" sum="Total"/>
                 <field name="state"/>
                 <field name="company_id" groups="base.group_multi_company"
                        options="{'no_create': True}"/>

@@ -55,6 +55,10 @@ class HrPayslipRun(models.Model):
                                  help="If its checked, indicates that all"
                                       "payslips generated from here are refund"
                                       "payslips.")
+    company_id = fields.Many2one('res.company', string='Company',
+                                 copy=False, readonly=True,
+                                 help="Company of the payslip.",
+                                 default=lambda self: self.env.user.company_id)
 
     def action_payslip_run(self):
         """Function for state change"""

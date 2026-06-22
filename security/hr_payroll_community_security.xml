@@ -53,5 +53,35 @@
                 ('company_id', 'in', company_ids)]
             </field>
         </record>
+        <record model="ir.rule" id="hr_payslip_run_multi_company_rule">
+            <field name="name">Payslip Batches multi company</field>
+            <field name="model_id" ref="model_hr_payslip_run"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record model="ir.rule" id="hr_salary_rule_multi_company_rule">
+            <field name="name">Salary Rule multi company</field>
+            <field name="model_id" ref="model_hr_salary_rule"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record model="ir.rule" id="hr_payroll_structure_multi_company_rule">
+            <field name="name">Payroll Structure multi company</field>
+            <field name="model_id" ref="model_hr_payroll_structure"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record model="ir.rule" id="hr_salary_rule_category_multi_company_rule">
+            <field name="name">Salary Rule Category multi company</field>
+            <field name="model_id" ref="model_hr_salary_rule_category"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
+        <record model="ir.rule" id="hr_contribution_register_multi_company_rule">
+            <field name="name">Contribution Register multi company</field>
+            <field name="model_id" ref="model_hr_contribution_register"/>
+            <field name="global" eval="True"/>
+            <field name="domain_force">['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]</field>
+        </record>
     </data>
 </odoo>

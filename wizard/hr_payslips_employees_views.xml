@@ -6,12 +6,9 @@
         <field name="model">hr.payslip.employees</field>
         <field name="arch" type="xml">
             <form string="Payslips by Employees">
-                <header>
-                    <button icon="fa-cogs" string="Generate"
-                            name="action_compute_sheet" type="object"
-                            class="oe_highlight"/>
-                </header>
                 <sheet>
+                    <field name="payslip_run_id" invisible="1"/>
+                    <field name="structure_id" invisible="1"/>
                     <span colspan="4" nolabel="1">This wizard will generate
                         payslips for all selected employee(s) based on the
                         dates
@@ -19,8 +16,21 @@
                     </span>
                     <separator string="Employees"/>
                     <newline/>
-                    <field name="employee_ids" nolabel="1"/>
+                    <field name="line_ids" nolabel="1" >
+                        <list editable="bottom" create="false" delete="false">
+                            <field name="is_selected"/>
+                            <field name="employee_id" readonly="1" force_save="1"/>
+                            <field name="job_id" readonly="1" force_save="1"/>
+                            <field name="department_id" readonly="1" force_save="1"/>
+                        </list>
+                    </field>
                 </sheet>
+                <footer>
+                    <button icon="fa-cogs" string="Generate"
+                            name="action_compute_sheet" type="object"
+                            class="oe_highlight"/>
+                    <button string="Cancel" class="btn-secondary" special="cancel"/>
+                </footer>
             </form>
         </field>
     </record>

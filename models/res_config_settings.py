@@ -20,7 +20,7 @@
 #    If not, see <http://www.gnu.org/licenses/>.
 #
 #############################################################################
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class ResConfigSettings(models.TransientModel):
@@ -35,3 +35,25 @@ class ResConfigSettings(models.TransientModel):
                                                help="Is Belgium Payroll")
     module_l10n_in_hr_payroll = fields.Boolean(string='Indian Payroll',
                                                help="Is Indian Payroll")
+    send_payslip_by_email = fields.Boolean(
+        string="Automatic Send Payslip By Mail",
+        help="Is needed for automatic send mail")
+
+    @api.model
+    def get_values(self):
+        """Function for getting boolean"""
+        res = super(ResConfigSettings, self).get_values()
+        params = self.env['ir.config_parameter'].sudo()
+        send_payslip_by_email = params.get_param('send_payslip_by_email',
+                                                 default=False)
+        res.update(
+            send_payslip_by_email=send_payslip_by_email
+        )
+        return res
+
+    def set_values(self):
+        """Function for setting boolean"""
+        super(ResConfigSettings, self).set_values()
+        self.env['ir.config_parameter'].sudo().set_param(
+            "send_payslip_by_email",
+            self.send_payslip_by_email)

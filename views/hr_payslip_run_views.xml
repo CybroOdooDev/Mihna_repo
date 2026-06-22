@@ -81,6 +81,9 @@
                     <button name="close_payslip_run" type="object"
                             string="Close" invisible="state != 'draft'"
                             class="oe_highlight"/>
+                    <button name="%(action_hr_payslip_run_generate)d"
+                            type="action" invisible="state != 'draft'"
+                            string="Run" class="oe_highlight"/>
                     <button name="%(hr_payslip_by_employees_action)d"
                             type="action" invisible="state != 'draft'"
                             string="Generate Payslips" class="oe_highlight"/>
@@ -103,6 +106,7 @@
                                    readonly="state != 'draft'"/>
                         </div>
                         <field name="credit_note" readonly="state != 'draft'"/>
+                        <field name="company_id" groups="base.group_multi_company"/>
                     </group>
                     <separator string="Payslips"/>
                     <field name="slip_ids" readonly="state != 'draft'"/>

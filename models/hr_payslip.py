@@ -114,6 +114,28 @@ class HrPayslip(models.Model):
     payslip_count = fields.Integer(compute='_compute_payslip_count',
                                    string="Payslip Computation Details",
                                    help="Set Payslip Count")
+    is_send_mail = fields.Boolean(
+        string="Is Send Mail",
+        help="Checks the Mail is send or not")
+    
+    basic_wage = fields.Monetary(compute='_compute_wages', string='Basic Wage')
+    gross_wage = fields.Monetary(compute='_compute_wages', string='Gross Wage')
+    net_wage = fields.Monetary(compute='_compute_wages', string='Net Wage')
+    employer_cost = fields.Monetary(compute='_compute_wages', string='Employer Cost')
+    currency_id = fields.Many2one(related='company_id.currency_id', readonly=True)
+
+    @api.depends('line_ids.total')
+    def _compute_wages(self):
+        for payslip in self:
+            payslip.basic_wage = sum(payslip.line_ids.filtered(lambda l: l.category_id.code == 'BASIC' or l.code == 'BASIC').mapped('total'))
+            
+            gross_lines = payslip.line_ids.filtered(lambda l: l.category_id.code == 'GROSS' or l.code == 'GROSS' or 'gross' in l.name.lower())
+            payslip.gross_wage = sum(gross_lines.mapped('total')) if gross_lines else payslip.basic_wage
+            
+            payslip.net_wage = sum(payslip.line_ids.filtered(lambda l: l.category_id.code == 'NET' or l.code == 'NET' or 'net' in l.name.lower()).mapped('total'))
+            
+            comp_lines = payslip.line_ids.filtered(lambda l: l.category_id.code == 'COMP' or l.code == 'COMP' or 'employer' in l.name.lower() or 'company' in l.name.lower())
+            payslip.employer_cost = sum(comp_lines.mapped('total'))
 
     def _compute_details_by_salary_rule_category_ids(self):
         """Compute function for Salary Rule Category for getting
@@ -143,7 +165,58 @@ class HrPayslip(models.Model):
     def action_payslip_done(self):
         """Function for change stage of Payslip"""
         self.action_compute_sheet()
-        return self.write({'state': 'done'})
+        
+        send_payslip_by_email = self.env['ir.config_parameter'].sudo().get_param(
+            'send_payslip_by_email')
+        if send_payslip_by_email:
+            self.write({'is_send_mail': True})
+        
+        res = self.write({'state': 'done'})
+        
+        if send_payslip_by_email:
+            for payslip in self:
+                if payslip.employee_id.private_email:
+                    template = self.env.ref(
+                        'hr_payroll_community.email_template_payslip', raise_if_not_found=False)
+                    if template:
+                        template.sudo().send_mail(payslip.id, force_send=True)
+        return res
+
+    def action_payslip_send(self):
+        """Opens a window to compose an email,
+        with template message loaded by default"""
+        self.ensure_one()
+        self.write({'is_send_mail': True})
+        ir_model_data = self.env['ir.model.data']
+        try:
+            template_id = ir_model_data._xmlid_lookup(
+                'hr_payroll_community.email_template_payslip')[1]
+        except ValueError:
+            template_id = False
+        try:
+            compose_form_id = ir_model_data._xmlid_lookup(
+                'mail.email_compose_message_wizard_form')[1]
+        except ValueError:
+            compose_form_id = False
+        ctx = {
+            'default_model': 'hr.payslip',
+            'default_res_ids': self.ids,
+            'default_template_id': template_id,
+            'default_composition_mode': 'comment',
+            'default_partner_ids': self.employee_id.work_contact_id.ids,
+            'force_email': True,
+        }
+        self.write({'is_send_mail': True})
+        return {
+            'name': _('Compose Email'),
+            'type': 'ir.actions.act_window',
+            'view_mode': 'form',
+            'res_model': 'mail.compose.message',
+            'views': [(compose_form_id, 'form')],
+            'view_id': compose_form_id,
+            'target': 'new',
+            'context': ctx,
+        }
 
     def action_payslip_cancel(self):
         """Function for change stage of Payslip"""

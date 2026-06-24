@@ -11,6 +11,31 @@ class HrBatchPaymentWizard(models.TransientModel):
                                              domain="[('journal_id', '=', journal_id), ('payment_type', '=', 'outbound')]")
     payment_date = fields.Date(string='Payment Date', required=True, default=fields.Date.context_today)
     payslip_ids = fields.Many2many('hr.payslip', string='Payslips', required=True)
+    amount = fields.Monetary(string='Amount', compute='_compute_amount_memo')
+    memo = fields.Char(string='Memo', compute='_compute_amount_memo')
+    currency_id = fields.Many2one('res.currency', compute='_compute_currency_id')
+    partner_bank_id = fields.Many2one('res.partner.bank', string='Recipient Bank Account')
+
+    @api.depends('payslip_ids')
+    def _compute_amount_memo(self):
+        for wizard in self:
+            if wizard.payslip_ids:
+                wizard.amount = sum(wizard.payslip_ids.mapped('net_wage'))
+                if len(wizard.payslip_ids) == 1:
+                    wizard.memo = wizard.payslip_ids[0].number
+                else:
+                    wizard.memo = _("Batch Payment: %s Payslips") % len(wizard.payslip_ids)
+            else:
+                wizard.amount = 0.0
+                wizard.memo = False
+
+    @api.depends('payslip_ids')
+    def _compute_currency_id(self):
+        for wizard in self:
+            if wizard.payslip_ids:
+                wizard.currency_id = wizard.payslip_ids[0].company_id.currency_id.id
+            else:
+                wizard.currency_id = self.env.company.currency_id.id
 
     @api.model
     def default_get(self, fields_list):
@@ -35,12 +60,12 @@ class HrBatchPaymentWizard(models.TransientModel):
         for slip in payslips:
             # Find the payable line from the payslip's journal entry
             payable_lines = slip.move_id.line_ids.filtered(
-                lambda l: l.account_id.account_type in ('liability_payable', 'asset_receivable') 
+                lambda l: l.account_id.reconcile 
                 and not l.reconciled and l.credit > 0
             )
             
             for line in payable_lines:
-                partner_id = line.partner_id.id or slip.employee_id.address_home_id.id
+                partner_id = line.partner_id.id or slip.employee_id.work_contact_id.id
                 if not partner_id:
                     raise UserError(_("No partner found for employee %s. Please configure the Private Address on the employee form.") % slip.employee_id.name)
                 # Create the payment
@@ -50,9 +75,10 @@ class HrBatchPaymentWizard(models.TransientModel):
                     'payment_type': 'outbound',
                     'partner_type': 'supplier',
                     'partner_id': partner_id,
+                    'destination_account_id': line.account_id.id,
                     'journal_id': self.journal_id.id,
                     'payment_method_line_id': self.payment_method_line_id.id,
-                    'ref': _("Payment for %s") % slip.name,
+                    'memo': _("Payment for %s") % slip.name,
                 }
                 payment = self.env['account.payment'].create(payment_vals)
                 payment.action_post()

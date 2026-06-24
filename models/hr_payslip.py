@@ -101,12 +101,26 @@ class HrPayslip(models.Model):
         # Post the payment to move it to 'in_process'
         payment.action_post()
         
+        # Reconcile the payment with the payslip's payable line
+        payable_lines = self.move_id.line_ids.filtered(
+            lambda l: l.account_id.account_type in ('liability_payable', 'asset_receivable') 
+            and not l.reconciled and l.credit > 0
+        )
+        
+        for line in payable_lines:
+            payment_lines = payment.line_ids.filtered(
+                lambda l: l.account_id == line.account_id and not l.reconciled
+            )
+            if payment_lines:
+                (line + payment_lines).reconcile()
+                break
+        
         # Post message in payment chatter linking back to the payslip
         body = Markup(_("This payment has been created from: <a href=# data-oe-model=hr.payslip data-oe-id=%d>%s</a>")) % (self.id, self.name)
         payment.message_post(body=body)
         
         # Automatically mark the payslip as paid
-        self.write({'state': 'paid'})
+        # self.write({'state': 'paid'})
         
         return {
             'name': _('Payment'),
@@ -185,6 +199,10 @@ class HrPayslip(models.Model):
                     continue
                 debit_account_id = line.salary_rule_id.account_debit_id.id
                 credit_account_id = line.salary_rule_id.account_credit_id.id
+                
+                if line.code == 'NET' and credit_account_id and not line.salary_rule_id.account_credit_id.reconcile:
+                    raise UserError(_("The credit account on the NET salary rule is not reconciliable"))
+                
                 if debit_account_id:
                     debit_line = (0, 0, {
                         'name': line.name,
@@ -266,13 +284,28 @@ class AccountPayment(models.Model):
     _inherit = 'account.payment'
 
     payslip_count = fields.Integer(compute='_compute_payslip_count')
+    
+    outstanding_account_id = fields.Many2one(
+        comodel_name='account.account',
+        string="Outstanding Account",
+        store=True,
+        compute='_compute_outstanding_account_id',
+        check_company=True)
 
+    @api.depends('memo')
     def _compute_payslip_count(self):
         for payment in self:
             if payment.memo:
                 payment.payslip_count = self.env['hr.payslip'].search_count([('number', '=', payment.memo)])
             else:
                 payment.payslip_count = 0
+
+    @api.depends('payment_method_line_id', 'payslip_count')
+    def _compute_outstanding_account_id(self):
+        super(AccountPayment, self)._compute_outstanding_account_id()
+        for pay in self:
+            if pay.payslip_count > 0 and pay.journal_id.default_account_id:
+                pay.outstanding_account_id = pay.journal_id.default_account_id
 
     def action_open_payslip(self):
         self.ensure_one()

@@ -55,9 +55,9 @@
             </xpath>
             <!-- Add Pay button in the header before the Mark as Paid button (or anywhere in the header) -->
             <xpath expr="//header" position="inside">
-                <button string="Pay" name="action_register_payment"
-                        type="object" class="oe_highlight"
-                        invisible="state != 'done'"/>
+                <button string="Pay" name="%(hr_payroll_account_community.action_hr_batch_payment_wizard)d"
+                        type="action" class="oe_highlight"
+                        invisible="state != 'done' or payment_count &gt; 0"/>
             </xpath>
             <field name="credit_note" position="before">
                 <field name="journal_id" readonly="state != 'draft'"/>

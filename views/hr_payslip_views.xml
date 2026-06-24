@@ -29,9 +29,12 @@
                 </button>
             </div>
             <xpath expr="//button[@name='action_mark_as_paid']" position="before">
-                <button string="Pay" name="action_register_payment"
-                        type="object" class="oe_highlight"
-                        invisible="not move_id or state == 'paid'"/>
+                <button string="Pay" name="%(hr_payroll_account_community.action_hr_batch_payment_wizard)d"
+                        type="action" class="oe_highlight"
+                        invisible="not move_id or payment_count &gt; 0"/>
+            </xpath>
+            <xpath expr="//button[@name='action_mark_as_paid']" position="attributes">
+                <attribute name="invisible">state != 'done' or payment_count == 0</attribute>
             </xpath>
             <field name="paid" position="after">
                 <field name="date" readonly="state != 'draft'"/>

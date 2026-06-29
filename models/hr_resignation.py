@@ -25,8 +25,7 @@ from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
 
 date_format = "%Y-%m-%d"
-RESIGNATION_TYPE = [('resigned', 'Normal Resignation'),
-                    ('fired', 'Fired by the company')]
+
 
 
 class HrResignation(models.Model):
@@ -78,14 +77,12 @@ class HrResignation(models.Model):
          ('relieved', 'Relieved'),
          ('cancel', 'Rejected')],
         string='Status', default='draft', track_visibility="always")
-    resignation_type = fields.Selection(selection=RESIGNATION_TYPE,
-                                        help="Select the type of resignation: "
-                                             "normal resignation or "
-                                             "fired by the company")
+
     change_employee = fields.Boolean(string="Change Employee",
                                      compute="_compute_change_employee",
                                      help="Checks , if the user has permission"
                                           " to change the employee")
+    is_manager = fields.Boolean(compute='_compute_is_manager', string="Is Manager")
     employee_contract = fields.Char(
         string="Contract Template",
         compute="_compute_notice_period",
@@ -97,6 +94,7 @@ class HrResignation(models.Model):
     clearance_line_ids = fields.One2many('hr.resignation.clearance.line', 'resignation_id', string='Clearance Lines')
     clearance_progress = fields.Float(string='Clearance Progress', compute='_compute_clearance_progress')
     settlement_state = fields.Selection([('draft', 'Draft'), ('computed', 'Computed'), ('approved', 'Approved')], string='Settlement State', default='draft')
+    survey_id = fields.Many2one('survey.survey', string='Exit Interview Template')
     exit_interview_id = fields.Many2one('survey.user_input', string='Exit Interview')
     relieving_date = fields.Date(string='Relieving Date')
 
@@ -124,6 +122,11 @@ class HrResignation(models.Model):
         """ Check whether the user has the permission to change the employee"""
         res_user = self.env.user
         self.change_employee = res_user.has_group('hr.group_hr_user')
+
+    @api.depends('employee_id.parent_id.user_id')
+    def _compute_is_manager(self):
+        for rec in self:
+            rec.is_manager = (rec.employee_id.parent_id.user_id == self.env.user) or self.env.user.has_group('hr.group_hr_user')
 
     @api.constrains('employee_id')
     def _check_employee_id(self):
@@ -167,7 +170,7 @@ class HrResignation(models.Model):
             rec.notice_period = 0
 
             if rec.employee_id:
-                contract = self.env['hr.version'].search([
+                contract = self.env['hr.version'].sudo().search([
                     ('employee_id', '=', rec.employee_id.id),
                     '|', ('date_start', '=', False),
                     ('date_start', '<=', today),
@@ -224,12 +227,13 @@ class HrResignation(models.Model):
             else:
                 raise ValidationError(
                     _('Please set a Joining Date for employee'))
-            if self.env.company.enable_manager_approval:
+            if self.env.company.sudo().enable_manager_approval:
                 resignation.state = 'confirm'
-                if resignation.employee_id.parent_id and resignation.employee_id.parent_id.user_id:
+                manager = resignation.sudo().employee_id.parent_id
+                if manager and manager.user_id:
                     resignation.activity_schedule(
                         'mail.mail_activity_data_todo',
-                        user_id=resignation.employee_id.parent_id.user_id.id,
+                        user_id=manager.user_id.id,
                         summary=_('Review resignation request'),
                         note=_('Please review the resignation request for %s.') % resignation.employee_id.name
                     )
@@ -269,8 +273,8 @@ class HrResignation(models.Model):
         for resignation in self:
             if (resignation.expected_revealing_date and
                     resignation.resign_confirm_date):
-                employee_contract = self.env['hr.version'].search(
-                    [('employee_id', '=', self.employee_id.id)])
+                employee_contract = self.env['hr.version'].sudo().search(
+                    [('employee_id', '=', resignation.employee_id.id)])
                 if not employee_contract:
                     raise ValidationError(
                         _("There are no Contracts found for this employee"))
@@ -348,12 +352,12 @@ class HrResignation(models.Model):
             resignation.employee_id.active = False
             resignation.employee_id.resign_date = resignation.expected_revealing_date
             
-            if resignation.resignation_type == 'resigned':
+            if resignation.reason_category_id.name == 'Resigned':
                 resignation.employee_id.resigned = True
-                departure_reason_id = self.env['hr.departure.reason'].search([('name', '=', 'Resigned')], limit=1)
-            else:
+            elif resignation.reason_category_id.name == 'Fired':
                 resignation.employee_id.fired = True
-                departure_reason_id = self.env['hr.departure.reason'].search([('name', '=', 'Fired')], limit=1)
+            
+            departure_reason_id = resignation.reason_category_id
 
             resignation.employee_id.departure_reason_id = departure_reason_id
             resignation.employee_id.departure_date = resignation.relieving_date
@@ -382,5 +386,35 @@ class HrResignation(models.Model):
         for resignation in resignations:
             resignation.action_relieve()
     def action_send_exit_interview(self):
-        for resignation in self:
-            pass
+        self.ensure_one()
+        
+        partner = self.employee_id.user_id.partner_id or self.employee_id.work_contact_id
+        if not partner:
+            if self.employee_id.work_email:
+                # If they have a work email but no partner, try to find or create one
+                partner = self.env['res.partner'].search([('email', '=', self.employee_id.work_email)], limit=1)
+                if not partner:
+                    partner = self.env['res.partner'].sudo().create({
+                        'name': self.employee_id.name,
+                        'email': self.employee_id.work_email,
+                    })
+            else:
+                raise ValidationError(_("The employee must have a linked user, private address, or work email to send an interview."))
+
+        if not self.survey_id:
+            raise ValidationError(_("Please select an Exit Interview Template before sending."))
+
+        local_context = dict(
+            default_partner_ids=partner.ids,
+            default_survey_id=self.survey_id.id,
+            default_email_layout_xmlid='mail.mail_notification_light',
+        )
+
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _("Send Exit Interview"),
+            'view_mode': 'form',
+            'res_model': 'survey.invite',
+            'target': 'new',
+            'context': local_context,
+        }

@@ -100,21 +100,18 @@ class HrResignation(models.Model):
 
     # Analytics Fields
     reason_category_id = fields.Many2one('hr.departure.reason', string='Reason Category')
-    is_regrettable = fields.Boolean(string='Regrettable Attrition')
-    rehire_eligible = fields.Boolean(string='Rehire Eligible')
     replacement_employee_id = fields.Many2one('hr.employee', string='Replacement Employee')
     handover_notes = fields.Text(string='Handover Notes')
 
     # Settlement Fields
     pending_salary = fields.Float(string='Pending Salary')
-    leave_encashment = fields.Float(string='Leave Encashment')
-    gratuity = fields.Float(string='Gratuity')
-    bonus = fields.Float(string='Bonus')
     loan_recovery = fields.Float(string='Loan Recovery')
     advance_recovery = fields.Float(string='Advance Recovery')
     notice_recovery = fields.Float(string='Notice Recovery')
     asset_recovery = fields.Float(string='Asset Recovery', compute='_compute_asset_recovery', store=True)
     net_settlement = fields.Float(string='Net Settlement', compute='_compute_net_settlement')
+    settlement_date = fields.Date(string='Settlement Date', compute='_compute_default_settlement_date', store=True, readonly=False, tracking=True)
+    is_settlement_date_reached = fields.Boolean(compute='_compute_is_settlement_date_reached')
     payslip_id = fields.Many2one('hr.payslip', string='Settlement Payslip')
 
     @api.depends('employee_id')
@@ -143,17 +140,16 @@ class HrResignation(models.Model):
     @api.constrains('employee_id', 'state')
     def _check_joined_date(self):
         """ Check if there is an active resignation request for the
-            same employee with a confirmed or approved state."""
+            same employee in progress."""
         for resignation in self:
-            if resignation.state in ['confirm', 'approved']:
+            if resignation.state not in ['cancel', 'relieved']:
                 resignation_request = self.env['hr.resignation'].search(
                     [('employee_id', '=', resignation.employee_id.id),
-                     ('state', 'in', ['confirm', 'approved']),
-                     ('id', '!=', resignation.id)])
+                     ('state', 'not in', ['cancel', 'relieved']),
+                     ('id', '!=', resignation.id)], limit=1)
                 if resignation_request:
                     raise ValidationError(
-                        _('There is a resignation request in confirmed or'
-                          ' approved state for this employee'))
+                        _('There is already an active resignation request in progress for this employee!'))
 
     @api.depends(
         'employee_id',
@@ -189,15 +185,27 @@ class HrResignation(models.Model):
             cleared = len(rec.clearance_line_ids.filtered(lambda l: l.state == 'cleared'))
             rec.clearance_progress = (cleared / total * 100.0) if total > 0 else 0.0
 
-    @api.depends('pending_salary', 'leave_encashment', 'gratuity', 'bonus', 'loan_recovery', 'advance_recovery', 'notice_recovery', 'asset_recovery')
+    @api.depends('pending_salary', 'loan_recovery', 'advance_recovery', 'notice_recovery', 'asset_recovery')
     def _compute_net_settlement(self):
         for rec in self:
-            rec.net_settlement = (rec.pending_salary + rec.leave_encashment + rec.gratuity + rec.bonus) - (rec.loan_recovery + rec.advance_recovery + rec.notice_recovery + rec.asset_recovery)
+            rec.net_settlement = rec.pending_salary - (rec.loan_recovery + rec.advance_recovery + rec.notice_recovery + rec.asset_recovery)
 
     @api.depends('clearance_line_ids', 'clearance_line_ids.due_amount')
     def _compute_asset_recovery(self):
         for rec in self:
             rec.asset_recovery = sum(rec.clearance_line_ids.mapped('due_amount'))
+
+    @api.depends('expected_revealing_date')
+    def _compute_default_settlement_date(self):
+        for rec in self:
+            if not rec.settlement_date:
+                rec.settlement_date = rec.expected_revealing_date
+
+    @api.depends('settlement_date')
+    def _compute_is_settlement_date_reached(self):
+        today = fields.Date.today()
+        for rec in self:
+            rec.is_settlement_date_reached = bool(rec.settlement_date and rec.settlement_date <= today)
 
     @api.model
     def create(self, vals):
@@ -323,6 +331,29 @@ class HrResignation(models.Model):
 
     def action_compute_settlement(self):
         for resignation in self:
+            advance_recovery = 0.0
+            loan_recovery = 0.0
+
+            # Fetch Salary Advance (Approved advances for the revealing month)
+            if 'salary.advance' in self.env and resignation.employee_id:
+                target_date = resignation.expected_revealing_date or fields.Date.today()
+                advances = self.env['salary.advance'].search([
+                    ('employee_id', '=', resignation.employee_id.id),
+                    ('state', '=', 'approve'),
+                ])
+                advance_recovery = sum(a.advance for a in advances if a.date.month == target_date.month and a.date.year == target_date.year)
+
+            # Fetch Loan (All approved loans with an open balance)
+            if 'hr.loan' in self.env and resignation.employee_id:
+                loans = self.env['hr.loan'].search([
+                    ('employee_id', '=', resignation.employee_id.id),
+                    ('state', '=', 'approve'),
+                    ('balance_amount', '>', 0)
+                ])
+                loan_recovery = sum(loans.mapped('balance_amount'))
+
+            resignation.advance_recovery = advance_recovery
+            resignation.loan_recovery = loan_recovery
             resignation.settlement_state = 'computed'
 
     def action_approve_settlement(self):
@@ -331,11 +362,71 @@ class HrResignation(models.Model):
                 raise ValidationError(_("Cannot approve settlement until all clearance lines are cleared!"))
             
             # Payroll Integration: Create a Payslip for the final settlement
+            date_to = resignation.settlement_date or resignation.expected_revealing_date or fields.Date.today()
+            date_from = date_to.replace(day=1)
+            
+            Payslip = self.env['hr.payslip'].sudo()
+            
+            # Find a contract first
+            contract_ids = Payslip.get_contract(resignation.employee_id, date_from, date_to)
+            contract_id = contract_ids[0] if contract_ids else False
+            
+            if not contract_id:
+                # Fallback to the latest contract
+                fallback_contract = self.env['hr.version'].search([
+                    ('employee_id', '=', resignation.employee_id.id)
+                ], order='date_start desc', limit=1)
+                contract_id = fallback_contract.id if fallback_contract else False
+            
+            if not contract_id:
+                raise ValidationError(_("No contract found for employee %s. A contract is required to generate a payslip.") % resignation.employee_id.name)
+            
+            # Fetch default payslip values with the explicit contract
+            defaults = Payslip.onchange_employee_id(date_from, date_to, resignation.employee_id.id, contract_id=contract_id)['value']
+            
+            # Convert raw dicts from onchange to ORM commands
+            worked_days_lines = []
+            for wd in defaults.get('worked_days_line_ids', []):
+                worked_days_lines.append((0, 0, wd) if isinstance(wd, dict) else wd)
+                
+            input_lines = []
+            for il in defaults.get('input_line_ids', []):
+                input_lines.append((0, 0, il) if isinstance(il, dict) else il)
+            
+            if resignation.asset_recovery > 0:
+                input_lines.append((0, 0, {
+                    'name': 'Asset Recovery',
+                    'code': 'ASSET_RECOVERY',
+                    'amount': resignation.asset_recovery,
+                    'contract_id': contract_id,
+                    'date_from': date_from,
+                    'date_to': date_to,
+                }))
+            if resignation.notice_recovery > 0:
+                input_lines.append((0, 0, {
+                    'name': 'Notice Recovery',
+                    'code': 'NOTICE_RECOVERY',
+                    'amount': resignation.notice_recovery,
+                    'contract_id': contract_id,
+                    'date_from': date_from,
+                    'date_to': date_to,
+                }))
+            
             payslip_vals = {
                 'employee_id': resignation.employee_id.id,
-                'name': f"F&F Settlement - {resignation.employee_id.name}",
+                'name': defaults.get('name', f"F&F Settlement - {resignation.employee_id.name}"),
+                'date_from': date_from,
+                'date_to': date_to,
+                'contract_id': contract_id,
+                'struct_id': defaults.get('struct_id'),
+                'company_id': defaults.get('company_id', self.env.company.id),
+                'worked_days_line_ids': worked_days_lines,
+                'input_line_ids': input_lines,
             }
-            payslip = self.env['hr.payslip'].create(payslip_vals)
+                
+            payslip = Payslip.create(payslip_vals)
+            payslip.action_compute_sheet()
+            
             resignation.payslip_id = payslip.id
             resignation.state = 'settlement'
             resignation.settlement_state = 'approved'
@@ -385,6 +476,20 @@ class HrResignation(models.Model):
         ])
         for resignation in resignations:
             resignation.action_relieve()
+
+    def action_force_add_rules(self):
+        """Temporary button action to force create and link salary rules."""
+        self.env['hr.resignation']._add_recovery_rules_to_structures()
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': 'Success',
+                'message': 'Salary Rules forced updated and linked to all structures!',
+                'sticky': False,
+            }
+        }
+            
     def action_send_exit_interview(self):
         self.ensure_one()
         
@@ -418,3 +523,28 @@ class HrResignation(models.Model):
             'target': 'new',
             'context': local_context,
         }
+
+    @api.model
+    def _add_recovery_rules_to_structures(self):
+        """Called via XML data to add the newly created recovery rules to all existing structures."""
+        asset_rule = self.env.ref('hr_resignation.hr_salary_rule_asset_recovery', raise_if_not_found=False)
+        notice_rule = self.env.ref('hr_resignation.hr_salary_rule_notice_recovery', raise_if_not_found=False)
+        
+        if asset_rule:
+            asset_rule.sudo().write({
+                'condition_python': 'result = bool(inputs.ASSET_RECOVERY)',
+                'amount_python_compute': 'result = -inputs.ASSET_RECOVERY.amount if inputs.ASSET_RECOVERY else 0.0'
+            })
+            
+        if notice_rule:
+            notice_rule.sudo().write({
+                'condition_python': 'result = bool(inputs.NOTICE_RECOVERY)',
+                'amount_python_compute': 'result = -inputs.NOTICE_RECOVERY.amount if inputs.NOTICE_RECOVERY else 0.0'
+            })
+        
+        if asset_rule and notice_rule:
+            structures = self.env['hr.payroll.structure'].search([])
+            for struct in structures:
+                struct.sudo().write({
+                    'rule_ids': [(4, asset_rule.id), (4, notice_rule.id)]
+                })

@@ -34,10 +34,21 @@ class HrResignationClearanceLine(models.Model):
         ('cleared', 'Cleared'),
         ('blocked', 'Blocked')
     ], string='Status', default='pending', tracking=True)
-    has_dues = fields.Boolean(string='Has Dues', tracking=True)
+    has_dues = fields.Boolean(string='Has Dues', compute='_compute_has_dues', store=True, tracking=True)
     due_amount = fields.Float(string='Due Amount', tracking=True)
     remarks = fields.Text(string='Remarks', tracking=True)
     cleared_date = fields.Datetime(string='Cleared Date')
+    is_responsible = fields.Boolean(compute='_compute_is_responsible')
+
+    @api.depends('due_amount')
+    def _compute_has_dues(self):
+        for rec in self:
+            rec.has_dues = bool(rec.due_amount)
+
+    @api.depends('responsible_user_id')
+    def _compute_is_responsible(self):
+        for rec in self:
+            rec.is_responsible = (self.env.user == rec.responsible_user_id) or self.env.user.has_group('hr.group_hr_manager')
 
     def action_mark_cleared(self):
         for rec in self:

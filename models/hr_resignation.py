@@ -107,7 +107,6 @@ class HrResignation(models.Model):
     pending_salary = fields.Float(string='Pending Salary')
     loan_recovery = fields.Float(string='Loan Recovery')
     advance_recovery = fields.Float(string='Advance Recovery')
-    notice_recovery = fields.Float(string='Notice Recovery')
     asset_recovery = fields.Float(string='Asset Recovery', compute='_compute_asset_recovery', store=True)
     net_settlement = fields.Float(string='Net Settlement', compute='_compute_net_settlement')
     settlement_date = fields.Date(string='Settlement Date', compute='_compute_default_settlement_date', store=True, readonly=False, tracking=True)
@@ -183,12 +182,12 @@ class HrResignation(models.Model):
         for rec in self:
             total = len(rec.clearance_line_ids)
             cleared = len(rec.clearance_line_ids.filtered(lambda l: l.state == 'cleared'))
-            rec.clearance_progress = (cleared / total * 100.0) if total > 0 else 0.0
+            rec.clearance_progress = (cleared / total * 100.0) if total > 0 else 100.0
 
-    @api.depends('pending_salary', 'loan_recovery', 'advance_recovery', 'notice_recovery', 'asset_recovery')
+    @api.depends('pending_salary', 'loan_recovery', 'advance_recovery', 'asset_recovery')
     def _compute_net_settlement(self):
         for rec in self:
-            rec.net_settlement = rec.pending_salary - (rec.loan_recovery + rec.advance_recovery + rec.notice_recovery + rec.asset_recovery)
+            rec.net_settlement = rec.pending_salary - (rec.loan_recovery + rec.advance_recovery + rec.asset_recovery)
 
     @api.depends('clearance_line_ids', 'clearance_line_ids.due_amount')
     def _compute_asset_recovery(self):
@@ -321,13 +320,31 @@ class HrResignation(models.Model):
                 ('state', '=', 'approved')
             ])
             if open_custodies:
+                remarks = "Pending return:\n" + "\n".join([f"- {c.custody_property_id.name} ({c.name})" for c in open_custodies])
                 # Find IT/Admin clearance line to block
                 admin_lines = resignation.clearance_line_ids.filtered(lambda l: l.clearance_type_id.name in ['IT', 'Admin'])
                 if admin_lines:
-                    remarks = "Pending return:\n" + "\n".join([f"- {c.custody_property_id.name} ({c.name})" for c in open_custodies])
                     for line in admin_lines:
                         line.state = 'blocked'
-                        line.remarks = remarks
+                        if line.remarks:
+                            line.remarks += "\n\n" + remarks
+                        else:
+                            line.remarks = remarks
+                else:
+                    # Create a Custody Recovery clearance line if no Admin/IT lines exist
+                    c_type = self.env['hr.clearance.type'].search([('name', 'in', ['IT', 'Admin', 'Custody Recovery'])], limit=1)
+                    if not c_type:
+                        c_type = self.env['hr.clearance.type'].sudo().create({
+                            'name': 'Custody Recovery',
+                            'default_responsible_id': self.env.uid,
+                        })
+                    self.env['hr.resignation.clearance.line'].sudo().create({
+                        'resignation_id': resignation.id,
+                        'clearance_type_id': c_type.id,
+                        'responsible_user_id': self.env.uid,
+                        'state': 'blocked',
+                        'remarks': remarks
+                    })
 
     def action_compute_settlement(self):
         for resignation in self:
@@ -375,14 +392,14 @@ class HrResignation(models.Model):
                 # Fallback to the latest contract
                 fallback_contract = self.env['hr.version'].search([
                     ('employee_id', '=', resignation.employee_id.id)
-                ], order='date_start desc', limit=1)
+                ], order='date_version desc', limit=1)
                 contract_id = fallback_contract.id if fallback_contract else False
             
             if not contract_id:
                 raise ValidationError(_("No contract found for employee %s. A contract is required to generate a payslip.") % resignation.employee_id.name)
             
             # Fetch default payslip values with the explicit contract
-            defaults = Payslip.onchange_employee_id(date_from, date_to, resignation.employee_id.id, contract_id=contract_id)['value']
+            defaults = Payslip.with_context(contract=True).onchange_employee_id(date_from, date_to, resignation.employee_id.id, contract_id=contract_id)['value']
             
             # Convert raw dicts from onchange to ORM commands
             worked_days_lines = []
@@ -392,25 +409,6 @@ class HrResignation(models.Model):
             input_lines = []
             for il in defaults.get('input_line_ids', []):
                 input_lines.append((0, 0, il) if isinstance(il, dict) else il)
-            
-            if resignation.asset_recovery > 0:
-                input_lines.append((0, 0, {
-                    'name': 'Asset Recovery',
-                    'code': 'ASSET_RECOVERY',
-                    'amount': resignation.asset_recovery,
-                    'contract_id': contract_id,
-                    'date_from': date_from,
-                    'date_to': date_to,
-                }))
-            if resignation.notice_recovery > 0:
-                input_lines.append((0, 0, {
-                    'name': 'Notice Recovery',
-                    'code': 'NOTICE_RECOVERY',
-                    'amount': resignation.notice_recovery,
-                    'contract_id': contract_id,
-                    'date_from': date_from,
-                    'date_to': date_to,
-                }))
             
             payslip_vals = {
                 'employee_id': resignation.employee_id.id,
@@ -477,18 +475,7 @@ class HrResignation(models.Model):
         for resignation in resignations:
             resignation.action_relieve()
 
-    def action_force_add_rules(self):
-        """Temporary button action to force create and link salary rules."""
-        self.env['hr.resignation']._add_recovery_rules_to_structures()
-        return {
-            'type': 'ir.actions.client',
-            'tag': 'display_notification',
-            'params': {
-                'title': 'Success',
-                'message': 'Salary Rules forced updated and linked to all structures!',
-                'sticky': False,
-            }
-        }
+
             
     def action_send_exit_interview(self):
         self.ensure_one()
@@ -528,23 +515,16 @@ class HrResignation(models.Model):
     def _add_recovery_rules_to_structures(self):
         """Called via XML data to add the newly created recovery rules to all existing structures."""
         asset_rule = self.env.ref('hr_resignation.hr_salary_rule_asset_recovery', raise_if_not_found=False)
-        notice_rule = self.env.ref('hr_resignation.hr_salary_rule_notice_recovery', raise_if_not_found=False)
         
         if asset_rule:
             asset_rule.sudo().write({
-                'condition_python': 'result = bool(inputs.ASSET_RECOVERY)',
-                'amount_python_compute': 'result = -inputs.ASSET_RECOVERY.amount if inputs.ASSET_RECOVERY else 0.0'
-            })
-            
-        if notice_rule:
-            notice_rule.sudo().write({
-                'condition_python': 'result = bool(inputs.NOTICE_RECOVERY)',
-                'amount_python_compute': 'result = -inputs.NOTICE_RECOVERY.amount if inputs.NOTICE_RECOVERY else 0.0'
+                'condition_select': 'none',
+                'amount_python_compute': "result = -(inputs.ASSET_REC.amount) if inputs.ASSET_REC else 0.0"
             })
         
-        if asset_rule and notice_rule:
+        if asset_rule:
             structures = self.env['hr.payroll.structure'].search([])
             for struct in structures:
                 struct.sudo().write({
-                    'rule_ids': [(4, asset_rule.id), (4, notice_rule.id)]
+                    'rule_ids': [(4, asset_rule.id)]
                 })

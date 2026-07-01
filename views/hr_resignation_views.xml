@@ -53,7 +53,6 @@
                             name="action_approve_settlement"
                             invisible="state != 'clearance' or settlement_state != 'computed' or not is_settlement_date_reached"
                             class="oe_highlight"/>
-                    <button name="action_force_add_rules" type="object" string="Fix Salary Rules"/>
                     <button string="Relieve Employee" type="object"
                             groups="hr.group_hr_manager"
                             name="action_relieve"
@@ -138,7 +137,6 @@
                                 <group>
                                     <field name="loan_recovery" readonly="settlement_state == 'approved'"/>
                                     <field name="advance_recovery" readonly="settlement_state == 'approved'"/>
-                                    <field name="notice_recovery" readonly="settlement_state == 'approved'"/>
                                     <field name="asset_recovery" readonly="1"/>
                                     <field name="net_settlement" readonly="1"/>
                                     <field name="payslip_id" readonly="1" invisible="payslip_id == False"/>

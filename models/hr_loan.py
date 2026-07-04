@@ -93,6 +93,10 @@ class HrLoan(models.Model):
                                      compute='_compute_total_amount',
                                      help="The total amount that has been "
                                           "paid towards the loan.")
+    interest_rate = fields.Float(string="Interest Rate (%)", help="Interest rate for the loan")
+    interest_type = fields.Selection([('flat', 'Flat Rate'), ('reducing', 'Reducing Balance')], string="Interest Type", default='flat')
+    interest_mode = fields.Selection([('next_installment', 'Deduct from next installment'), ('spread', 'Spread equally across remaining installments')], string="Interest Mode", default='spread')
+    total_interest_amount = fields.Float(string="Total Interest Amount", compute='_compute_total_amount', store=True, help="Total interest amount calculated")
     state = fields.Selection(
         [('draft', 'Draft'), ('waiting_approval_1', 'Submitted'),
          ('approve', 'Approved'), ('refuse', 'Refused'), ('cancel', 'Canceled'),
@@ -101,14 +105,13 @@ class HrLoan(models.Model):
 
     def _compute_total_amount(self):
         """ Compute total loan amount,balance amount and total paid amount"""
-        total_paid = 0.0
         for loan in self:
-            for line in loan.loan_lines:
-                if line.paid:
-                    total_paid += line.amount
-            balance_amount = loan.loan_amount - total_paid
-            loan.total_amount = loan.loan_amount
-            loan.balance_amount = balance_amount
+            total_paid = sum(line.amount for line in loan.loan_lines if line.paid)
+            total_interest = sum(line.interest_amount for line in loan.loan_lines)
+            
+            loan.total_interest_amount = total_interest
+            loan.total_amount = loan.loan_amount + total_interest
+            loan.balance_amount = loan.total_amount - total_paid
             loan.total_paid_amount = total_paid
 
     @api.model_create_multi
@@ -136,13 +139,50 @@ class HrLoan(models.Model):
             company based on payment start date and the no of installments.
             """
         for loan in self:
-            loan.loan_lines.unlink()
+            unpaid_lines = loan.loan_lines.filtered(lambda l: not l.paid)
+            paid_lines = loan.loan_lines.filtered(lambda l: l.paid)
+            unpaid_lines.unlink()
+
             date_start = datetime.strptime(str(loan.payment_date), '%Y-%m-%d')
-            amount = loan.loan_amount / loan.installment
-            for i in range(1, loan.installment + 1):
+            if paid_lines:
+                last_paid = max(paid_lines.mapped('date'))
+                date_start = last_paid + relativedelta(months=1)
+
+            remaining_installments = loan.installment - len(paid_lines)
+            if remaining_installments <= 0:
+                continue
+
+            remaining_principal = loan.loan_amount - sum(paid_lines.mapped('principal_amount'))
+            principal_per_installment = remaining_principal / remaining_installments
+
+            total_interest = 0.0
+            if loan.interest_rate > 0:
+                if loan.interest_type == 'flat':
+                    total_interest = remaining_principal * (loan.interest_rate / 100.0)
+                elif loan.interest_type == 'reducing':
+                    temp_principal = remaining_principal
+                    for i in range(remaining_installments):
+                        total_interest += temp_principal * (loan.interest_rate / 100.0)
+                        temp_principal -= principal_per_installment
+
+            interest_per_installment = 0.0
+            first_installment_interest = 0.0
+            
+            if loan.interest_mode == 'spread':
+                interest_per_installment = total_interest / remaining_installments
+            elif loan.interest_mode == 'next_installment':
+                first_installment_interest = total_interest
+
+            for i in range(1, remaining_installments + 1):
+                interest_amt = interest_per_installment
+                if i == 1 and loan.interest_mode == 'next_installment':
+                    interest_amt = first_installment_interest
+                    
                 self.env['hr.loan.line'].create({
                     'date': date_start,
-                    'amount': amount,
+                    'principal_amount': principal_per_installment,
+                    'interest_amount': interest_amt,
+                    'amount': principal_per_installment + interest_amt,
                     'employee_id': loan.employee_id.id,
                     'loan_id': loan.id})
                 date_start = date_start + relativedelta(months=1)

@@ -18,8 +18,11 @@ class HrLoanEarlySettlement(models.TransientModel):
         for rec in self:
             if rec.amount <= 0:
                 raise ValidationError(_("Amount must be greater than zero."))
-            if round(rec.amount, 2) > round(rec.loan_id.balance_amount, 2):
-                raise ValidationError(_("Amount cannot exceed the remaining balance amount."))
+            
+            paid_principal = sum(rec.loan_id.loan_lines.filtered(lambda l: l.paid).mapped('principal_amount'))
+            remaining_principal = rec.loan_id.loan_amount - paid_principal
+            if round(rec.amount, 2) > round(remaining_principal, 2):
+                raise ValidationError(_("Amount cannot exceed the remaining principal amount."))
 
     def action_settle(self):
         for rec in self:
@@ -34,23 +37,25 @@ class HrLoanEarlySettlement(models.TransientModel):
             # Add a payment line
             self.env['hr.loan.line'].with_context(early_settlement=True).create({
                 'date': fields.Date.today(),
+                'principal_amount': rec.amount,
+                'interest_amount': 0.0,
                 'amount': rec.amount,
                 'employee_id': loan.employee_id.id,
                 'loan_id': loan.id,
                 'paid': True,
             })
 
-            # Adjust unpaid lines
+            # Adjust unpaid lines based on principal
             remaining_s = rec.amount
             if rec.settlement_type == 'next_installments':
                 for line in unpaid_lines.sorted('date'):
                     if round(remaining_s, 2) <= 0:
                         break
-                    if line.amount <= remaining_s + 0.001:
-                        remaining_s -= line.amount
+                    if line.principal_amount <= remaining_s + 0.001:
+                        remaining_s -= line.principal_amount
                         line.with_context(early_settlement=True).unlink()
                     else:
-                        line.with_context(early_settlement=True).write({'amount': line.amount - remaining_s})
+                        line.with_context(early_settlement=True).write({'principal_amount': line.principal_amount - remaining_s})
                         remaining_s = 0
 
             elif rec.settlement_type == 'spread_equally':
@@ -62,12 +67,38 @@ class HrLoanEarlySettlement(models.TransientModel):
                     for line in existing_lines:
                         if round(remaining_s, 2) <= 0:
                             break
-                        if line.amount <= per_line + 0.001:
-                            remaining_s -= line.amount
+                        if line.principal_amount <= per_line + 0.001:
+                            remaining_s -= line.principal_amount
                             line.with_context(early_settlement=True).unlink()
                         else:
-                            line.with_context(early_settlement=True).write({'amount': line.amount - per_line})
+                            line.with_context(early_settlement=True).write({'principal_amount': line.principal_amount - per_line})
                             remaining_s -= per_line
+
+            # Recalculate interest for remaining lines
+            remaining_unpaid = loan.loan_lines.filtered(lambda l: not l.paid)
+            if remaining_unpaid:
+                new_remaining_principal = sum(remaining_unpaid.mapped('principal_amount'))
+                total_interest = 0.0
+                if loan.interest_rate > 0:
+                    if loan.interest_type == 'flat':
+                        total_interest = new_remaining_principal * (loan.interest_rate / 100.0)
+                    elif loan.interest_type == 'reducing':
+                        temp_p = new_remaining_principal
+                        for line in remaining_unpaid.sorted('date'):
+                            total_interest += temp_p * (loan.interest_rate / 100.0)
+                            temp_p -= line.principal_amount
+                
+                # Apply the new total interest
+                for line in remaining_unpaid:
+                    line.with_context(early_settlement=True).write({'interest_amount': 0.0})
+                
+                if loan.interest_mode == 'spread':
+                    interest_per_line = total_interest / len(remaining_unpaid)
+                    for line in remaining_unpaid:
+                        line.with_context(early_settlement=True).write({'interest_amount': interest_per_line})
+                elif loan.interest_mode == 'next_installment':
+                    first_line = remaining_unpaid.sorted('date')[0]
+                    first_line.with_context(early_settlement=True).write({'interest_amount': total_interest})
 
             loan._compute_total_amount()
         return {'type': 'ir.actions.act_window_close'}

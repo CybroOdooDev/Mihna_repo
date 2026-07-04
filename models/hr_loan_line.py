@@ -33,7 +33,16 @@ class HrLoanLine(models.Model):
                        help="Date of the payment")
     employee_id = fields.Many2one('hr.employee', string="Employee",
                                   help="Employee")
-    amount = fields.Float(string="Amount", required=True, help="Amount")
+    principal_amount = fields.Float(string="Principal Amount", help="Principal Amount")
+    interest_amount = fields.Float(string="Interest Amount", help="Interest Amount")
+    amount = fields.Float(string="Amount", required=True, help="Amount", compute='_compute_amount', store=True, readonly=False)
+
+    @api.depends('principal_amount', 'interest_amount')
+    def _compute_amount(self):
+        for line in self:
+            if line.principal_amount or line.interest_amount:
+                line.amount = line.principal_amount + line.interest_amount
+
     paid = fields.Boolean(string="Paid", help="Indicates whether the "
                                               "installment has been paid.")
     loan_id = fields.Many2one('hr.loan', string="Loan Ref.",

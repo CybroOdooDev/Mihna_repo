@@ -5,12 +5,13 @@
         <field name="name">hr.loan.view.list</field>
         <field name="model">hr.loan</field>
         <field name="arch" type="xml">
-            <list string="Loan Requests">
+            <list string="Loan Requests" decoration-muted="is_fully_paid == True">
                 <field name="name"/>
                 <field name="employee_id"/>
                 <field name="loan_amount"/>
                 <field name="date"/>
                 <field name="state"/>
+                <field name="is_fully_paid" widget="boolean_toggle" readonly="1"/>
             </list>
         </field>
     </record>
@@ -38,6 +39,14 @@
                             invisible="state != 'approve' or balance_amount &lt;= 0"
                             class="oe_highlight"
                             groups="hr.group_hr_manager"/>
+                    <button name="action_deferment" type="object" string="Defer Installment"
+                            invisible="state != 'approve' or balance_amount &lt;= 0"
+                            class="oe_highlight"
+                            groups="hr.group_hr_manager"/>
+                    <button name="action_topup" type="object" string="Top-Up Loan"
+                            invisible="state != 'approve' or balance_amount &lt;= 0"
+                            class="oe_highlight"
+                            groups="hr.group_hr_manager"/>
                     <button name="action_cancel" type="object" string="Cancel" invisible="state != 'draft'"/>
                     <field name="state" widget="statusbar"
                            statusbar_visible="draft,waiting_approval_1,approve"/>
@@ -62,7 +71,6 @@
                         <field name="payment_date" readonly="state == 'approve'"/>
                         <field name="interest_rate" readonly="state == 'approve'"/>
                         <field name="interest_type" readonly="state == 'approve'"/>
-                        <field name="interest_mode" readonly="state == 'approve'"/>
                         <field name="company_id" options="{'no_create': True}"
                                readonly="state != 'draft'"
                                groups="base.group_multi_company"/>
@@ -88,6 +96,9 @@
                                 <field name="total_amount" widget="monetary"
                                        options="{'currency_field': 'currency_id'}"/>
                                 <field name="total_paid_amount"
+                                       widget="monetary"
+                                       options="{'currency_field': 'currency_id'}"/>
+                                <field name="remaining_principal"
                                        widget="monetary"
                                        options="{'currency_field': 'currency_id'}"/>
                                 <field name="balance_amount"

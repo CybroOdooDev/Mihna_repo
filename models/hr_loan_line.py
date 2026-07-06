@@ -43,6 +43,14 @@ class HrLoanLine(models.Model):
             if line.principal_amount or line.interest_amount:
                 line.amount = line.principal_amount + line.interest_amount
 
+    @api.depends('date', 'amount')
+    def _compute_display_name(self):
+        for line in self:
+            date_str = line.date.strftime('%B %d, %Y') if line.date else 'Unknown Date'
+            # Format amount according to currency if possible, or just standard format
+            currency = line.loan_id.currency_id.symbol if line.loan_id and line.loan_id.currency_id else '$'
+            line.display_name = f"{date_str} ({currency}{line.amount:,.2f})"
+
     paid = fields.Boolean(string="Paid", help="Indicates whether the "
                                               "installment has been paid.")
     loan_id = fields.Many2one('hr.loan', string="Loan Ref.",
@@ -61,12 +69,21 @@ class HrLoanLine(models.Model):
 
     def write(self, vals):
         for line in self:
-            if line.loan_id.state == 'approve' and not self.env.context.get('early_settlement'):
+            if line.loan_id.state == 'approve' and not self.env.context.get('early_settlement') and not self.env.context.get('loan_deferment'):
                 # Allow updates to 'paid' and 'payslip_id' from payslip processing
                 allowed_fields = {'paid', 'payslip_id'}
                 if any(field not in allowed_fields for field in vals):
                     raise UserError(_("You cannot modify installment lines of an approved loan."))
-        return super(HrLoanLine, self).write(vals)
+                    
+        res = super(HrLoanLine, self).write(vals)
+        
+        if 'paid' in vals and vals['paid']:
+            for line in self:
+                template = self.env.ref('ohrms_loan.email_template_loan_installment_paid', raise_if_not_found=False)
+                if template:
+                    template.send_mail(line.id, force_send=True)
+                    
+        return res
 
     def unlink(self):
         for line in self:

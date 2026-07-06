@@ -93,10 +93,13 @@ class HrLoan(models.Model):
                                      compute='_compute_total_amount',
                                      help="The total amount that has been "
                                           "paid towards the loan.")
+    remaining_principal = fields.Float(string="Remaining Principal", store=True,
+                                       compute='_compute_total_amount',
+                                       help="The remaining principal amount of the loan, used for early settlement.")
     interest_rate = fields.Float(string="Interest Rate (%)", help="Interest rate for the loan")
     interest_type = fields.Selection([('flat', 'Flat Rate'), ('reducing', 'Reducing Balance')], string="Interest Type", default='flat')
-    interest_mode = fields.Selection([('next_installment', 'Deduct from next installment'), ('spread', 'Spread equally across remaining installments')], string="Interest Mode", default='spread')
     total_interest_amount = fields.Float(string="Total Interest Amount", compute='_compute_total_amount', store=True, help="Total interest amount calculated")
+    is_fully_paid = fields.Boolean(string="Fully Paid", compute='_compute_total_amount', store=True, help="Indicates if the loan is fully paid off.")
     state = fields.Selection(
         [('draft', 'Draft'), ('waiting_approval_1', 'Submitted'),
          ('approve', 'Approved'), ('refuse', 'Refused'), ('cancel', 'Canceled'),
@@ -107,12 +110,15 @@ class HrLoan(models.Model):
         """ Compute total loan amount,balance amount and total paid amount"""
         for loan in self:
             total_paid = sum(line.amount for line in loan.loan_lines if line.paid)
+            paid_principal = sum(line.principal_amount for line in loan.loan_lines if line.paid)
             total_interest = sum(line.interest_amount for line in loan.loan_lines)
             
             loan.total_interest_amount = total_interest
             loan.total_amount = loan.loan_amount + total_interest
             loan.balance_amount = loan.total_amount - total_paid
             loan.total_paid_amount = total_paid
+            loan.remaining_principal = loan.loan_amount - paid_principal
+            loan.is_fully_paid = loan.state == 'approve' and loan.total_amount > 0 and round(loan.balance_amount, 2) <= 0.0
 
     @api.model_create_multi
     def create(self, vals_list):
@@ -141,7 +147,7 @@ class HrLoan(models.Model):
         for loan in self:
             unpaid_lines = loan.loan_lines.filtered(lambda l: not l.paid)
             paid_lines = loan.loan_lines.filtered(lambda l: l.paid)
-            unpaid_lines.unlink()
+            unpaid_lines.with_context(early_settlement=True).unlink()
 
             date_start = datetime.strptime(str(loan.payment_date), '%Y-%m-%d')
             if paid_lines:
@@ -166,19 +172,13 @@ class HrLoan(models.Model):
                         temp_principal -= principal_per_installment
 
             interest_per_installment = 0.0
-            first_installment_interest = 0.0
-            
-            if loan.interest_mode == 'spread':
+            if remaining_installments > 0:
                 interest_per_installment = total_interest / remaining_installments
-            elif loan.interest_mode == 'next_installment':
-                first_installment_interest = total_interest
 
             for i in range(1, remaining_installments + 1):
                 interest_amt = interest_per_installment
-                if i == 1 and loan.interest_mode == 'next_installment':
-                    interest_amt = first_installment_interest
                     
-                self.env['hr.loan.line'].create({
+                self.env['hr.loan.line'].with_context(early_settlement=True).create({
                     'date': date_start,
                     'principal_amount': principal_per_installment,
                     'interest_amount': interest_amt,
@@ -215,6 +215,9 @@ class HrLoan(models.Model):
         if self.state != 'approve':
             raise UserError(_("Early settlement is only allowed for approved loans."))
         
+        paid_principal = sum(self.loan_lines.filtered(lambda l: l.paid).mapped('principal_amount'))
+        remaining_principal = self.loan_amount - paid_principal
+
         return {
             'name': _('Early Settlement'),
             'type': 'ir.actions.act_window',
@@ -223,7 +226,67 @@ class HrLoan(models.Model):
             'target': 'new',
             'context': {
                 'default_loan_id': self.id,
-                'default_amount': self.balance_amount,
+                'default_amount': remaining_principal,
+            }
+        }
+
+    def write(self, vals):
+        """ Override write to trigger automated email notifications """
+        res = super(HrLoan, self).write(vals)
+        
+        for loan in self:
+            if 'state' in vals:
+                if vals['state'] == 'waiting_approval_1':
+                    template = self.env.ref('ohrms_loan.email_template_loan_submitted', raise_if_not_found=False)
+                    if template:
+                        template.send_mail(loan.id, force_send=True)
+                elif vals['state'] == 'approve':
+                    template = self.env.ref('ohrms_loan.email_template_loan_approved', raise_if_not_found=False)
+                    if template:
+                        template.send_mail(loan.id, force_send=True)
+                        
+            if 'is_fully_paid' in vals and vals['is_fully_paid']:
+                template = self.env.ref('ohrms_loan.email_template_loan_closed', raise_if_not_found=False)
+                if template:
+                    template.send_mail(loan.id, force_send=True)
+                    
+        return res
+
+    def action_deferment(self):
+        """ Open wizard to defer loan installment """
+        self.ensure_one()
+        if self.state != 'approve':
+            raise UserError(_("Deferment is only allowed for approved loans."))
+        if self.balance_amount <= 0:
+            raise UserError(_("This loan is already fully paid."))
+            
+        return {
+            'name': _('Defer Installment'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'hr.loan.deferment',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_loan_id': self.id,
+            }
+        }
+
+    def action_topup(self):
+        """ Open wizard to top-up loan """
+        self.ensure_one()
+        if self.state != 'approve':
+            raise UserError(_("Top-Up is only allowed for approved loans."))
+        if self.balance_amount <= 0:
+            raise UserError(_("This loan is already fully paid."))
+            
+        return {
+            'name': _('Top-Up Loan'),
+            'type': 'ir.actions.act_window',
+            'res_model': 'hr.loan.topup',
+            'view_mode': 'form',
+            'target': 'new',
+            'context': {
+                'default_loan_id': self.id,
             }
         }
 

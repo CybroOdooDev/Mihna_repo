@@ -7,28 +7,38 @@
         <field name="arch" type="xml">
             <form string="Employee Insurance">
                 <header>
-                    <button name="action_renewal" string="Renewal" type="object" class="oe_highlight" invisible="state != 'expired'"/>
+                    <button name="action_confirm" string="Confirm" type="object" class="oe_highlight"
+                            invisible="state != 'draft'"/>
+                    <button name="action_renewal" string="Renewal" type="object" class="oe_highlight"
+                            invisible="state != 'expired'"/>
                     <field name="state" widget="statusbar"
-                           statusbar_visible="active,expired"/>
+                           statusbar_visible="draft,active,expired"/>
                 </header>
                 <sheet>
                     <group>
                         <group>
                             <field name="employee_id"/>
-                            <field name="policy_coverage"/>
+                            <field name="policy_id"/>
+                            <field name="insurer_id"/>
+                            <field name="group_policy_number"/>
+                            <field name="policy_coverage" readonly="1" force_save="1"/>
                             <label for="date_from" string="Policy Period"/>
                             <div>
                                 <field name="date_from" class="oe_inline" required="1" readonly="1" force_save="1"/>
                                 -
-                                <field name="date_to" class="oe_inline" required="1" readonly="1" force_save="1"/>
+                                <field name="date_to" class="oe_inline" required="1"/>
                             </div>
                         </group>
                         <group>
-                            <field name="policy_id"/>
-                            <field name="insurer_id"/>
-                            <field name="group_policy_number"/>
-                            <field name="sum_insured"/>
-                            <field name="amount"/>
+                            <field name="sum_insured" readonly="1" force_save="1"/>
+                            <field name="amount" readonly="1" force_save="1"/>
+                            <label for="company_percentage"/>
+                            <div class="d-flex align-items-center">
+                                <field name="company_percentage" class="oe_inline" style="max-width: 100px;"
+                                       readonly="1" force_save="1"/>
+                                <span class="ms-2">%</span>
+                            </div>
+                            <field name="deducted_amount"/>
                             <field name="company_id"/>
                         </group>
                     </group>
@@ -54,6 +64,8 @@
                 <field name="date_from"/>
                 <field name="date_to"/>
                 <field name="company_id"/>
+                <field name="state" widget="badge" decoration-info="state == 'draft'"
+                       decoration-success="state == 'active'" decoration-danger="state == 'expired'"/>
             </list>
         </field>
     </record>

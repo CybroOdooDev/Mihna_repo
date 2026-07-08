@@ -11,9 +11,13 @@
                         <group>
                             <field name="name"/>
                             <field name="insurer_id"/>
+                            <field name="group_policy_number"/>
+                            <field name="policy_coverage"/>
                         </group>
                         <group>
-                            <field name="group_policy_number"/>
+                            <field name="sum_insured"/>
+                            <field name="amount"/>
+                            <field name="company_percentage"/>
                             <field name="company_id"/>
                         </group>
                     </group>
@@ -23,6 +27,7 @@
                         </page>
                     </notebook>
                 </sheet>
+                <chatter/>
             </form>
         </field>
     </record>

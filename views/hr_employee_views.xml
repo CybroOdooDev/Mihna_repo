@@ -8,19 +8,7 @@
         <field name="arch" type="xml">
             <xpath expr="//page[@name='hr_settings']" position="after">
                 <page name="insurance_ids" string="Insurance">
-                    <group>
-                        <group>
-                            <label for="insurance_percentage"/>
-                            <div class="d-flex align-items-center">
-                                <field name="insurance_percentage" class="oe_inline" style="max-width: 100px;"/>
-                                <span class="ms-2">%</span>
-                            </div>
-                        </group>
-                        <group>
-                            <field name="deduced_amount_per_year"/>
-                            <field name="deduced_amount_per_month"/>
-                        </group>
-                    </group>
+
                     <field name="insurance_ids"
                            context="{'default_employee_id':id}"/>
                 </page>

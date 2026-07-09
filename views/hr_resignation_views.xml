@@ -31,6 +31,9 @@
                             name="action_confirm_resignation"
                             invisible="state != 'draft'"
                             class="oe_highlight"/>
+                    <button string="Cancel" type="object"
+                            name="action_cancel_resignation"
+                            invisible="state != 'draft'"/>
                     <button string="Manager Approve" type="object"
                             name="action_manager_approve"
                             invisible="state != 'confirm' or not is_manager"/>
@@ -42,16 +45,16 @@
                     <button string="Compute Settlement" type="object"
                             groups="hr.group_hr_user"
                             name="action_compute_settlement"
-                            invisible="state != 'clearance' or clearance_progress &lt; 100 or settlement_state == 'computed' or not is_settlement_date_reached"
+                            invisible="state != 'clearance' or clearance_progress &lt; 100 or settlement_state == 'computed'"
                             class="oe_highlight"/>
                     <button string="Recompute Settlement" type="object"
                             groups="hr.group_hr_user"
                             name="action_compute_settlement"
-                            invisible="state != 'clearance' or settlement_state != 'computed' or not is_settlement_date_reached"/>
+                            invisible="state != 'clearance' or settlement_state != 'computed'"/>
                     <button string="Approve Settlement" type="object"
                             groups="hr.group_hr_manager"
                             name="action_approve_settlement"
-                            invisible="state != 'clearance' or settlement_state != 'computed' or not is_settlement_date_reached"
+                            invisible="state != 'clearance' or settlement_state != 'computed'"
                             class="oe_highlight"/>
                     <button string="Relieve Employee" type="object"
                             groups="hr.group_hr_manager"
@@ -67,9 +70,9 @@
                     <button string="Set to Draft" type="object"
                             groups="hr.group_hr_manager"
                             name="action_reset_to_draft"
-                            invisible="state not in ['cancel', 'relieved']"/>
+                            invisible="state != 'cancel'"/>
                     <field name="state" widget="statusbar"
-                           statusbar_visible="draft,confirm,approved,relieved"/>
+                           statusbar_visible="draft,confirm,approved"/>
                 </header>
                 <sheet>
                     <field name="is_manager" invisible="1"/>
@@ -107,7 +110,7 @@
                         </group>
                     </group>
                     <notebook>
-                        <page string="Clearance Checklist" name="clearance_page" invisible="state in ('draft', 'confirm', 'manager_approved', 'approved')">
+                        <page string="Clearance Checklist" name="clearance_page" invisible="state in ('draft', 'confirm', 'manager_approved', 'approved', 'cancel')">
                             <group>
                                 <field name="clearance_progress" widget="progressbar"/>
                             </group>
@@ -127,7 +130,7 @@
                                 </list>
                             </field>
                         </page>
-                        <page string="Settlement (F&amp;F)" name="settlement_page" invisible="state in ('draft', 'confirm', 'manager_approved', 'approved')">
+                        <page string="Settlement (F&amp;F)" name="settlement_page" invisible="state in ('draft', 'confirm', 'manager_approved', 'approved', 'cancel')">
                             <group>
                                 <group>
                                     <field name="settlement_state" readonly="1"/>
@@ -143,16 +146,15 @@
                                 </group>
                             </group>
                         </page>
-                        <page string="Analytics &amp; Handover" name="analytics_page" groups="hr.group_hr_user">
+                        <page string="Exit Interview &amp; Handover" name="analytics_page" groups="hr.group_hr_user" invisible="state in ('draft', 'confirm', 'manager_approved', 'cancel')">
                             <group>
-
                                 <group>
-                                    <field name="replacement_employee_id" domain="[('id', '!=', employee_id)]"/>
-                                    <field name="survey_id" invisible="exit_interview_id != False"/>
-                                    <field name="exit_interview_id" invisible="exit_interview_id == False"/>
-                                    <button name="action_send_exit_interview" type="object" string="Send Exit Interview" class="btn-link"/>
+                                    <field name="replacement_employee_id" domain="[('id', '!=', employee_id)]" readonly="state == 'relieved'"/>
+                                    <field name="survey_id" invisible="exit_interview_id != False" readonly="state == 'relieved'"/>
+                                    <field name="exit_interview_id" invisible="exit_interview_id == False" readonly="state == 'relieved'"/>
+                                    <button name="action_send_exit_interview" type="object" string="Send Exit Interview" class="btn-link" invisible="state == 'relieved'"/>
                                 </group>
-                                <field name="handover_notes" placeholder="Handover notes..."/>
+                                <field name="handover_notes" placeholder="Handover notes..." readonly="state == 'relieved'"/>
                             </group>
                         </page>
                     </notebook>
@@ -194,7 +196,7 @@
         <field name="name">Employee Resignation</field>
         <field name="res_model">hr.resignation</field>
         <field name="view_mode">list,form</field>
-        <field name="domain">[]</field>
+        <field name="domain">[('state', 'in', ('draft', 'confirm', 'manager_approved'))]</field>
 
         <field name="help" type="html">
             <p class="oe_view_nocontent_create">Create the First Resignation
@@ -207,6 +209,7 @@
         <field name="res_model">hr.resignation</field>
         <field name="view_mode">list,form</field>
         <field name="domain">[('state', 'in', ('approved', 'clearance', 'settlement', 'relieved'))]</field>
+        <field name="context">{'search_default_approved': 1}</field>
         <field name="help" type="html">
             <p class="oe_view_nocontent_create">Approved Resignation
             </p>

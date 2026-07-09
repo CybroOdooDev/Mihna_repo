@@ -1,14 +1,38 @@
 # -*- coding: utf-8 -*-
+#############################################################################
+#    A part of Open HRMS Project <https://www.openhrms.com>
+#
+#    Cybrosys Technologies Pvt. Ltd.
+#
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
+#
+#    You can modify it under the terms of the GNU LESSER
+#    GENERAL PUBLIC LICENSE (LGPL v3), Version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
+#
+#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
+#    (LGPL v3) along with this program.
+#    If not, see <http://www.gnu.org/licenses/>.
+#
+#############################################################################
 from odoo import models, api
 
 class HrPayslip(models.Model):
+    """
+    Inherits the hr.payslip model to inject resignation deductions/recoveries.
+    """
     _inherit = 'hr.payslip'
 
     @api.model
     def get_inputs(self, contracts, date_from, date_to):
         """Override to inject resignation recoveries into payslip inputs automatically."""
         res = super(HrPayslip, self).get_inputs(contracts, date_from, date_to)
-        
+
         for contract in contracts:
             # Look for active/approved resignations overlapping the payslip period
             resignation = self.env['hr.resignation'].search([

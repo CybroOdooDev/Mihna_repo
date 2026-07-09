@@ -1,8 +1,32 @@
 # -*- coding: utf-8 -*-
+#############################################################################
+#    A part of Open HRMS Project <https://www.openhrms.com>
+#
+#    Cybrosys Technologies Pvt. Ltd.
+#
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
+#
+#    You can modify it under the terms of the GNU LESSER
+#    GENERAL PUBLIC LICENSE (LGPL v3), Version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
+#
+#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
+#    (LGPL v3) along with this program.
+#    If not, see <http://www.gnu.org/licenses/>.
+#
+#############################################################################
 from odoo import api, fields, models, _
-from odoo.exceptions import ValidationError
+
 
 class HrClearanceType(models.Model):
+    """
+    Model for defining different types of HR clearances required during employee resignation.
+    """
     _name = 'hr.clearance.type'
     _description = 'HR Clearance Type'
 
@@ -12,6 +36,9 @@ class HrClearanceType(models.Model):
 
 
 class HrClearanceTemplate(models.Model):
+    """
+    Model for creating templates that group multiple clearance types together.
+    """
     _name = 'hr.clearance.template'
     _description = 'HR Clearance Template'
 
@@ -21,6 +48,9 @@ class HrClearanceTemplate(models.Model):
 
 
 class HrResignationClearanceLine(models.Model):
+    """
+    Model for individual clearance items assigned to specific users during a resignation.
+    """
     _name = 'hr.resignation.clearance.line'
     _description = 'Resignation Clearance Line'
     _inherit = ['mail.thread', 'mail.activity.mixin']
@@ -42,15 +72,26 @@ class HrResignationClearanceLine(models.Model):
 
     @api.depends('due_amount')
     def _compute_has_dues(self):
+        """
+        Compute method to determine if there are any outstanding dues for this clearance line.
+        """
         for rec in self:
             rec.has_dues = bool(rec.due_amount)
 
     @api.depends('responsible_user_id')
     def _compute_is_responsible(self):
+        """
+        Compute method to check if the current user is responsible for this clearance line
+        or has HR Manager privileges.
+        """
         for rec in self:
-            rec.is_responsible = (self.env.user == rec.responsible_user_id) or self.env.user.has_group('hr.group_hr_manager')
+            rec.is_responsible = (self.env.user == rec.responsible_user_id) or self.env.user.has_group(
+                'hr.group_hr_manager')
 
     def action_mark_cleared(self):
+        """
+        Action to mark the clearance line as cleared and record the clearance date.
+        """
         for rec in self:
             rec.state = 'cleared'
             rec.cleared_date = fields.Datetime.now()
@@ -58,5 +99,8 @@ class HrResignationClearanceLine(models.Model):
             rec.resignation_id._compute_clearance_progress()
 
     def action_mark_blocked(self):
+        """
+        Action to mark the clearance line as blocked if there are unresolved issues.
+        """
         for rec in self:
             rec.state = 'blocked'

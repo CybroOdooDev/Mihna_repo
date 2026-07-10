@@ -28,6 +28,7 @@ Developers: (V15) Mily Shajan
             (V16) Aiswarya M
             (V17) Janish Babu EK
             (V18) Raneesha MK
+            (V19) Mihna T
 Contact: odoo@cybrosys.com
 
 Contacts

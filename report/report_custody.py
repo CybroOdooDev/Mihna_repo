@@ -4,7 +4,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2025-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -66,12 +66,12 @@ class ReportCustody(models.Model):
                     t.id as id,
                     t.name as name,
                     t.date_request as date_request,
-                    t.employee_id as employee,
+                    t.employee_id as employee_id,
                     t.purpose as purpose,
-                    t.custody_property_id as custody_name,
+                    t.custody_property_id as custody_property_id,
                     t.return_date as return_date,
                     t.renew_date as renew_date,
-                    t.is_renew_return_date as renew_return_date,
+                    t.is_renew_return_date as is_renew_return_date,
                     t.state as state
         """
         return select_str

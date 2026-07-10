@@ -4,7 +4,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2025-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -27,6 +27,7 @@ class CustodyProperty(models.Model):
     """ Hr property creation model"""
     _name = 'custody.property'
     _description = 'Custody Property'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
 
     name = fields.Char(string='Property Name', required=True,
                        help='Enter the name of the custody property')

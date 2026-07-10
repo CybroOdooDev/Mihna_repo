@@ -4,7 +4,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2025-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -40,8 +40,7 @@ class HrCustody(models.Model):
         """ Use this function to check weather
         the user has the permission
         to change the employee"""
-        res_user = self.env['res.users'].browse(self._uid)
-        if res_user.has_group('hr.group_hr_user'):
+        if self.env.user.has_group('hr.group_hr_user'):
             self.is_read_only = True
         else:
             self.is_read_only = False
@@ -107,8 +106,8 @@ class HrCustody(models.Model):
     def action_send_mail(self):
         """Send email notification using a predefined template."""
         template = self.env.ref(
-            'hr_custody.custody_email_notification_template')
-        self.env['mail.template'].browse(template.id).send_mail(self.id)
+            'hr_custody.custody_email_notification_template_v2')
+        self.env['mail.template'].browse(template.id).send_mail(self.id, force_send=True)
         self.is_mail_send = True
 
     def action_set_to_draft(self):

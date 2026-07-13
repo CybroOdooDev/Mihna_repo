@@ -1,10 +1,36 @@
 # -*- coding: utf-8 -*-
+#############################################################################
+#    A part of Open HRMS Project <https://www.openhrms.com>
+#
+#    Cybrosys Technologies Pvt. Ltd.
+#
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
+#
+#    You can modify it under the terms of the GNU LESSER
+#    GENERAL PUBLIC LICENSE (LGPL v3), Version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
+#
+#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
+#    (LGPL v3) along with this program.
+#    If not, see <http://www.gnu.org/licenses/>.
+#
+#############################################################################
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
 from dateutil.relativedelta import relativedelta
 from markupsafe import Markup
 
 class HrLoanDeferment(models.TransientModel):
+    """ 
+    Wizard for deferring a specific loan installment.
+    Pushes the selected installment and all subsequent unpaid installments
+    back by one month.
+    """
     _name = 'hr.loan.deferment'
     _description = 'Loan Deferment Wizard'
 
@@ -19,6 +45,11 @@ class HrLoanDeferment(models.TransientModel):
     reason = fields.Char(string="Reason", required=True, help="Reason for deferring the loan installment")
 
     def action_defer(self):
+        """
+        Execute the deferment process by shifting the date of the selected
+        installment and all future installments ahead by one month, and log
+        the action in the chatter.
+        """
         self.ensure_one()
         if not self.loan_line_id:
             raise UserError(_("Please select an installment to defer."))

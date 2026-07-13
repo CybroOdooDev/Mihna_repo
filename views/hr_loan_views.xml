@@ -24,7 +24,7 @@
                 <header>
                     <button name="action_compute_installment" type="object"
                             string="Compute Installment" class="oe_highlight"
-                            invisible="state in ('approve','refuse')"/>
+                            invisible="state != 'draft'"/>
                     <button name="action_submit" type="object" string="Submit" invisible="state != 'draft'"
                             class="oe_highlight"/>
                     <button name="action_approve" type="object"
@@ -32,7 +32,7 @@
                             class="oe_highlight"
                             groups="hr.group_hr_manager"/>
                     <button name="action_refuse" type="object" string="Refuse"
-                            invisible="state not in ['draft','waiting_approval_1']"
+                            invisible="state != 'waiting_approval_1'"
                             class="oe_highlight"
                             groups="hr.group_hr_manager"/>
                     <button name="action_early_settlement" type="object" string="Early Settlement"
@@ -62,7 +62,8 @@
                         </h1>
                     </div>
                     <group col="4">
-                        <field name="employee_id" readonly="state == 'approve'"/>
+                        <field name="is_current_user_hr" invisible="1"/>
+                        <field name="employee_id" readonly="state == 'approve' or is_current_user_hr == False"/>
                         <field name="date"/>
                         <field name="department_id"/>
                         <field name="job_position_id"/>

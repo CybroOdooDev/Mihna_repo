@@ -1,8 +1,35 @@
 # -*- coding: utf-8 -*-
+#############################################################################
+#    A part of Open HRMS Project <https://www.openhrms.com>
+#
+#    Cybrosys Technologies Pvt. Ltd.
+#
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
+#
+#    You can modify it under the terms of the GNU LESSER
+#    GENERAL PUBLIC LICENSE (LGPL v3), Version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
+#
+#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
+#    (LGPL v3) along with this program.
+#    If not, see <http://www.gnu.org/licenses/>.
+#
+#############################################################################
 from odoo import api, fields, models, _
 from odoo.exceptions import ValidationError
 
 class HrLoanEarlySettlement(models.TransientModel):
+    """
+    Wizard for processing an early settlement of a loan.
+    Allows either deducting the settlement amount from the next installments
+    sequentially, or spreading the settlement deduction equally across all
+    remaining unpaid installments.
+    """
     _name = 'hr.loan.early.settlement'
     _description = 'Early Settlement Wizard'
 
@@ -15,11 +42,19 @@ class HrLoanEarlySettlement(models.TransientModel):
 
     @api.constrains('amount')
     def _check_amount(self):
+        """
+        Validate that the settlement amount entered is strictly positive.
+        """
         for rec in self:
             if rec.amount <= 0:
                 raise ValidationError(_("Amount must be greater than zero."))
 
     def action_settle(self):
+        """
+        Process the early settlement according to the selected settlement method,
+        adjusting the principal and interest amounts of remaining installments,
+        or deleting them entirely if they are fully paid off by the settlement.
+        """
         for rec in self:
             loan = rec.loan_id
             if loan.state != 'approve':

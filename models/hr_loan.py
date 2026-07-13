@@ -4,7 +4,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2025-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -100,6 +100,16 @@ class HrLoan(models.Model):
     interest_type = fields.Selection([('flat', 'Flat Rate'), ('reducing', 'Reducing Balance')], string="Interest Type", default='flat')
     total_interest_amount = fields.Float(string="Total Interest Amount", compute='_compute_total_amount', store=True, help="Total interest amount calculated")
     is_fully_paid = fields.Boolean(string="Fully Paid", compute='_compute_total_amount', store=True, help="Indicates if the loan is fully paid off.")
+    is_current_user_hr = fields.Boolean(compute='_compute_is_current_user_hr')
+    
+    def _compute_is_current_user_hr(self):
+        """
+        Compute field to determine if the current user belongs to the HR group.
+        Used to conditionally restrict UI elements for normal employees.
+        """
+        for loan in self:
+            loan.is_current_user_hr = self.env.user.has_group('hr.group_hr_user')
+
     state = fields.Selection(
         [('draft', 'Draft'), ('waiting_approval_1', 'Submitted'),
          ('approve', 'Approved'), ('refuse', 'Refused'), ('cancel', 'Canceled'),
@@ -122,18 +132,10 @@ class HrLoan(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        """
+        Override create to generate sequence numbers for new loan requests.
+        """
         for values in vals_list:
-            # check for existing pending loans
-            loan_count = self.env['hr.loan'].search_count([
-                ('employee_id', '=', values.get('employee_id')),
-                ('state', '=', 'approve'),
-                ('balance_amount', '!=', 0)
-            ])
-            if loan_count:
-                raise ValidationError(
-                    _("The Employee already has a pending installment")
-                )
-
             # generate sequence
             values['name'] = self.env['ir.sequence'].next_by_code(
                 'hr.loan.seq') or _('New')
@@ -147,7 +149,7 @@ class HrLoan(models.Model):
         for loan in self:
             unpaid_lines = loan.loan_lines.filtered(lambda l: not l.paid)
             paid_lines = loan.loan_lines.filtered(lambda l: l.paid)
-            unpaid_lines.with_context(early_settlement=True).unlink()
+            unpaid_lines.sudo().with_context(early_settlement=True).unlink()
 
             date_start = datetime.strptime(str(loan.payment_date), '%Y-%m-%d')
             if paid_lines:
@@ -178,7 +180,7 @@ class HrLoan(models.Model):
             for i in range(1, remaining_installments + 1):
                 interest_amt = interest_per_installment
                     
-                self.env['hr.loan.line'].with_context(early_settlement=True).create({
+                self.env['hr.loan.line'].sudo().with_context(early_settlement=True).create({
                     'date': date_start,
                     'principal_amount': principal_per_installment,
                     'interest_amount': interest_amt,
@@ -195,6 +197,9 @@ class HrLoan(models.Model):
 
     def action_submit(self):
         """ Function to submit loan request"""
+        for data in self:
+            if not data.loan_lines:
+                raise ValidationError(_("Please Compute installment"))
         self.write({'state': 'waiting_approval_1'})
 
     def action_cancel(self):
@@ -208,6 +213,27 @@ class HrLoan(models.Model):
                 raise ValidationError(_("Please Compute installment"))
             else:
                 self.write({'state': 'approve'})
+
+    @api.constrains('state')
+    def _check_validations_on_state(self):
+        """
+        Validate loan request state transitions. Ensures the loan amount is
+        positive when submitted, and prevents employees from having multiple
+        pending installments.
+        """
+        for loan in self:
+            if loan.state in ['waiting_approval_1', 'approve']:
+                if loan.loan_amount <= 0:
+                    raise ValidationError(_("The loan amount must be strictly positive."))
+                
+                loan_count = self.env['hr.loan'].search_count([
+                    ('employee_id', '=', loan.employee_id.id),
+                    ('state', '=', 'approve'),
+                    ('balance_amount', '!=', 0),
+                    ('id', '!=', loan.id)
+                ])
+                if loan_count:
+                    raise ValidationError(_("The Employee already has a pending installment"))
 
     def action_early_settlement(self):
         """ Open wizard to early settle loan """
@@ -239,16 +265,24 @@ class HrLoan(models.Model):
                 if vals['state'] == 'waiting_approval_1':
                     template = self.env.ref('ohrms_loan.email_template_loan_submitted', raise_if_not_found=False)
                     if template:
-                        template.send_mail(loan.id, force_send=True)
+                        group = self.env.ref('hr.group_hr_manager').sudo()
+                        hr_managers = group.users if hasattr(group, 'users') else group.user_ids
+                        partner_ids = hr_managers.mapped('partner_id.id')
+                        if partner_ids:
+                            template.send_mail(loan.id, force_send=True, email_values={'recipient_ids': [(6, 0, partner_ids)]})
                 elif vals['state'] == 'approve':
                     template = self.env.ref('ohrms_loan.email_template_loan_approved', raise_if_not_found=False)
                     if template:
-                        template.send_mail(loan.id, force_send=True)
+                        email_to = loan.employee_id.work_email or (loan.employee_id.user_id.email if loan.employee_id.user_id else '') or ''
+                        if email_to:
+                            template.send_mail(loan.id, force_send=True, email_values={'email_to': email_to})
                         
             if 'is_fully_paid' in vals and vals['is_fully_paid']:
                 template = self.env.ref('ohrms_loan.email_template_loan_closed', raise_if_not_found=False)
                 if template:
-                    template.send_mail(loan.id, force_send=True)
+                    email_to = loan.employee_id.work_email or (loan.employee_id.user_id.email if loan.employee_id.user_id else '') or ''
+                    if email_to:
+                        template.send_mail(loan.id, force_send=True, email_values={'email_to': email_to})
                     
         return res
 

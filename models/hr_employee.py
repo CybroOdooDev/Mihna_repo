@@ -36,7 +36,7 @@ class HrEmployee(models.Model):
         """Compute the number of loans associated with the employee."""
         for rec in self:
             rec.loan_count = rec.env['hr.loan'].search_count(
-                [('employee_id', '=', rec.id)])
+                [('employee_id', '=', rec.id), ('state', '=', 'approve'), ('balance_amount', '!=', 0)])
 
     def action_view_loans(self):
         """Open loans only for this employee."""
@@ -46,6 +46,6 @@ class HrEmployee(models.Model):
             'type': 'ir.actions.act_window',
             'res_model': 'hr.loan',
             'view_mode': 'list,form',
-            'domain': [('employee_id', '=', self.id)],
+            'domain': [('employee_id', '=', self.id), ('state', '=', 'approve'), ('balance_amount', '!=', 0)],
             'context': dict(self.env.context, default_employee_id=self.id),
         }

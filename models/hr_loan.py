@@ -101,6 +101,11 @@ class HrLoan(models.Model):
     total_interest_amount = fields.Float(string="Total Interest Amount", compute='_compute_total_amount', store=True, help="Total interest amount calculated")
     is_fully_paid = fields.Boolean(string="Fully Paid", compute='_compute_total_amount', store=True, help="Indicates if the loan is fully paid off.")
     is_current_user_hr = fields.Boolean(compute='_compute_is_current_user_hr')
+    state = fields.Selection(
+        [('draft', 'Draft'), ('waiting_approval_1', 'Submitted'),
+         ('approve', 'Approved'), ('refuse', 'Refused'), ('cancel', 'Canceled'),
+         ], string="State", default='draft', help="The current state of the "
+                                                  "loan request.", copy=False)
     
     def _compute_is_current_user_hr(self):
         """
@@ -109,12 +114,6 @@ class HrLoan(models.Model):
         """
         for loan in self:
             loan.is_current_user_hr = self.env.user.has_group('hr.group_hr_user')
-
-    state = fields.Selection(
-        [('draft', 'Draft'), ('waiting_approval_1', 'Submitted'),
-         ('approve', 'Approved'), ('refuse', 'Refused'), ('cancel', 'Canceled'),
-         ], string="State", default='draft', help="The current state of the "
-                                                  "loan request.", copy=False)
 
     def _compute_total_amount(self):
         """ Compute total loan amount,balance amount and total paid amount"""
@@ -225,15 +224,15 @@ class HrLoan(models.Model):
             if loan.state in ['waiting_approval_1', 'approve']:
                 if loan.loan_amount <= 0:
                     raise ValidationError(_("The loan amount must be strictly positive."))
-                
-                loan_count = self.env['hr.loan'].search_count([
-                    ('employee_id', '=', loan.employee_id.id),
-                    ('state', '=', 'approve'),
-                    ('balance_amount', '!=', 0),
-                    ('id', '!=', loan.id)
-                ])
-                if loan_count:
-                    raise ValidationError(_("The Employee already has a pending installment"))
+            
+            loan_count = self.env['hr.loan'].search_count([
+                ('employee_id', '=', loan.employee_id.id),
+                ('state', '=', 'approve'),
+                ('is_fully_paid', '=', False),
+                ('id', '!=', loan.id)
+            ])
+            if loan_count and not loan.company_id.allow_multiple_loans:
+                raise ValidationError(_("The Employee already has a pending installment"))
 
     def action_early_settlement(self):
         """ Open wizard to early settle loan """

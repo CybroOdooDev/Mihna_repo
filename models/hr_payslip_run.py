@@ -22,24 +22,28 @@
 #############################################################################
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
-from odoo import fields, models
+from odoo import fields, models, _
+from odoo.exceptions import UserError
 
 
 class HrPayslipRun(models.Model):
     """Create new model for getting Payslip Batches"""
     _name = 'hr.payslip.run'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
     _description = 'Payslip Batches'
 
     name = fields.Char(required=True, help="Name for Payslip Batches",
-                       string="Name")
+                       string="Name", tracking=True)
     slip_ids = fields.One2many('hr.payslip',
                                'payslip_run_id',
                                string='Payslips',
                                help="Choose Payslips for Batches")
     state = fields.Selection([
         ('draft', 'Draft'),
-        ('close', 'Close'),
-    ], string='Status', index=True, readonly=True, copy=False, default='draft',
+        ('done', 'Validated'),
+        ('paid', 'Paid'),
+        ('cancel', 'Canceled'),
+    ], string='Status', index=True, readonly=True, copy=False, default='draft', tracking=True,
                                help="Status for Payslip Batches")
     date_start = fields.Date(string='Date From', required=True,
                              help="start date for batch",
@@ -61,9 +65,37 @@ class HrPayslipRun(models.Model):
                                  default=lambda self: self.env.user.company_id)
 
     def action_payslip_run(self):
-        """Function for state change"""
+        """Function for state change and resetting payslips"""
+        for run in self:
+            for slip in run.slip_ids:
+                if slip.state == 'done':
+                    slip.action_payslip_cancel()
+                if slip.state in ['cancel', 'done']:
+                    slip.action_payslip_draft()
         return self.write({'state': 'draft'})
 
-    def close_payslip_run(self):
-        """Function for state change"""
-        return self.write({'state': 'close'})
+    def action_confirm_payslips(self):
+        """Confirm all draft payslips in the batch"""
+        for run in self:
+            if not run.slip_ids:
+                raise UserError(_("You must generate or add payslips before confirming the batch."))
+            draft_slips = run.mapped('slip_ids').filtered(lambda slip: slip.state == 'draft')
+            for slip in draft_slips:
+                slip.action_payslip_done()
+            run.write({'state': 'done'})
+
+    def action_cancel_payslips(self):
+        """Cancel all payslips in the batch and set batch to cancel"""
+        for run in self:
+            for slip in run.slip_ids:
+                slip.action_payslip_cancel()
+            run.write({'state': 'cancel'})
+
+
+    def action_mark_as_paid(self):
+        """Mark batch and its payslips as paid"""
+        for run in self:
+            for slip in run.slip_ids.filtered(lambda s: s.state == 'done'):
+                slip.action_mark_as_paid()
+            run.write({'state': 'paid'})
+        return True

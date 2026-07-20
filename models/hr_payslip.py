@@ -34,7 +34,7 @@ ROUNDING_FACTOR = 16
 class HrPayslip(models.Model):
     """Create new model for getting total Payroll Sheet for an Employee"""
     _name = 'hr.payslip'
-    _inherit = 'mail.thread'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
     _description = 'Pay Slip'
 
     struct_id = fields.Many2one(comodel_name='hr.payroll.structure',
@@ -51,7 +51,7 @@ class HrPayslip(models.Model):
     number = fields.Char(string='Reference', copy=False,
                          help="References for Payslip", )
     employee_id = fields.Many2one(comodel_name='hr.employee', string='Employee',
-                                  required=True,
+                                  required=True, tracking=True,
                                   help="Choose Employee for Payslip")
     date_from = fields.Date(string='Date From', required=True,
                             help="Start date for Payslip",
@@ -67,9 +67,10 @@ class HrPayslip(models.Model):
     state = fields.Selection(selection=[
         ('draft', 'Draft'),
         ('verify', 'Waiting'),
-        ('done', 'Done'),
-        ('cancel', 'Rejected'),
-    ], string='Status', index=True, readonly=True, copy=False, default='draft',
+        ('done', 'Validated'),
+        ('paid', 'Paid'),
+        ('cancel', 'Canceled'),
+    ], string='Status', index=True, readonly=True, copy=False, default='draft', tracking=True,
         help="""* When the payslip is created the status is \'Draft\'
                 \n* If the payslip is under verification, 
                 the status is \'Waiting\'.
@@ -95,7 +96,7 @@ class HrPayslip(models.Model):
                                      'payslip_id',
                                      string='Payslip Inputs',
                                      help="Choose Payslip Input")
-    paid = fields.Boolean(string='Made Payment Order ? ',
+    paid = fields.Boolean(string='Made Payment Order',
                           copy=False, help="Is Payment Order")
     note = fields.Text(string='Internal Note', help="Description for Payslip")
     contract_id = fields.Many2one('hr.version', string='Contract',
@@ -124,8 +125,94 @@ class HrPayslip(models.Model):
     employer_cost = fields.Monetary(compute='_compute_wages', string='Employer Cost')
     currency_id = fields.Many2one(related='company_id.currency_id', readonly=True)
 
+    @property
+    def paid_amount(self):
+        """
+        Property exposing the computed net paid amount based on worked days.
+        This provides a unified monetary value for salary rules to consume.
+        """
+        return self._get_paid_amount()
+
+    def _get_paid_amount(self):
+        """
+        Computes the total paid amount by summing the monetary values of all 
+        worked day lines in this payslip.
+        @return: float representing the total paid amount
+        """
+        self.ensure_one()
+        return sum(line.amount for line in self.worked_days_line_ids)
+
+    @api.model
+    def _get_payroll_days(self, contract, date_from, date_to, total_days=30.0):
+        """
+        Hook to return the number of days in the payroll period.
+        Can be overridden by localization modules (e.g. to use calendar days, fixed 30 days, or working days).
+        """
+        return total_days or 30.0
+
+    @api.model
+    def _get_contract_wage(self, contract):
+        """
+        Retrieves the base wage from the specified contract.
+        @param contract: hr.contract record
+        @return: float representing the base contract wage
+        """
+        return contract.wage
+
+    @api.model
+    def _get_daily_rate(self, contract, date_from, date_to, total_days=30.0):
+        payroll_days = self._get_payroll_days(contract, date_from, date_to, total_days)
+        if payroll_days:
+            return self._get_contract_wage(contract) / payroll_days
+        return 0.0
+
+    @api.model
+    def _is_paid_worked_day(self, worked_day_dict):
+        """
+        Determines if a worked day should be paid.
+        Default: based on hr.work.entry.type 'is_paid' field.
+        """
+        code = worked_day_dict.get('code')
+        if not code:
+            return True
+        work_entry_type = self.env['hr.work.entry.type'].search([('code', '=', code)], limit=1)
+        if work_entry_type:
+            return work_entry_type.is_paid
+        # Fallback if no matching work entry type is found
+        # In hr_payroll_community, leaves without a code default to 'GLOBAL' and were historically deducted.
+        if code == 'GLOBAL':
+            return False
+        return True
+
+    @api.model
+    def _compute_worked_day_amount(self, worked_day_dict, contract, date_from, date_to, total_days=30.0):
+        if self._is_paid_worked_day(worked_day_dict):
+            daily_rate = self._get_daily_rate(contract, date_from, date_to, total_days)
+            return daily_rate * worked_day_dict.get('number_of_days', 0.0)
+        return 0.0
+
+    @api.model
+    def _prepare_worked_day_line(self, worked_day_dict, contract, date_from, date_to, total_days=30.0):
+        """
+        Hook to process each worked day dictionary before it is finalized.
+        Calculates and injects the monetary 'amount' based on the daily rate.
+        @param worked_day_dict: Dictionary containing worked day data
+        @param contract: hr.contract record
+        @param date_from: Start date of the period
+        @param date_to: End date of the period
+        @param total_days: Total payroll days in the period
+        @return: updated worked_day_dict with monetary 'amount'
+        """
+        worked_day_dict['amount'] = self._compute_worked_day_amount(worked_day_dict, contract, date_from, date_to, total_days)
+        return worked_day_dict
+
     @api.depends('line_ids.total')
     def _compute_wages(self):
+        """
+        Computes the basic, gross, net, and employer cost totals for the payslip
+        by dynamically summing the appropriate computed payslip lines based on 
+        category codes ('BASIC', 'GROSS', 'NET', 'COMP').
+        """
         for payslip in self:
             payslip.basic_wage = sum(payslip.line_ids.filtered(lambda l: l.category_id.code == 'BASIC' or l.code == 'BASIC').mapped('total'))
             
@@ -161,6 +248,10 @@ class HrPayslip(models.Model):
     def action_payslip_draft(self):
         """Function for change stage of Payslip"""
         return self.write({'state': 'draft'})
+
+    def action_mark_as_paid(self):
+        """Mark payslip as paid"""
+        return self.write({'state': 'paid'})
 
     def action_payslip_done(self):
         """Function for change stage of Payslip"""
@@ -224,23 +315,34 @@ class HrPayslip(models.Model):
 
     def action_refund_sheet(self):
         """Function for refund the Payslip sheet"""
+        copied_payslips = self.env['hr.payslip']
         for payslip in self:
             copied_payslip = payslip.copy(
                 {'credit_note': True, 'name': _('Refund: ') + payslip.name})
             copied_payslip.action_compute_sheet()
-            copied_payslip.action_payslip_done()
+            copied_payslips |= copied_payslip
         formview_ref = self.env.ref('hr_payroll_community.hr_payslip_view_form',
                                     False)
         treeview_ref = self.env.ref('hr_payroll_community.hr_payslip_view_tree',
                                     False)
+        if len(copied_payslips) == 1:
+            return {
+                'name': _("Refund Payslip"),
+                'view_mode': 'form',
+                'res_model': 'hr.payslip',
+                'res_id': copied_payslips.id,
+                'type': 'ir.actions.act_window',
+                'target': 'current',
+            }
+        
         return {
-            'name': _("Refund Payslip"),
-            'view_mode': 'list, form',
+            'name': _("Refund Payslips"),
+            'view_mode': 'list,form',
             'view_id': False,
             'res_model': 'hr.payslip',
             'type': 'ir.actions.act_window',
             'target': 'current',
-            'domain': "[('id', 'in', %s)]" % copied_payslip.ids,
+            'domain': "[('id', 'in', %s)]" % copied_payslips.ids,
             'views': [(treeview_ref and treeview_ref.id or False, 'list'),
                       (formview_ref and formview_ref.id or False, 'form')],
             'context': {}
@@ -293,18 +395,21 @@ class HrPayslip(models.Model):
             contract_ids = payslip.contract_id.ids or \
                            self.get_contract(payslip.employee_id,
                                              payslip.date_from, payslip.date_to)
-            print(contract_ids,"contract_ids")
             lines = [(0, 0, line) for line in
                      self._get_payslip_lines(contract_ids, payslip.id)]
             payslip.write({'line_ids': lines, 'number': number})
-        return True
 
     @api.model
     def get_worked_day_lines(self, contracts, date_from, date_to):
         """
-        @param contracts: Browse record of contracts, date_from, date_to
-        @return: returns a list of dict containing the input that should be
-        applied for the given contract between date_from and date_to
+        Computes and returns the worked days data for the given contracts and dates.
+        Evaluates the resource calendar, leaves, and standard working hours to generate
+        a list of dictionaries that will be used to create hr.payslip.worked_days records.
+        
+        @param contracts: Recordset of hr.contract
+        @param date_from: String representing start date
+        @param date_to: String representing end date
+        @return: List of dictionaries containing worked days values
         """
         res = []
         # fill only if the contract as a working schedule linked
@@ -385,11 +490,35 @@ class HrPayslip(models.Model):
                         leaves[item]['number_of_days'] \
                             += c_leaves[item]['hours'] / work_hours
             res.extend(leaves.values())
+        
+        contracts_dict = {c.id: c for c in contracts}
+        
+        # Group dicts by contract to calculate total working days generated
+        contract_days = {}
+        for d in res:
+            cid = d.get('contract_id')
+            if cid:
+                contract_days[cid] = contract_days.get(cid, 0.0) + d.get('number_of_days', 0.0)
+
+        for worked_day_dict in res:
+            contract_id = worked_day_dict.get('contract_id')
+            contract = contracts_dict.get(contract_id)
+            if contract:
+                total_days = contract_days.get(contract_id, 30.0)
+                self._prepare_worked_day_line(worked_day_dict, contract, date_from, date_to, total_days)
+                
         return res
 
     @api.model
     def get_inputs(self, contracts, date_from, date_to):
-        """Function for getting contracts upon date_from and date_to fields"""
+        """
+        Gathers required manual input lines based on the salary rules attached to the contract's structure.
+        
+        @param contracts: Recordset of hr.contract
+        @param date_from: Start date
+        @param date_to: End date
+        @return: List of dictionaries representing manual input line templates
+        """
         res = []
         structure_ids = contracts.get_all_structures()
         rule_ids = self.env['hr.payroll.structure'].browse(
@@ -412,7 +541,16 @@ class HrPayslip(models.Model):
 
     @api.model
     def _get_payslip_lines(self, contract_ids, payslip_id):
-        """Function for getting Payslip Lines"""
+        """
+        The core salary engine execution loop. 
+        It evaluates the salary structure, compiles the python sandbox (`localdict`) 
+        containing worked days, inputs, and previous rule evaluations, and computes 
+        the final monetary amount for each salary rule.
+        
+        @param contract_ids: List of contract IDs
+        @param payslip_id: ID of the current payslip being evaluated
+        @return: List of dictionaries representing computed payslip lines
+        """
 
         def _sum_salary_rule_category(localdict, category, amount):
             """Function for getting total sum of Salary Rule Category"""
@@ -493,6 +631,12 @@ class HrPayslip(models.Model):
         class Payslips(BrowsableObject):
             """a class that will be used into the python code, mainly for
             usability purposes"""
+
+            def __getattr__(self, attr):
+                try:
+                    return getattr(self.dict, attr)
+                except AttributeError:
+                    return super().__getattr__(attr)
 
             def sum(self, code, from_date, to_date=None):
                 """Function for getting sum of Payslip with respect to
@@ -608,7 +752,11 @@ class HrPayslip(models.Model):
 
     def onchange_employee_id(self, date_from, date_to, employee_id=False,
                              contract_id=False):
-        """Function for return worked days when changing onchange_employee_id"""
+        """
+        Onchange handler for employee selection (legacy method, mainly used in older UI views).
+        Automatically fetches the relevant contract, salary structure, worked days, 
+        and input lines for the selected employee within the given period.
+        """
         # defaults
         res = {
             'value': {
@@ -650,7 +798,7 @@ class HrPayslip(models.Model):
         res['value'].update({
             'contract_id': contract.id
         })
-        struct = contract.struct_id or contract.structure_type_id.default_struct_id
+        struct = contract.struct_id or contract.contract_template_id.struct_id or contract.structure_type_id.default_struct_id
         if not struct:
             return res
         res['value'].update({
@@ -688,11 +836,9 @@ class HrPayslip(models.Model):
             if not contract_ids:
                 return
             self.contract_id = self.env['hr.version'].browse(contract_ids[0])
-            if not self.contract_id.contract_template_id.struct_id:
-                if self.contract_id.structure_type_id.default_struct_id:
-                    self.struct_id = self.contract_id.structure_type_id.default_struct_id
+            self.struct_id = self.contract_id.struct_id or self.contract_id.contract_template_id.struct_id or self.contract_id.structure_type_id.default_struct_id
+            if not self.struct_id:
                 return
-            self.struct_id = self.contract_id.contract_template_id.struct_id
         if self.contract_id:
             contract_ids = self.contract_id.ids
         # computation of the salary input

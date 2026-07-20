@@ -37,3 +37,4 @@ from . import hr_salary_rule_category
 from . import res_config_settings
 from . import resource_mixin
 from . import hr_payroll_structure_type
+from . import hr_work_entry_type

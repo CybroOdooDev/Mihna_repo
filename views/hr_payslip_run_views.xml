@@ -18,6 +18,29 @@
             </search>
         </field>
     </record>
+
+    <!-- Specific tree view for payslips inside a batch to hide 'Add a line' -->
+    <record id="hr_payslip_run_slip_tree" model="ir.ui.view">
+        <field name="name">hr.payslip.run.slip.tree</field>
+        <field name="model">hr.payslip</field>
+        <field name="priority">999</field>
+        <field name="arch" type="xml">
+            <list create="false">
+                <field name="number" string="Reference"/>
+                <field name="employee_id"/>
+                <field name="name" string="Payslip Name"/>
+                <field name="date_from"/>
+                <field name="date_to"/>
+                <field name="employer_cost"/>
+                <field name="basic_wage"/>
+                <field name="gross_wage"/>
+                <field name="net_wage"/>
+                <field name="state" string="Status" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'verify'" decoration-success="state == 'done'" decoration-primary="state == 'paid'"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </list>
+        </field>
+    </record>
+
 <!--    List view of hr_payslip_run-->
     <record id="hr_payslip_run_view_tree" model="ir.ui.view">
         <field name="name">hr.payslip.run.view.list</field>
@@ -78,18 +101,22 @@
         <field name="arch" type="xml">
             <form string="Payslips Batches">
                 <header>
-                    <button name="close_payslip_run" type="object"
-                            string="Close" invisible="state != 'draft'"
-                            class="oe_highlight"/>
+
                     <button name="%(action_hr_payslip_run_generate)d"
                             type="action" invisible="state != 'draft'"
                             string="Run" class="oe_highlight"/>
-                    <button name="%(hr_payslip_by_employees_action)d"
-                            type="action" invisible="state != 'draft'"
-                            string="Generate Payslips" class="oe_highlight"/>
+                    <button name="action_confirm_payslips" type="object"
+                            string="Validate Payslips" class="oe_highlight"
+                            invisible="state != 'draft'"/>
+                    <button name="action_mark_as_paid" type="object"
+                            string="Mark as Paid" class="oe_highlight"
+                            invisible="state != 'done'"/>
+                    <button name="action_cancel_payslips" type="object"
+                            string="Cancel Payslips"
+                            invisible="state in ('draft', 'cancel')"/>
                     <button string="Set to Draft" name="action_payslip_run"
-                            type="object" invisible="state != 'close'"/>
-                    <field name="state" widget="statusbar"/>
+                            type="object" invisible="state not in ('cancel', 'done', 'paid')"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,done,paid"/>
                 </header>
                 <sheet>
                     <label for="name" class="oe_edit_only"/>
@@ -109,8 +136,23 @@
                         <field name="company_id" groups="base.group_multi_company"/>
                     </group>
                     <separator string="Payslips"/>
-                    <field name="slip_ids" readonly="state != 'draft'"/>
+                    <field name="slip_ids" readonly="state != 'draft'">
+                        <list create="0">
+                            <field name="number" string="Reference"/>
+                            <field name="employee_id"/>
+                            <field name="name" string="Payslip Name"/>
+                            <field name="date_from"/>
+                            <field name="date_to"/>
+                            <field name="employer_cost"/>
+                            <field name="basic_wage"/>
+                            <field name="gross_wage"/>
+                            <field name="net_wage"/>
+                            <field name="state" string="Status" widget="badge" decoration-info="state == 'draft'" decoration-warning="state == 'verify'" decoration-success="state == 'done'" decoration-primary="state == 'paid'"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </list>
+                    </field>
                 </sheet>
+                <chatter/>
             </form>
         </field>
     </record>

@@ -48,3 +48,13 @@ class HrPayslipWorkedDays(models.Model):
                                   required=True,
                                   help="The contract for which applied"
                                        "this input")
+    amount = fields.Monetary(
+        string='Amount',
+        help="The amount for this worked day line"
+    )
+    currency_id = fields.Many2one(
+        related='payslip_id.currency_id',
+        store=True,
+        string='Currency',
+        help="The currency of the payslip"
+    )

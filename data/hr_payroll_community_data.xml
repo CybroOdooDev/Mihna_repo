@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 <!--    Data file for Contribution Register-->
+    <data noupdate="0">
+        <function name="write" model="ir.model.data">
+            <function name="search" model="ir.model.data">
+                <value eval="[('module', '=', 'hr_payroll_community'), ('name', 'in', ['hr_rule_basic', 'hr_rule_unpaid'])]"/>
+            </function>
+            <value eval="{'noupdate': False}"/>
+        </function>
+    </data>
     <data noupdate="1">
         <record id="contribution_register_employees" model="hr.contribution.register">
             <field name="name">Employees</field>
@@ -61,7 +69,7 @@
             <field name="category_id" ref="hr_payroll_community.BASIC"/>
             <field name="condition_select">none</field>
             <field name="amount_select">code</field>
-            <field name="amount_python_compute">result = contract.wage</field>
+            <field name="amount_python_compute">result = payslip.paid_amount</field>
         </record>
         <record id="hr_rule_taxable" model="hr.salary.rule">
             <field name="name">Gross</field>
@@ -143,6 +151,7 @@
             <field name="category_id" ref="hr_payroll_community.DED"/>
             <field name="condition_select">none</field>
             <field name="amount_select">code</field>
+            <field name="active" eval="False"/>
             <field name="amount_python_compute">result = -(GLOBAL * (contract.wage / 30.0))</field>
         </record>
         <!-- Salary Structure -->

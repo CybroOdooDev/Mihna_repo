@@ -4,6 +4,7 @@
     <template id="report_payslipdetails">
         <t t-call="web.html_container">
             <t t-foreach="docs" t-as="o">
+                <t t-set="company" t-value="o.company_id"/>
                 <t t-call="web.external_layout">
                     <div class="page">
                         <h2>Pay Slip</h2>
@@ -66,28 +67,33 @@
                                 </td>
                             </tr>
                         </table>
-                        <h3>Details by Salary Rule Category</h3>
+                        <h3>Payslip Lines</h3>
                         <table class="table table-sm mb32">
                             <thead>
                                 <tr>
                                     <th>Code</th>
-                                    <th>Salary Rule Category</th>
-                                    <th>Total</th>
+                                    <th>Name</th>
+                                    <th class="text-right">Quantity/Rate</th>
+                                    <th class="text-right">Amount</th>
+                                    <th class="text-right">Total</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr t-foreach="get_details_by_rule_category.get(o.id, [])"
-                                    t-as="h">
+                                <tr t-foreach="o.line_ids.filtered(lambda line: line.appears_on_payslip)" t-as="line">
                                     <td>
-                                        <span t-esc="h['code']"/>
+                                        <span t-field="line.code"/>
                                     </td>
                                     <td>
-                                        <span t-esc="'..'*h['level']"/>
-                                        <span t-esc="h['rule_category']"/>
+                                        <span t-field="line.name"/>
                                     </td>
                                     <td class="text-right">
-                                        <span t-esc="h['total']"
-                                              t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                        <span t-esc="line.quantity"/>
+                                    </td>
+                                    <td class="text-right">
+                                        <span t-esc="line.amount" t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                    </td>
+                                    <td class="text-right">
+                                        <span t-esc="line.total" t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
                                     </td>
                                 </tr>
                             </tbody>

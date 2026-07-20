@@ -29,6 +29,9 @@ class HrPayslipRunGenerate(models.TransientModel):
     struct_id = fields.Many2one('hr.payroll.structure', string='Salary Structure',
                                 help='Select the Salary Structure to generate payslips for.')
     payslip_run_id = fields.Many2one('hr.payslip.run', string='Payslip Batch')
+    name = fields.Char(related='payslip_run_id.name', string='Name', readonly=True)
+    date_start = fields.Date(related='payslip_run_id.date_start', string='Date From', readonly=True)
+    date_end = fields.Date(related='payslip_run_id.date_end', string='Date To', readonly=True)
 
     @api.model
     def default_get(self, fields):

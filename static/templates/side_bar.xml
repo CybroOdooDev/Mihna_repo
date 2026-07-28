@@ -2,8 +2,9 @@
 <!--Template for new AppsMenu-->
 <templates id="template" xml:space="preserve">
     <t t-inherit="web.NavBar.AppsMenu" t-inherit-mode="extension" owl="1">
-        <xpath expr="//Dropdown" position="replace">
-            <li class="dropdown app-launcher-dropdown d-flex justify-content-center align-items-center">
+        <xpath expr="." position="replace">
+            <div t-if="!isScopedApp" class="o_navbar_apps_menu">
+                <li class="dropdown app-launcher-dropdown d-flex justify-content-center align-items-center">
                 <a t-on-click="_onMenuClick" class="full d-flex justify-content-center align-items-center" data-toggle="dropdown" data-display="static"
                    href="#" style="padding: 0 0 0 16px; margin-right: -4px; height: 46px; text-decoration: none;">
                     <t t-set="myCurrentApp" t-value="menuService.getCurrentApp()"/>
@@ -23,7 +24,6 @@
                 <div class="dropdown-menu fullscreen-menu" role="menu">
                     <style>
                         /* Home Menu Custom Theme - Injected via OpenHRMS Core */
-                        .o_ohrms_core_systray { display: none !important; }
                         /* Bring systray dropdowns to front. */
                         .o_main_navbar.app-launcher-open .o_menu_systray { position: relative !important; z-index: 1100 !important; }
                         .o_main_navbar.app-launcher-open .o_menu_systray .dropdown-menu { z-index: 1110 !important; }
@@ -189,6 +189,8 @@
 
                 </div>
             </li>
+            </div>
+            <div t-else="" class="mx-2"/>
         </xpath>
     </t>
 </templates>

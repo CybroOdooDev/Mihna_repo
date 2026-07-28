@@ -7,6 +7,20 @@ import { onMounted, Component, useRef, useState } from "@odoo/owl";
 import { routerBus } from "@web/core/browser/router";
 const commandProviderRegistry = registry.category("command_provider");
 import { patch } from "@web/core/utils/patch";
+import { ActivityMenu } from "@mail/core/web/activity_menu";
+
+patch(ActivityMenu.prototype, {
+    openActivityGroup(group, filter = "all", newWindow) {
+        // Fix UX misclick issue: if user clicks a 0-count filter (e.g., clicking the 'Future' area by mistake 
+        // because it aligns with the mouse cursor), fallback to 'all' so they still get relevant Late/Today records.
+        if (filter === "overdue" && group.overdue_count === 0) filter = "all";
+        if (filter === "today" && group.today_count === 0) filter = "all";
+        if (filter === "upcoming_all" && group.planned_count === 0) filter = "all";
+        
+        return super.openActivityGroup(group, filter, newWindow);
+    }
+});
+
 patch(NavBar.prototype, {
     //--------------------------------------------------------------------------
     // Public
@@ -27,7 +41,23 @@ patch(NavBar.prototype, {
             activeIndex: 0,
         });
 
-        // Intercept Ctrl+K and Escape when App Launcher is visible
+        // Patch Odoo's global action service to treat the App Launcher as a fresh context
+        if (this.env.services.action && !this.env.services.action.doAction._isOhrmsPatched) {
+            const originalDoAction = this.env.services.action.doAction;
+            this.env.services.action.doAction = async function (actionRequest, options = {}) {
+                if (document.body.classList.contains('app-launcher-open') || sessionStorage.getItem('app_launcher_open') === 'true') {
+                    // Force clearing breadcrumbs when executing actions from the App Launcher
+                    options.clearBreadcrumbs = true;
+                    // Prevent Odoo from restoring an old search state (like 'Future Activities') from a previous session
+                    sessionStorage.removeItem('current_action');
+                    sessionStorage.removeItem('current_state');
+                }
+                return originalDoAction.apply(this, [actionRequest, options]);
+            };
+            this.env.services.action.doAction._isOhrmsPatched = true;
+        }
+
+        // Intercept typing, Ctrl+K and Escape when App Launcher is visible
         window.addEventListener('keydown', (ev) => {
             const fullscreenMenu = document.querySelector('.dropdown-menu.fullscreen-menu.show');
             if (fullscreenMenu) {
@@ -39,6 +69,12 @@ patch(NavBar.prototype, {
                     ev.preventDefault();
                     ev.stopPropagation();
                     this.closeCustomSearch(ev);
+                } else if (!this.state.isSearchOpen && ev.key.length === 1 && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+                    if (ev.target.tagName !== 'INPUT' && ev.target.tagName !== 'TEXTAREA') {
+                        ev.preventDefault();
+                        ev.stopPropagation();
+                        this.openCustomSearch(ev, ev.key);
+                    }
                 }
             }
         }, { capture: true });
@@ -55,17 +91,32 @@ patch(NavBar.prototype, {
             }
         });
 
-        // Ensure App Launcher closes when navigating via Systray or other non-App Launcher links
-        routerBus.addEventListener('ROUTE_CHANGE', () => {
+        // Ensure App Launcher closes when navigating via Systray or other non-App Launcher links.
+        // We use a MutationObserver on document.body to detect when Odoo's ActionManager or DialogContainer
+        // loads a new view. This reliably catches all full-page redirects and popup dialogs (like SMS/Email failures).
+        let isInitialLoad = true;
+        setTimeout(() => isInitialLoad = false, 1500);
+
+        const actionObserver = new MutationObserver((mutations) => {
+            if (isInitialLoad) return; // Ignore initial DOM rendering
             const fullscreenMenu = document.querySelector(".dropdown-menu.fullscreen-menu.show");
-            if (fullscreenMenu) {
-                fullscreenMenu.classList.remove("show");
-                sessionStorage.setItem('app_launcher_open', 'false');
-                const navbar = document.querySelector('.o_main_navbar');
-                if (navbar) navbar.classList.remove('app-launcher-open');
-                document.body.classList.remove('app-launcher-open');
+            if (!fullscreenMenu) return; // Only process if App Launcher is open
+            
+            for (let m of mutations) {
+                if (m.addedNodes.length > 0) {
+                    const target = m.target;
+                    if (target.classList && (target.classList.contains('o_action_manager') || target.classList.contains('o_dialog_container'))) {
+                        fullscreenMenu.classList.remove("show");
+                        sessionStorage.setItem('app_launcher_open', 'false');
+                        const navbar = document.querySelector('.o_main_navbar');
+                        if (navbar) navbar.classList.remove('app-launcher-open');
+                        document.body.classList.remove('app-launcher-open');
+                        return;
+                    }
+                }
             }
         });
+        actionObserver.observe(document.body, { childList: true, subtree: true });
 
         // Robust fallback: Close App Launcher immediately if any actionable item is clicked anywhere.
         // Odoo 17/19 Systray dropdowns are Popovers attached to document.body, so we can't restrict by .o_menu_systray.
@@ -75,10 +126,11 @@ patch(NavBar.prototype, {
                 const isAction = ev.target.closest('.dropdown-item, .list-group-item, .btn-link, .o-mail-NotificationItem, .o-mail-ActivityGroup');
                 const inMessagingMenu = ev.target.closest('.o-mail-MessagingMenu');
                 const inChatWindow = ev.target.closest('.o-mail-ChatWindow');
+                const inReminderMenu = ev.target.closest('.reminder-dropdown');
                 
-                // If the click is an action but it's inside the Messaging menu OR a Chat Window, 
-                // DO NOT close the App Launcher! Chats open as floating windows on top.
-                if (isAction && !inMessagingMenu && !inChatWindow) {
+                // If the click is an action but it's inside the Messaging menu, Chat Window, OR Reminder Menu, 
+                // DO NOT close the App Launcher!
+                if (isAction && !inMessagingMenu && !inChatWindow && !inReminderMenu) {
                     fullscreenMenu.classList.remove("show");
                     sessionStorage.setItem('app_launcher_open', 'false');
                     const navbar = document.querySelector('.o_main_navbar');
@@ -160,7 +212,7 @@ patch(NavBar.prototype, {
         }
     },
 
-    openCustomSearch(ev) {
+    openCustomSearch(ev, initialQuery = "") {
         if (ev) ev.preventDefault();
         this.state.isSearchOpen = true;
         this.state.activeIndex = 0;
@@ -168,8 +220,11 @@ patch(NavBar.prototype, {
         // Focus and clear the modal search input after it renders
         setTimeout(() => {
             if (this.search_input.el) {
-                this.search_input.el.value = "";
+                this.search_input.el.value = typeof initialQuery === 'string' ? initialQuery : "";
                 this.search_input.el.focus();
+                if (typeof initialQuery === 'string' && initialQuery.length > 0) {
+                    this._searchMenusSchedule();
+                }
             }
         }, 50);
     },

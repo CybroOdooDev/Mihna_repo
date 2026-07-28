@@ -22,7 +22,7 @@
 #############################################################################
 {
     'name': 'Open HRMS Core',
-    'version': '19.0.1.0.1',
+    'version': '19.0.2.0.0',
     'category': 'Generic Modules/Human Resources',
     'summary': """Open HRMS Odoo19, HRMS odoo19, Odoo HR, HR Dashboard, 
      Odoo19 Payroll, HR Management, Odoo Branch, Odoo Loan, Salary Advance, 

@@ -63,19 +63,17 @@ body.o_dark {
     align-self: center;
     width: 28px;
     height: 28px;
-    margin: 0 0.25rem;
-    border-radius: 50%;
+    margin: 0;
     color: #ffffff;
     background-color: transparent;
     font-size: 1rem;
     line-height: 1;
     cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+    transition: color 0.15s ease, transform 0.15s ease;
 }
 
 .o_ohrms_core_systray:hover,
 .o_ohrms_core_systray:focus-visible {
-    background-color: var(--ohrms-core-systray-hover-bg);
     color: var(--ohrms-core-systray-hover-color);
     transform: scale(1.05);
     outline: none;
@@ -87,6 +85,7 @@ body.o_dark {
 
 .o_ohrms_core_systray .fa {
     line-height: 1;
+    font-size: 1.15rem !important;
 }
 
 .o_dialog:has(.o_ohrms_core_support_form),
@@ -308,6 +307,8 @@ body.o_dark {
 
 .o_ohrms_core_ticket_notification {
     min-width: 340px;
+    border-radius: 8px !important;
+    overflow: hidden !important;
 }
 
 /* Resize the standard bell icon in the systray to match other icons */
@@ -321,7 +322,8 @@ body.o_dark {
     border: 1px solid rgba(0, 0, 0, 0.15) !important;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
     margin-top: 10px !important;
-    overflow: hidden !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
 }
 
 /* ============================================================================
@@ -416,7 +418,8 @@ body.app-launcher-open div.o-mail-ChatHub-bubbles {
     border-radius: 1rem !important;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
     border: 1px solid rgba(0, 0, 0, 0.15) !important;
-    overflow: hidden !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
 }
 
 
@@ -440,4 +443,22 @@ body.app-launcher-open div.o-mail-ChatHub-bubbles {
 .o_searchview .o_searchview_facet {
     border-color: #1B5298 !important;
     background-color: rgba(27, 82, 152, 0.1) !important;
+}
+
+/* 8. Discuss App Search Bar / Video Call Icon Alignment */
+.o-mail-DiscussSearch {
+    align-items: stretch !important;
+    min-height: 42px !important;
+}
+.o-mail-DiscussSearch .btn[data-hotkey="m"] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+}
+.o-mail-DiscussSearch input.form-control {
+    font-size: 0.95rem !important;
 }

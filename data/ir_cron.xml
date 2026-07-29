@@ -1,0 +1,16 @@
+<?xml version="1.0" ?>
+<odoo>
+    <data>
+        <!-- Inactive by default: only meaningful once a company has a working ASP connector
+             configured (see res.company.l10n_om_edi_asp_provider). Enable it manually once ready. -->
+        <record id="ir_cron_l10n_om_edi_document_sync" model="ir.cron">
+            <field name="name">Oman E-Invoicing: Submission Status Sync</field>
+            <field name="model_id" ref="model_l10n_om_edi_document"/>
+            <field name="state">code</field>
+            <field name="code">model._cron_poll_submission_status()</field>
+            <field name="interval_number">1</field>
+            <field name="interval_type">hours</field>
+            <field name="active" eval="False"/>
+        </record>
+    </data>
+</odoo>

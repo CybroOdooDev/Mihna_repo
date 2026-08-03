@@ -22,15 +22,9 @@
 
                             <field name="l10n_om_edi_asp_required_config" invisible="1"/>
                             <field name="l10n_om_edi_asp_config_status" invisible="1"/>
+                            <field name="l10n_om_edi_asp_ota_accredited" invisible="1"/>
 
-                            <div class="alert alert-warning mt-2" role="alert"
-                                 invisible="not l10n_om_edi_asp_provider or l10n_om_edi_asp_config_status == 'confirmed'">
-                                <strong invisible="l10n_om_edi_asp_config_status != 'unconfirmed'">Unknown / To Be Confirmed:</strong>
-                                <strong invisible="l10n_om_edi_asp_config_status != 'partial'">Partially confirmed:</strong>
-                                <field name="l10n_om_edi_asp_config_notes" nolabel="1" readonly="1"/>
-                            </div>
-                            <div class="alert alert-info mt-2" role="alert"
-                                 invisible="not l10n_om_edi_asp_provider or l10n_om_edi_asp_config_status != 'confirmed'">
+                            <div class="text-muted oe_inline mb-3" invisible="not l10n_om_edi_asp_provider">
                                 <field name="l10n_om_edi_asp_config_notes" nolabel="1" readonly="1"/>
                             </div>
 
@@ -82,8 +76,9 @@
                                     <button name="action_l10n_om_edi_test_connection" type="object"
                                             string="Test Connection" class="btn-secondary"/>
                                     <span class="text-muted ms-2">
-                                        Only implemented for Sovos today - other providers will report
-                                        that plainly rather than pretending to test anything.
+                                        Only implemented for Flick Network today - other providers
+                                        will report that plainly rather than pretending to test
+                                        anything, until a real connector implements it.
                                     </span>
                                 </div>
                             </div>

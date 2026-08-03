@@ -235,7 +235,7 @@ class L10nOmEdiDocument(models.Model):
                 invoice_xml = document._generate_invoice_xml()
                 tdd_xml = document._generate_tdd_xml()
                 connector = document.company_id._l10n_om_edi_get_connector()
-                reference = connector.submit_invoice(invoice_xml, tdd_xml)
+                reference = connector.submit_invoice(invoice_xml, tdd_xml, document)
             except UserError as e:
                 document.l10n_om_edi_state = 'error'
                 document.error_message = str(e)

@@ -11,6 +11,7 @@ class ResConfigSettings(models.TransientModel):
     l10n_om_edi_asp_required_config = fields.Json(related='company_id.l10n_om_edi_asp_required_config')
     l10n_om_edi_asp_config_status = fields.Selection(related='company_id.l10n_om_edi_asp_config_status')
     l10n_om_edi_asp_config_notes = fields.Char(related='company_id.l10n_om_edi_asp_config_notes')
+    l10n_om_edi_asp_ota_accredited = fields.Boolean(related='company_id.l10n_om_edi_asp_ota_accredited')
     l10n_om_edi_asp_base_url = fields.Char(related='company_id.l10n_om_edi_asp_base_url', readonly=False)
     l10n_om_edi_asp_client_id = fields.Char(related='company_id.l10n_om_edi_asp_client_id', readonly=False)
     l10n_om_edi_asp_client_secret = fields.Char(related='company_id.l10n_om_edi_asp_client_secret', readonly=False)
@@ -39,8 +40,9 @@ class ResConfigSettings(models.TransientModel):
 
     def action_l10n_om_edi_test_connection(self):
         """ Verify the configured ASP credentials actually authenticate, without touching invoice
-        submission. Only meaningful for connectors that implement `test_connection` (currently: Sovos
-        only) - other connectors report that plainly rather than pretending to test anything. """
+        submission. Only meaningful for connectors that implement `test_connection` (none of the 12
+        do yet) - connectors that don't implement it report that plainly rather than pretending to
+        test anything. """
         self.check_access('read')
         try:
             connector = self.company_id._l10n_om_edi_get_connector()

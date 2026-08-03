@@ -16,14 +16,12 @@ CONNECTOR_REGISTRY = {}
 
 # Generic credential "slots" a connector's REQUIRED_CONFIG can reference. The Settings UI shows only
 # the fields a given connector actually lists - this is deliberately NOT a single auth_type toggle,
-# because different ASPs genuinely require different things (confirmed by reading each vendor's own
-# public API docs - see CONFIG_SOURCE on each connector class):
-#   - Sovos, Basware, SAP: OAuth2 client_credentials -> client_id + client_secret
-#   - ClearTax (their KSA product): a single bearer-style API key
-#   - Pagero: OAuth2 authorization_code -> client_id + client_secret + redirect_url + account_id
-# Comarch and OpenText's Trading Grid e-Invoicing product had no locatable public API auth docs, so
-# their connectors are left with CONFIG_STATUS = 'unconfirmed' and an empty REQUIRED_CONFIG rather than
-# a guess.
+# because different ASPs can genuinely require different things. Of the 12 officially OTA-accredited
+# providers, only ClearTax has any public API documentation located so far (a single bearer-style API
+# key, confirmed only for their KSA product - see lib/connectors/cleartax.py); the other 11 have no
+# located public API docs at all, so they're left with CONFIG_STATUS = 'unconfirmed' and an empty
+# REQUIRED_CONFIG rather than a guess - their CONFIG_NOTES point to a real contact email from the
+# official OTA list as the next step.
 CONFIG_FIELD_LABELS = {
     'client_id': "Client ID",
     'client_secret': "Client Secret",
@@ -40,6 +38,14 @@ CONFIG_STATUS_SELECTION = [
     ('partial', "Partially confirmed - some details unverified"),
     ('unconfirmed', "Unknown / To Be Confirmed"),
 ]
+
+# The Oman Tax Authority's own published list of Accredited Service Providers - the actual source of
+# truth for "is this vendor legally usable for Oman e-invoicing at all", independent of how well its
+# API is technically documented (that's what CONFIG_STATUS above tracks). Checked directly on the
+# Fawtara Portal on 2026-07-30; 12 providers were listed, no pagination beyond that (confirmed
+# "Showing 1 - 12 of 12"). CONNECTOR classes for those 12 set OTA_ACCREDITED = True; everything else
+# built before this list was checked defaults to False and must say so plainly in the Settings UI.
+OTA_ACCREDITED_LIST_URL = "https://fawtara.taxoman.gov.om/accredited-service-providers"
 
 
 def register_connector(provider_code):
@@ -66,6 +72,13 @@ class L10nOmEdiConnector:
 
     # Human-readable vendor name, overridden by each subclass.
     display_name = "Unconfigured"
+
+    # Whether this provider appears on the Oman Tax Authority's actual published accredited-provider
+    # list (see OTA_ACCREDITED_LIST_URL) - the real, legal answer to "can a business actually use this
+    # ASP for Oman e-invoicing", independent of how well-documented its API is. Defaults to False:
+    # most connectors in this module were built from general research before that list was checked,
+    # and are NOT confirmed to be legally usable for Oman regardless of technical CONFIG_STATUS.
+    OTA_ACCREDITED = False
 
     # List of keys from CONFIG_FIELD_LABELS that this provider's Settings block should show. Populated
     # per-connector from that vendor's own public documentation - see each connector file's
@@ -124,11 +137,18 @@ class L10nOmEdiConnector:
     # Interface - implement in a concrete vendor subclass
     # -------------------------------------------------------------------------
 
-    def submit_invoice(self, invoice_xml, tdd_xml):
+    def submit_invoice(self, invoice_xml, tdd_xml, document):
         """ Submit a PINT OM invoice/credit-note XML together with its Tax Data Document (TDD) XML.
 
         :param bytes invoice_xml: the PINT OM Invoice/CreditNote XML (Corners 1-4, Peppol network).
         :param bytes tdd_xml: the Tax Data Document XML (Corner 5, sent to the Oman Tax Authority).
+        :param l10n.om.edi.document document: the submission-tracking record itself (its `move_id`
+            gives the invoice, `l10n_om_edi_uuid` the supplier-generated UUID) - passed alongside the
+            generated XML because not every ASP's documented API actually wants that XML on the wire:
+            some (Flick Network) accept it, others (Fynamics) only document a proprietary JSON schema
+            built from the same underlying data. `invoice_xml`/`tdd_xml` are still always generated and
+            kept as attachments regardless of what a given connector actually transmits (Oman's 10-year
+            self-archival requirement needs that XML to exist either way).
         :return: an ASP-assigned reference string identifying this submission.
         :rtype: str
         """

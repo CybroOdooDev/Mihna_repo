@@ -7,18 +7,26 @@ from odoo.addons.l10n_om_edi.lib.connectors.base import CONFIG_STATUS_SELECTION
 # Keep in sync with the connector modules registered in lib/connectors/__init__.py. Oman's e-invoicing
 # mandate allows multiple Accredited Service Providers (unlike e.g. Malaysia's single MyInvois portal),
 # so this is a plain per-company choice rather than a hardcoded single integration.
+#
+# This is the complete, official Oman Tax Authority Accredited Service Provider list (verified
+# 2026-07-30, "Showing 1 - 12 of 12" - https://fawtara.taxoman.gov.om/accredited-service-providers).
+# An earlier version of this module also shipped 10 additional connectors built from general vendor
+# research before that official list was checked (Pagero, EDICOM, Sovos, Comarch, OpenText, SAP,
+# Basware, Vertex, Unifiedpost, FawtaraX) - none of them were on the real list, so they were removed
+# rather than kept as a confusing "unofficial" option alongside the real 12.
 ASP_PROVIDER_SELECTION = [
     ('cleartax', "ClearTax"),
-    ('pagero', "Pagero"),
-    ('edicom', "EDICOM"),
-    ('sovos', "Sovos"),
-    ('comarch', "Comarch"),
-    ('opentext', "OpenText"),
-    ('sap', "SAP"),
-    ('basware', "Basware"),
-    ('vertex', "Vertex"),
-    ('unifiedpost', "Unifiedpost"),
-    ('fawtarax', "FawtaraX"),
+    ('jsr', "JSR Tax Advisors"),
+    ('flick', "Flick Network"),
+    ('smarteis', "SMARTeIS"),
+    ('convergex', "ConvergeX"),
+    ('bdo', "BDO"),
+    ('cygnet', "Cygnet"),
+    ('fynamics', "Fynamics"),
+    ('webtel', "Webtel"),
+    ('faturathi', "Faturathi"),
+    ('marminai', "Marmin AI"),
+    ('goroute', "GoRoute"),
 ]
 
 
@@ -50,6 +58,14 @@ class ResCompany(models.Model):
     l10n_om_edi_asp_config_notes = fields.Char(
         string="ASP Config Notes",
         compute='_compute_l10n_om_edi_asp_config_meta',
+    )
+    l10n_om_edi_asp_ota_accredited = fields.Boolean(
+        string="ASP is OTA-Accredited",
+        compute='_compute_l10n_om_edi_asp_config_meta',
+        help="Whether the selected provider actually appears on the Oman Tax Authority's own "
+             "published accredited-provider list - the real, legal answer to whether this ASP can be "
+             "used for Oman e-invoicing at all, independent of how well its API happens to be "
+             "documented.",
     )
 
     l10n_om_edi_asp_base_url = fields.Char(string="ASP API Base URL")
@@ -86,10 +102,12 @@ class ResCompany(models.Model):
                 company.l10n_om_edi_asp_required_config = connector_cls.REQUIRED_CONFIG
                 company.l10n_om_edi_asp_config_status = connector_cls.CONFIG_STATUS
                 company.l10n_om_edi_asp_config_notes = connector_cls.CONFIG_NOTES
+                company.l10n_om_edi_asp_ota_accredited = connector_cls.OTA_ACCREDITED
             else:
                 company.l10n_om_edi_asp_required_config = []
                 company.l10n_om_edi_asp_config_status = False
                 company.l10n_om_edi_asp_config_notes = False
+                company.l10n_om_edi_asp_ota_accredited = False
 
     def _l10n_om_edi_get_connector(self, timeout_limit=None):
         """ Return an instantiated connector for this company's configured ASP provider.

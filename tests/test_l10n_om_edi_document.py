@@ -14,7 +14,7 @@ from odoo.tests import tagged
 class MockConnector(L10nOmEdiConnector):
     display_name = "Mock ASP"
 
-    def submit_invoice(self, invoice_xml, tdd_xml):
+    def submit_invoice(self, invoice_xml, tdd_xml, document):
         return 'MOCK-REF-001'
 
     def get_status(self, asp_reference):
@@ -27,7 +27,7 @@ class MockConnector(L10nOmEdiConnector):
 class FailingMockConnector(L10nOmEdiConnector):
     display_name = "Failing Mock ASP"
 
-    def submit_invoice(self, invoice_xml, tdd_xml):
+    def submit_invoice(self, invoice_xml, tdd_xml, document):
         raise UserError("Simulated ASP failure")
 
 
@@ -57,11 +57,7 @@ class TestL10nOmEdiDocument(AccountTestInvoicingCommon):
         self.assertEqual(company.l10n_om_edi_asp_required_config, ['api_key'])
         self.assertEqual(company.l10n_om_edi_asp_config_status, 'partial')
 
-        company.l10n_om_edi_asp_provider = 'sovos'
-        self.assertEqual(company.l10n_om_edi_asp_required_config, ['client_id', 'client_secret'])
-        self.assertEqual(company.l10n_om_edi_asp_config_status, 'confirmed')
-
-        company.l10n_om_edi_asp_provider = 'comarch'
+        company.l10n_om_edi_asp_provider = 'jsr'
         # Odoo's Json field normalizes an empty list to False on read-back (see
         # odoo/orm/fields_misc.py Json.convert_to_cache: `if not value: return None`), so an "empty"
         # REQUIRED_CONFIG reads as False here, not []. The Settings view's `invisible` expressions are
@@ -69,15 +65,22 @@ class TestL10nOmEdiDocument(AccountTestInvoicingCommon):
         self.assertFalse(company.l10n_om_edi_asp_required_config)
         self.assertEqual(company.l10n_om_edi_asp_config_status, 'unconfirmed')
 
-        company.l10n_om_edi_asp_provider = 'fawtarax'
-        self.assertEqual(company.l10n_om_edi_asp_required_config, ['api_key'])
-        # Deliberately 'unconfirmed', unlike other api_key providers - FawtaraX's legitimacy as a
-        # company (not just its API details) is unverified, see lib/connectors/fawtarax.py.
-        self.assertEqual(company.l10n_om_edi_asp_config_status, 'unconfirmed')
-
         company.l10n_om_edi_asp_provider = False
         self.assertFalse(company.l10n_om_edi_asp_required_config)
         self.assertFalse(company.l10n_om_edi_asp_config_status)
+
+    def test_ota_accredited_flag_matches_official_list(self):
+        """ Verified 2026-07-30 against https://fawtara.taxoman.gov.om/accredited-service-providers
+        ("Showing 1 - 12 of 12" - the complete list, no pagination beyond that). Every provider
+        currently shipped in this module is one of those 12, so all should report as accredited -
+        this test exists to catch a future connector being added without checking that list first
+        (the exact mistake that happened with this module's first version). """
+        company = self.company_data['company']
+
+        for provider in ('cleartax', 'jsr', 'flick', 'smarteis', 'convergex', 'bdo', 'cygnet',
+                         'fynamics', 'webtel', 'faturathi', 'marminai', 'goroute'):
+            company.l10n_om_edi_asp_provider = provider
+            self.assertTrue(company.l10n_om_edi_asp_ota_accredited, f"{provider} should be OTA-accredited")
 
     def test_submit_without_asp_provider_raises(self):
         self.company_data['company'].l10n_om_edi_asp_provider = False

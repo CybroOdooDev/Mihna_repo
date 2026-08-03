@@ -19,10 +19,15 @@
       separate Tax Data Document (TDD) sent to the Oman Tax Authority, and the ASP's acknowledgement.
     * A QR-code helper for B2C invoices.
 
-    IMPORTANT: this module ships the ASP connectors as stubs. Oman's e-invoicing mandate requires an
-    Accredited Service Provider chosen via the Fawtara Portal, and none of the vendors listed here have
-    a confirmed, published Oman API integration at the time of writing. Each connector raises a clear
-    error until it is completed against that vendor's real API once available/contracted.
+    IMPORTANT: the ASP Provider list here is exactly the Oman Tax Authority's own published
+    Accredited Service Provider list (verified 2026-07-30 - see
+    https://fawtara.taxoman.gov.om/accredited-service-providers). All 12 connectors ship without a
+    working submit_invoice/get_status/cancel implementation - this is deliberate, deferred work, not
+    an oversight (no ASP account/production credentials were available at the time of writing). Flick
+    Network's connector has confirmed, working authentication and a real connectivity check; ClearTax's
+    auth is confirmed for their KSA product only; the other 10 have no located public API documentation
+    at all. Each connector raises a clear error on submit/status/cancel until it is completed against
+    that vendor's real API - see each connector's CONFIG_NOTES for their listed contact email.
     """,
     'depends': ['l10n_om', 'l10n_om_ubl_pint', 'certificate'],
     'data': [

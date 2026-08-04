@@ -1,10 +1,31 @@
-# Part of Odoo. See LICENSE file for full copyright and licensing details.
+#############################################################################
+#
+#    Cybrosys Technologies Pvt. Ltd.
+#
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
+#
+#    You can modify it under the terms of the GNU LESSER
+#    GENERAL PUBLIC LICENSE (LGPL v3), Version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
+#
+#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
+#    (LGPL v3) along with this program.
+#    If not, see <http://www.gnu.org/licenses/>.
+#
+#############################################################################
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
 from odoo.addons.l10n_om_edi.lib.connectors import get_connector_class
 
 
 class ResConfigSettings(models.TransientModel):
+    """ Exposes the company's Oman E-Invoicing ASP configuration on the Settings screen, plus the
+    Test Connection action. """
     _inherit = 'res.config.settings'
 
     l10n_om_edi_asp_provider = fields.Selection(related='company_id.l10n_om_edi_asp_provider', readonly=False)
@@ -40,9 +61,8 @@ class ResConfigSettings(models.TransientModel):
 
     def action_l10n_om_edi_test_connection(self):
         """ Verify the configured ASP credentials actually authenticate, without touching invoice
-        submission. Only meaningful for connectors that implement `test_connection` (none of the 12
-        do yet) - connectors that don't implement it report that plainly rather than pretending to
-        test anything. """
+        submission. Connectors that don't implement `test_connection` report that plainly rather
+        than pretending to test anything. """
         self.check_access('read')
         try:
             connector = self.company_id._l10n_om_edi_get_connector()

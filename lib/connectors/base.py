@@ -1,4 +1,23 @@
-# Part of Odoo. See LICENSE file for full copyright and licensing details.
+#############################################################################
+#
+#    Cybrosys Technologies Pvt. Ltd.
+#
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
+#
+#    You can modify it under the terms of the GNU LESSER
+#    GENERAL PUBLIC LICENSE (LGPL v3), Version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
+#
+#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
+#    (LGPL v3) along with this program.
+#    If not, see <http://www.gnu.org/licenses/>.
+#
+#############################################################################
 import logging
 from datetime import datetime
 from json import JSONDecodeError
@@ -14,43 +33,22 @@ _logger = logging.getLogger(__name__)
 # Keyed by the same string used in res.company.l10n_om_edi_asp_provider's Selection value.
 CONNECTOR_REGISTRY = {}
 
-# Generic credential "slots" a connector's REQUIRED_CONFIG can reference. The Settings UI shows only
-# the fields a given connector actually lists - this is deliberately NOT a single auth_type toggle,
-# because different ASPs can genuinely require different things. Of the 12 officially OTA-accredited
-# providers, only ClearTax has any public API documentation located so far (a single bearer-style API
-# key, confirmed only for their KSA product - see lib/connectors/cleartax.py); the other 11 have no
-# located public API docs at all, so they're left with CONFIG_STATUS = 'unconfirmed' and an empty
-# REQUIRED_CONFIG rather than a guess - their CONFIG_NOTES point to a real contact email from the
-# official OTA list as the next step.
-CONFIG_FIELD_LABELS = {
-    'client_id': "Client ID",
-    'client_secret': "Client Secret",
-    'api_key': "API Key",
-    'username': "Username",
-    'password': "Password",
-    'certificate_id': "Client Certificate",
-    'account_id': "Account / Tenant / Company ID",
-    'redirect_url': "OAuth Redirect URL",
-}
-
 CONFIG_STATUS_SELECTION = [
     ('confirmed', "Confirmed from vendor documentation"),
     ('partial', "Partially confirmed - some details unverified"),
     ('unconfirmed', "Unknown / To Be Confirmed"),
 ]
 
-# The Oman Tax Authority's own published list of Accredited Service Providers - the actual source of
-# truth for "is this vendor legally usable for Oman e-invoicing at all", independent of how well its
-# API is technically documented (that's what CONFIG_STATUS above tracks). Checked directly on the
-# Fawtara Portal on 2026-07-30; 12 providers were listed, no pagination beyond that (confirmed
-# "Showing 1 - 12 of 12"). CONNECTOR classes for those 12 set OTA_ACCREDITED = True; everything else
-# built before this list was checked defaults to False and must say so plainly in the Settings UI.
+# The Oman Tax Authority's own published list of Accredited Service Providers - the source of truth
+# for "is this vendor legally usable for Oman e-invoicing at all", independent of CONFIG_STATUS above
+# (which only tracks how well the API happens to be documented).
 OTA_ACCREDITED_LIST_URL = "https://fawtara.taxoman.gov.om/accredited-service-providers"
 
 
 def register_connector(provider_code):
     """ Class decorator registering a connector implementation for a given ASP provider code. """
     def decorator(cls):
+        """ Register `cls` under `provider_code` and return it unchanged. """
         CONNECTOR_REGISTRY[provider_code] = cls
         return cls
     return decorator
@@ -73,17 +71,13 @@ class L10nOmEdiConnector:
     # Human-readable vendor name, overridden by each subclass.
     display_name = "Unconfigured"
 
-    # Whether this provider appears on the Oman Tax Authority's actual published accredited-provider
-    # list (see OTA_ACCREDITED_LIST_URL) - the real, legal answer to "can a business actually use this
-    # ASP for Oman e-invoicing", independent of how well-documented its API is. Defaults to False:
-    # most connectors in this module were built from general research before that list was checked,
-    # and are NOT confirmed to be legally usable for Oman regardless of technical CONFIG_STATUS.
+    # Whether this provider is on the OTA's own published accredited-provider list (see
+    # OTA_ACCREDITED_LIST_URL) - independent of how well-documented its API is.
     OTA_ACCREDITED = False
 
-    # List of keys from CONFIG_FIELD_LABELS that this provider's Settings block should show. Populated
-    # per-connector from that vendor's own public documentation - see each connector file's
-    # CONFIG_SOURCE/CONFIG_NOTES for what was actually verified and where. Left empty when nothing
-    # about the vendor's auth mechanism could be confirmed from an official source.
+    # Generic credential "slots" (see the Settings view rows keyed by these same strings) that this
+    # provider's Settings block should show, populated from that vendor's own documentation (see
+    # CONFIG_SOURCE/CONFIG_NOTES). Empty when nothing could be confirmed from an official source.
     REQUIRED_CONFIG = []
 
     # 'confirmed' / 'partial' / 'unconfirmed' - see CONFIG_STATUS_SELECTION. Surfaced in the Settings UI
@@ -94,12 +88,8 @@ class L10nOmEdiConnector:
     # URL of the official vendor documentation page(s) actually read to determine REQUIRED_CONFIG.
     CONFIG_SOURCE = None
 
-    # {'test': url, 'production': url} - only set on a connector when its vendor's API is reached at a
-    # fixed, documented host (many ASPs work this way: you're issued credentials, not a base URL, since
-    # there's only one place their API lives). Used purely to pre-fill the Settings "API Base URL"
-    # field as a convenience default - left {} when no such fixed host is known/confirmed, in which
-    # case the field stays genuinely required input (e.g. for ASPs whose host varies per customer/
-    # region, or where none of this was confirmed at all).
+    # {'test': url, 'production': url} - pre-fills the Settings "API Base URL" field when a vendor's
+    # API lives at one fixed, documented host. Left {} when no such host is known/confirmed.
     DEFAULT_BASE_URL = {}
 
     # Short human-readable caveat shown alongside the Settings block for this provider.
@@ -109,6 +99,9 @@ class L10nOmEdiConnector:
     def __init__(self, base_url=None, client_id=None, client_secret=None, api_key=None,
                  username=None, password=None, certificate_id=None, account_id=None,
                  redirect_url=None, environment='test', timeout_limit=None):
+        """ Store the company's configured ASP credentials and open an HTTP session for this
+        connector instance. Every parameter is a generic credential "slot" - a concrete subclass
+        only reads the ones its REQUIRED_CONFIG declares. """
         self.base_url = base_url
         self.client_id = client_id
         self.client_secret = client_secret
@@ -128,9 +121,11 @@ class L10nOmEdiConnector:
         self._session.headers.update({'Accept': 'application/json'})
 
     def __enter__(self):
+        """ Support using a connector as a context manager, e.g. `with company._l10n_om_edi_get_connector() as c`. """
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        """ Close the underlying HTTP session on exiting the `with` block. """
         self._session.close()
 
     # -------------------------------------------------------------------------
@@ -191,6 +186,7 @@ class L10nOmEdiConnector:
     # -------------------------------------------------------------------------
 
     def _not_configured_error(self):
+        """ Return (not raise) a UserError explaining this ASP has no working integration yet. """
         return UserError(_(
             "No working Accredited Service Provider (ASP) integration is configured for %(provider)s yet. "
             "Select and contract an ASP via the Fawtara Portal, then complete this connector's API "
@@ -202,6 +198,9 @@ class L10nOmEdiConnector:
 
     def _request(self, method, endpoint, params=None, json=None, data=None, headers=None,
                  files=None, handle_response=True):
+        """ Perform one HTTP call against `self.base_url + endpoint`, logging the response body on
+        failure, and either return the parsed/validated response (`handle_response=True`) or the raw
+        `requests.Response` for a caller that needs custom handling. """
         start = datetime.utcnow()
         url = f"{self.base_url}{endpoint}"
 
@@ -234,6 +233,8 @@ class L10nOmEdiConnector:
         return response
 
     def _handle_response(self, response):
+        """ Raise a clear UserError for auth/transport/JSON failures, otherwise return the parsed
+        JSON body. """
         if response.status_code in (401, 403):
             raise UserError(_("Authentication with %(provider)s failed. Please check the API credentials "
                                "configured in Settings > Accounting > Oman E-Invoicing.", provider=self.display_name))

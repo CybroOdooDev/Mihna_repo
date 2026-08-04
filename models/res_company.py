@@ -1,4 +1,23 @@
-# Part of Odoo. See LICENSE file for full copyright and licensing details.
+#############################################################################
+#
+#    Cybrosys Technologies Pvt. Ltd.
+#
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
+#
+#    You can modify it under the terms of the GNU LESSER
+#    GENERAL PUBLIC LICENSE (LGPL v3), Version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
+#
+#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
+#    (LGPL v3) along with this program.
+#    If not, see <http://www.gnu.org/licenses/>.
+#
+#############################################################################
 from odoo import api, models, fields, _
 from odoo.exceptions import UserError
 from odoo.addons.l10n_om_edi.lib.connectors import get_connector_class
@@ -6,14 +25,9 @@ from odoo.addons.l10n_om_edi.lib.connectors.base import CONFIG_STATUS_SELECTION
 
 # Keep in sync with the connector modules registered in lib/connectors/__init__.py. Oman's e-invoicing
 # mandate allows multiple Accredited Service Providers (unlike e.g. Malaysia's single MyInvois portal),
-# so this is a plain per-company choice rather than a hardcoded single integration.
-#
-# This is the complete, official Oman Tax Authority Accredited Service Provider list (verified
-# 2026-07-30, "Showing 1 - 12 of 12" - https://fawtara.taxoman.gov.om/accredited-service-providers).
-# An earlier version of this module also shipped 10 additional connectors built from general vendor
-# research before that official list was checked (Pagero, EDICOM, Sovos, Comarch, OpenText, SAP,
-# Basware, Vertex, Unifiedpost, FawtaraX) - none of them were on the real list, so they were removed
-# rather than kept as a confusing "unofficial" option alongside the real 12.
+# so this is a plain per-company choice rather than a hardcoded single integration. This is the
+# complete, official OTA Accredited Service Provider list - see
+# https://fawtara.taxoman.gov.om/accredited-service-providers.
 ASP_PROVIDER_SELECTION = [
     ('cleartax', "ClearTax"),
     ('jsr', "JSR Tax Advisors"),
@@ -31,7 +45,13 @@ ASP_PROVIDER_SELECTION = [
 
 
 class ResCompany(models.Model):
+    """ Stores the company's chosen Oman e-invoicing ASP and its credentials, and exposes the
+    single seam (`_l10n_om_edi_get_connector`) a real ASP integration is wired in through. Also
+    exposes the company's Oman CR number and PINT OM address line 3, related from its partner. """
     _inherit = 'res.company'
+
+    l10n_om_cr_number = fields.Char(related='partner_id.l10n_om_cr_number', readonly=False)
+    l10n_om_address_line3 = fields.Char(related='partner_id.l10n_om_address_line3', readonly=False)
 
     l10n_om_edi_asp_provider = fields.Selection(
         selection=ASP_PROVIDER_SELECTION,
@@ -39,11 +59,8 @@ class ResCompany(models.Model):
         help="The Accredited Service Provider (ASP) this company has contracted, via the Fawtara "
              "Portal, to submit e-invoices to the Oman Tax Authority.",
     )
-    # Provider-driven config metadata, computed from the selected connector class - NOT a single
-    # hardcoded auth type. Each connector declares its own REQUIRED_CONFIG/CONFIG_STATUS/CONFIG_NOTES
-    # from that vendor's own public documentation (see lib/connectors/<vendor>.py); this just surfaces
-    # that metadata so the Settings view can show only the relevant fields plus an honest confidence
-    # indicator, rather than assuming every ASP authenticates the same way.
+    # Provider-driven config metadata, computed from the selected connector class - see
+    # lib/connectors/base.py and _compute_l10n_om_edi_asp_config_meta below.
     l10n_om_edi_asp_required_config = fields.Json(
         string="ASP Required Configuration",
         compute='_compute_l10n_om_edi_asp_config_meta',
@@ -96,6 +113,8 @@ class ResCompany(models.Model):
 
     @api.depends('l10n_om_edi_asp_provider')
     def _compute_l10n_om_edi_asp_config_meta(self):
+        """ Surface the selected connector's REQUIRED_CONFIG/CONFIG_STATUS/CONFIG_NOTES/OTA_ACCREDITED
+        class attributes as company fields, so the Settings view can read them. """
         for company in self:
             connector_cls = company.l10n_om_edi_asp_provider and get_connector_class(company.l10n_om_edi_asp_provider)
             if connector_cls:
@@ -117,12 +136,19 @@ class ResCompany(models.Model):
         real, no other code in this module needs to change.
         """
         self.ensure_one()
-        connector_cls = self.l10n_om_edi_asp_provider and get_connector_class(self.l10n_om_edi_asp_provider)
-        if not connector_cls:
+        if not self.l10n_om_edi_asp_provider:
             raise UserError(_(
                 "No Accredited Service Provider is configured for %(company)s. "
                 "Go to Settings > Accounting > Oman E-Invoicing to select one.",
                 company=self.display_name,
+            ))
+        connector_cls = get_connector_class(self.l10n_om_edi_asp_provider)
+        if not connector_cls:
+            raise UserError(_(
+                "%(provider)s has no working integration yet - only Flick Network is currently "
+                "implemented. Contact %(provider)s directly to arrange API access, or submit invoices "
+                "manually in the meantime using the generated PINT OM invoice and Tax Data Document XML.",
+                provider=dict(self._fields['l10n_om_edi_asp_provider'].selection).get(self.l10n_om_edi_asp_provider),
             ))
 
         return connector_cls(
@@ -138,3 +164,11 @@ class ResCompany(models.Model):
             environment=self.l10n_om_edi_environment,
             timeout_limit=timeout_limit,
         )
+
+
+class BaseDocumentLayout(models.TransientModel):
+    """ Exposes the company's Oman CR number to the document layout preview/config wizard. """
+    _inherit = 'base.document.layout'
+
+    account_fiscal_country_id = fields.Many2one(related="company_id.account_fiscal_country_id")
+    l10n_om_cr_number = fields.Char(related='company_id.l10n_om_cr_number')

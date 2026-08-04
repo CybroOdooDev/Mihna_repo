@@ -1,26 +1,32 @@
-# Part of Odoo. See LICENSE file for full copyright and licensing details.
+#############################################################################
+#
+#    Cybrosys Technologies Pvt. Ltd.
+#
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
+#
+#    You can modify it under the terms of the GNU LESSER
+#    GENERAL PUBLIC LICENSE (LGPL v3), Version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
+#
+#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
+#    (LGPL v3) along with this program.
+#    If not, see <http://www.gnu.org/licenses/>.
+#
+#############################################################################
 from .base import L10nOmEdiConnector, CONNECTOR_REGISTRY
 
 # Importing each vendor module registers its connector class into CONNECTOR_REGISTRY (see base.py's
 # @register_connector decorator). Add a new ASP by creating one file here + a matching Selection
-# option on res.company.l10n_om_edi_asp_provider (see models/res_company.py).
-#
-# These 12 are the complete, official Oman Tax Authority Accredited Service Provider list (verified
-# 2026-07-30, "Showing 1 - 12 of 12", no pagination beyond that -
-# https://fawtara.taxoman.gov.om/accredited-service-providers). Only these are legally usable for
-# real Oman e-invoicing compliance - do not add a connector here without checking that list first.
-from . import cleartax
-from . import jsr
+# option on res.company.l10n_om_edi_asp_provider (see models/res_company.py). Only Flick Network has
+# a real, confirmed connector currently; the other 11 OTA-accredited providers still appear in the
+# Settings dropdown (see ASP_PROVIDER_SELECTION in models/res_company.py) but have no connector class
+# registered here - selecting one surfaces a clear "not configured" error rather than a stub file.
 from . import flick
-from . import smarteis
-from . import convergex
-from . import bdo
-from . import cygnet
-from . import fynamics
-from . import webtel
-from . import faturathi
-from . import marminai
-from . import goroute
 
 
 def get_connector_class(provider_code):

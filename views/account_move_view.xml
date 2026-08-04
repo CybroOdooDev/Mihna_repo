@@ -22,7 +22,7 @@
                 <button name="action_l10n_om_edi_submit" string="Submit to Oman E-Invoicing" type="object"
                         groups="account.group_account_invoice"
                         class="oe_highlight"
-                        invisible="country_code != 'OM' or move_type not in ('out_invoice', 'out_refund') or l10n_om_edi_state in ('in_progress', 'accepted')"/>
+                        invisible="state != 'posted' or country_code != 'OM' or move_type not in ('out_invoice', 'out_refund') or l10n_om_edi_state in ('in_progress', 'accepted')"/>
             </button>
         </field>
     </record>

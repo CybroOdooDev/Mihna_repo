@@ -24,10 +24,6 @@
                             <field name="l10n_om_edi_asp_config_status" invisible="1"/>
                             <field name="l10n_om_edi_asp_ota_accredited" invisible="1"/>
 
-                            <div class="text-muted oe_inline mb-3" invisible="not l10n_om_edi_asp_provider">
-                                <field name="l10n_om_edi_asp_config_notes" nolabel="1" readonly="1"/>
-                            </div>
-
                             <div class="row">
                                 <label string="API Base URL" for="l10n_om_edi_asp_base_url" class="col-lg-3 o_light_label"/>
                                 <field name="l10n_om_edi_asp_base_url"/>
@@ -75,11 +71,10 @@
                                 <div class="col-lg-9 offset-lg-3">
                                     <button name="action_l10n_om_edi_test_connection" type="object"
                                             string="Test Connection" class="btn-secondary"/>
-                                    <span class="text-muted ms-2">
-                                        Only implemented for Flick Network today - other providers
-                                        will report that plainly rather than pretending to test
-                                        anything, until a real connector implements it.
-                                    </span>
+                                    <div class="text-muted mt-1">
+                                        Currently supported for Flick Network only. Other providers
+                                        will clearly state this feature isn't available yet.
+                                    </div>
                                 </div>
                             </div>
                         </div>

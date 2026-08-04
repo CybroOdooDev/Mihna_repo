@@ -1,4 +1,23 @@
-# Part of Odoo. See LICENSE file for full copyright and licensing details.
+#############################################################################
+#
+#    Cybrosys Technologies Pvt. Ltd.
+#
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
+#
+#    You can modify it under the terms of the GNU LESSER
+#    GENERAL PUBLIC LICENSE (LGPL v3), Version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
+#
+#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
+#    (LGPL v3) along with this program.
+#    If not, see <http://www.gnu.org/licenses/>.
+#
+#############################################################################
 import json
 from datetime import datetime, timezone
 
@@ -12,67 +31,36 @@ from .base import L10nOmEdiConnector, register_connector
 class FlickNetworkConnector(L10nOmEdiConnector):
     """ Flick Network connector.
 
-    CONFIRMED OTA-ACCREDITED: listed on the Oman Tax Authority's official accredited-provider list
-    (checked 2026-07-30, full list of 12): legal entity "Advanced Information Technology Company LLC",
-    Solution Name "Flick Network", Data Residency Oman, contact ameen@flick.network -
-    https://fawtara.taxoman.gov.om/accredited-service-providers
+    OTA-accredited (legal entity "Advanced Information Technology Company LLC", contact
+    ameen@flick.network). API reference: developer.flick.network/api-references/regional/om.
 
-    CONFIRMED from their own dedicated Oman API reference (developer.flick.network/api-references/
-    regional/om, "Flick Oman eInvoicing API" v1.0.0, OpenAPI 3.1.0 - resolves the earlier concern that
-    their SDK's "EGS"/ZATCA-flavored terminology meant this was a Saudi-first product with no
-    Oman-specific layer - it has its own) and their Oman developer guide
-    (developer.flick.network/developer-guides/global-einvoicing/oman):
-
-    - Sandbox server: https://sb-om-api.flick.network (production host not yet seen).
-    - Auth: static API key via an `X-Flick-Auth-Key` header (implemented here), or OAuth2
-      client_credentials (POST /v1/oauth/token, JSON body {client_id, client_secret,
-      grant_type: "client_credentials"} -> {access_token, token_type: "Bearer", expires_in}) as an
-      alternative not implemented here.
-    - `GET /v1/auth/verify` -> {"status": "success", "message": "...", "data": null} - confirmed
-      exact response shape, implemented below as test_connection().
-    - IMPORTANT PREREQUISITE discovered from their Participants section: before any document can be
-      submitted, the company must first be registered as a "Participant" on Flick's Peppol network
-      (`POST /v1/participants`, with trade/legal name, VAT, address, and a Peppol ID; see
-      `GET/PUT/DELETE /v1/participants/{participant_id}` and `.../activate`). The resulting
-      `participant_id` is required on every document call below - mapped onto this module's generic
-      `account_id` slot. This registration is treated as a one-time manual setup step (done via their
-      dashboard or a separate call, not by this connector) rather than something Odoo re-does per
-      invoice.
-    - `POST /v1/{participant_id}/documents` - CONFIRMED: accepts either `application/json` (their own
-      flattened PINT-OM field schema, fully documented with a required-fields table and a sample
-      payload) or `application/xml` (a single undocumented line, no example ever shown). A real
-      submission of our generic PINT-OM XML was tried first and came back with 5 validation errors -
-      some pointed at genuine gaps in the generic XML (missing IssueTime/address-line-3, now fixed in
-      l10n_om_ubl_pint), but one ("Buyer Peppol ID must be in format 0248:OM11XXXXXXXX") revealed their
-      validator expects the *combined* scheme:value string their own JSON schema documents
-      (`"peppol_id": "0248:OM1234567890"`), not the standard Peppol/UBL convention of `schemeID` as an
-      XML attribute with the plain value as text. That's a real deviation from Peppol XML convention on
-      their side - submitting their documented JSON instead of our generic XML sidesteps it entirely
-      rather than guessing at further XML workarounds. Built here from the invoice record directly (see
-      `_build_flick_payload`), not from the PINT-OM XML - `invoice_xml`/`tdd_xml` are still generated
-      and kept as attachments regardless (Oman's 10-year self-archival requirement), just not what gets
-      transmitted to Flick. Response: {"status": "success"|"failed", "data": {"document_id": ...,
-      "status": "processing"|"completed"|"failed", "exchange_status": ..., "reporting_status": ...}} on
-      success, or {"status": "failed", "data": {"errors": [...]}} on validation failure - the live
-      sandbox's error entries did not use the documented 'field_name'/'error_message' keys, so
-      `_format_flick_error` degrades to showing the raw error object rather than guessing further.
-      `tdd_xml` is accepted (shared connector interface) but intentionally unused: Flick's platform
-      performs Corner-5/OTA reporting itself once the invoice is submitted, matching the 5-corner
-      model - there is no separate TDD upload endpoint in their documented API.
-    - `item_type` (their invoice line field, Oman-specific business term BTOM-013, "MUST be provided
-      except for simplified invoices" per the live validator) has only one example value in their docs
-      ("GS") and no enum list - defaulted to "GS" for every line below, flagged as an assumption to
-      revisit once Flick clarifies the real allowed values.
-    - `GET /v1/{participant_id}/documents/{document_id}` - status-check endpoint, confirmed to reuse
-      the identical status/exchange_status/reporting_status envelope described above - implemented
-      below as get_status().
-    - No dedicated cancel/void endpoint was found among their documented operations (only "Retry
-      Document") - consistent with Peppol/Oman generally correcting via credit notes rather than true
-      cancellation, which is already how this module's l10n.om.edi.document model works.
-    - Also documented but not yet needed here: Network Lookup, Labels, Suppliers, Customers, Webhooks
-      (could replace this module's cron-based polling with push notifications later), a
-      Simulate/incoming endpoint useful for sandbox testing, bulk submission (up to 100/request), and
-      a pre-submission /validate endpoint.
+    - Sandbox server: https://sb-om-api.flick.network (production host not yet published).
+    - Auth: static API key via `X-Flick-Auth-Key` (implemented here). They also document an OAuth2
+      client_credentials flow (POST /v1/oauth/token), not implemented here.
+    - `GET /v1/auth/verify` -> {"status", "message", "data": null}, implemented as test_connection().
+    - Before any document can be submitted, the company must be registered as a "Participant" on
+      Flick's Peppol network (POST /v1/participants, a one-time manual setup via their dashboard, not
+      something this connector does). The resulting `participant_id` maps onto this module's generic
+      `account_id` slot and is required on every call below.
+    - `POST /v1/{participant_id}/documents` accepts their own flattened PINT-OM JSON schema or XML.
+      JSON is used here instead of the generic PINT-OM XML because their validator expects Peppol IDs
+      as a combined "scheme:value" string (e.g. "0248:OM1234567890"), not the standard XML
+      schemeID-attribute convention - see `_build_flick_payload`. `invoice_xml`/`tdd_xml` are still
+      always generated and kept as attachments (Oman's 10-year self-archival requirement), just not
+      transmitted to Flick. The request body must be wrapped in a top-level "document" key - required
+      but not shown in their sample payload. Response on success: {"status": "success", "data":
+      {"document_id"/"id", "status", "exchange_status", "reporting_status"}}; on failure: {"status":
+      "failed", "data": {"errors": [...]}}  or errors at the top level - `_format_flick_error` handles
+      both documented and undocumented error-entry shapes rather than guessing further.
+      `tdd_xml` is accepted (shared connector interface) but unused: Flick performs Corner-5/OTA
+      reporting itself once the invoice is submitted.
+    - `item_type` (BTOM-013, "MUST be provided except for simplified invoices") has only one example
+      value in their docs ("GS") and no enum list - defaulted to "GS" for every line, pending
+      clarification from Flick on the real allowed values.
+    - `GET /v1/{participant_id}/documents/{document_id}` reuses the same status envelope, implemented
+      as get_status().
+    - No cancel/void endpoint is documented (only "Retry Document") - consistent with Oman/Peppol
+      generally correcting via credit notes, already how l10n.om.edi.document works.
     """
     display_name = "Flick Network"
     OTA_ACCREDITED = True
@@ -120,10 +108,6 @@ class FlickNetworkConnector(L10nOmEdiConnector):
         payload = self._build_flick_payload(document)
         response = self._request(
             'POST', f'/v1/{self.account_id}/documents',
-            # A real submission confirmed the request body must be wrapped in a top-level "document"
-            # key ({"document": {...}}) - their docs' sample payload showed the fields flat, without
-            # this wrapper, so this was only discovered via a live rejection ("`document` field is
-            # required"), not from the documentation itself.
             json={'document': payload},
             headers={'X-Flick-Auth-Key': self.api_key},
             handle_response=False,
@@ -131,11 +115,8 @@ class FlickNetworkConnector(L10nOmEdiConnector):
         return self._handle_submit_response(response)
 
     def _build_flick_payload(self, document):
-        """ Maps `document`/`document.move_id` into Flick's documented JSON schema (developer.flick.
-        network/developer-guides/global-einvoicing/oman) - see class docstring for why this is built
-        directly rather than reusing the generic PINT-OM XML. Reuses the same tax-category and
-        UN/ECE unit-code logic the generic XML builder already uses, via the pint_om EDI builder
-        model, rather than re-deriving that logic here. """
+        """ Maps `document`/`document.move_id` into Flick's JSON schema (see class docstring). Reuses
+        the pint_om EDI builder's tax-category/UN-ECE unit-code logic rather than re-deriving it. """
         move = document.move_id
         builder = move.env['account.edi.xml.pint_om']
         supplier = move.company_id.partner_id.commercial_partner_id
@@ -156,7 +137,12 @@ class FlickNetworkConnector(L10nOmEdiConnector):
                 'additional_address_lines': [partner.l10n_om_address_line3] if partner.l10n_om_address_line3 else [],
                 'city_address': partner.city,
                 'postal_zone': partner.zip,
-                'country_subdivision_code': partner.state_id.code,
+                # Not a geographic state/governorate code (Odoo's res.country.state has no such
+                # concept for Oman) - Flick's live validator only accepts one of Oman's 4 named free
+                # zones (SHRFZ/SEZAD/SLLFZ/AFZ) or "MO" for Mainland Oman. Odoo has no field recording
+                # free-zone registration, so default every partner to "MO" - true for the vast
+                # majority of businesses.
+                'country_subdivision_code': "MO",
                 'country_code': partner.country_id.code,
                 'contact_name': partner.name,
                 'contact_telephone': partner.phone,
@@ -176,9 +162,7 @@ class FlickNetworkConnector(L10nOmEdiConnector):
                 'line_extension_amount': "%.2f" % line.price_subtotal,
                 'vat_category': builder._get_tax_category_code(customer, supplier, tax),
                 'vat_percentage': "%.2f" % (tax.amount if tax else 0.0),
-                # Only one example value ("GS") is shown in Flick's docs, no enum list - see class
-                # docstring. Defaulted here for every line pending clarification from Flick.
-                'item_type': "GS",
+                'item_type': "GS",  # see class docstring: only one example value documented, no enum list
                 'line_total_including_vat': "%.2f" % line.price_total,
             }
 
@@ -192,10 +176,8 @@ class FlickNetworkConnector(L10nOmEdiConnector):
             'document_type': '381' if move.move_type == 'out_refund' else '380',
             'document_currency': move.currency_id.name,
             'transaction_type_code': '0' * 20,
-            # Their written docs call this "sending_party", but every single live validation error
-            # (from the very first rejection) referenced the seller side as "issuing_party" instead -
-            # the live validator does not recognize "sending_party" at all, so it reported everything
-            # under it as missing regardless of content. "receiving_party" (buyer) matches the docs.
+            # Their docs call this "sending_party", but the live validator only recognizes
+            # "issuing_party" - using their documented name here gets the seller rejected as missing.
             'issuing_party': _party(supplier),
             'receiving_party': _party(customer),
             'invoice_lines': [_invoice_line(index, line) for index, line in enumerate(lines, start=1)],
@@ -226,10 +208,7 @@ class FlickNetworkConnector(L10nOmEdiConnector):
                 status=response.status_code, body=response.text[:2000],
             ))
         if payload.get('status') != 'success':
-            # Documented shape is {"data": {"errors": [{"field_name", "error_message", ...}, ...]}},
-            # but the live sandbox's actual error responses have not been fully confirmed against
-            # that shape - fall back to showing the raw payload rather than hiding it behind a
-            # generic message, so a real rejection is always self-diagnosing from the Odoo UI alone.
+            # Errors can appear nested under "data" (documented) or at the top level (seen live).
             errors = (payload.get('data') or {}).get('errors') or payload.get('errors') or []
             if errors:
                 details = '\n'.join('- %s' % self._format_flick_error(error) for error in errors)
@@ -279,6 +258,7 @@ class FlickNetworkConnector(L10nOmEdiConnector):
         }.get(document.get('status'), 'in_progress')
 
     def cancel(self, asp_reference, reason):
+        """ Not implemented: Flick documents no cancel/void endpoint, only "Retry Document". """
         raise UserError(_(
             "No cancellation-specific endpoint was found among Flick Network's documented operations "
             "(only 'Retry Document') - Oman/Peppol e-invoicing generally corrects via credit notes "

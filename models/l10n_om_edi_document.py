@@ -1,4 +1,23 @@
-# Part of Odoo. See LICENSE file for full copyright and licensing details.
+#############################################################################
+#
+#    Cybrosys Technologies Pvt. Ltd.
+#
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
+#
+#    You can modify it under the terms of the GNU LESSER
+#    GENERAL PUBLIC LICENSE (LGPL v3), Version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
+#
+#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
+#    (LGPL v3) along with this program.
+#    If not, see <http://www.gnu.org/licenses/>.
+#
+#############################################################################
 import base64
 import logging
 import uuid
@@ -38,7 +57,7 @@ class L10nOmEdiDocument(models.Model):
         string="UUID",
         readonly=True,
         copy=False,
-        help="Supplier-generated UUID identifying this document, printed on the B2C QR code. "
+        help="Supplier-generated UUID identifying this document, printed on the QR code. "
              "Generated locally so it is available even before the ASP acknowledges the submission.",
     )
 
@@ -77,6 +96,7 @@ class L10nOmEdiDocument(models.Model):
 
     @api.depends('l10n_om_edi_issuance_date')
     def _compute_name(self):
+        """ Assign the next OMEDI/YYYY/NNNNN sequence number once the issuance date is known. """
         for document in self.sorted(key=lambda d: (d.l10n_om_edi_issuance_date, d._origin.id)):
             document_has_name = document.name and document.name != '/'
             if document_has_name:
@@ -88,18 +108,22 @@ class L10nOmEdiDocument(models.Model):
         self.filtered(lambda d: not d.name).name = '/'
 
     def _compute_invoice_xml_fname(self):
+        """ Derive the invoice XML attachment's filename from the invoice number. """
         for document in self:
             document.invoice_xml_fname = document.move_id.name and f"{document.move_id.name.replace('/', '_')}_pint_om.xml"
 
     def _compute_tdd_xml_fname(self):
+        """ Derive the Tax Data Document XML attachment's filename from the invoice number. """
         for document in self:
             document.tdd_xml_fname = document.move_id.name and f"{document.move_id.name.replace('/', '_')}_tdd.xml"
 
     def _compute_qr_code(self):
+        """ Generate the QR code image for any out_invoice document, or False otherwise. """
         for document in self:
             document.qr_code = document._generate_qr_code() if document.move_id.move_type == 'out_invoice' else False
 
     def _get_starting_sequence(self):
+        """ Return the first sequence value for a given issuance year, e.g. 'OMEDI/2026/00000'. """
         self.ensure_one()
         return "OMEDI/%04d/00000" % (self.l10n_om_edi_issuance_date or fields.Date.context_today(self)).year
 
@@ -128,6 +152,7 @@ class L10nOmEdiDocument(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        """ Generate the supplier-side UUID locally at creation time, not deferred to submission. """
         for vals in vals_list:
             vals.setdefault('l10n_om_edi_uuid', str(uuid.uuid4()))
         return super().create(vals_list)
@@ -149,12 +174,9 @@ class L10nOmEdiDocument(models.Model):
     def _generate_tdd_xml(self):
         """ Generate the Tax Data Document (TDD) XML sent to the Oman Tax Authority (Corner 5).
 
-        NOTE: the Oman Tax Authority's official TDD XSD/schematron (urn:peppol:taxdata:om-1) was not
-        publicly available at the time this module was written. This is a best-effort placeholder
-        covering only the summary fields described in the regulatory brief (parties' VATINs, document
-        reference/UUID, totals, tax breakdown, document type) - it must be revisited once the official
-        schema is published. Deliberately built as a small, direct dict-to-XML function rather than a
-        generic templating layer, since the TDD is a small summary document, not a full UBL invoice.
+        NOTE: the OTA's official TDD XSD/schematron (urn:peppol:taxdata:om-1) was not publicly
+        available at the time this was written - this is a best-effort placeholder covering only the
+        summary fields in the regulatory brief, to revisit once the official schema is published.
         """
         self.ensure_one()
         move = self.move_id
@@ -181,14 +203,11 @@ class L10nOmEdiDocument(models.Model):
         return xml_content
 
     def _generate_qr_code(self):
-        """ Generate the B2C human-readable QR code (seller name, VATIN, timestamp, total incl. VAT,
-        VAT amount, supplier-generated UUID).
+        """ Generate the QR code (seller name, VATIN, timestamp, total incl. VAT, VAT amount,
+        supplier-generated UUID), TLV-packed like l10n_sa_edi's but without ZATCA's hash/signature.
 
-        Follows the byte-packed TLV pattern used by l10n_sa_edi (seller name/VAT/timestamp/total/tax
-        amount), dropping ZATCA's hash+signature tags since Oman has no invoice clearance/signing step.
-        ASSUMPTION, not confirmed: the Oman Tax Authority's exact QR technical spec (TLV vs. URL vs.
-        JSON payload) was not publicly available at the time this module was written - this encoding
-        is a best-effort default, kept isolated here so it is cheap to change once the spec is public.
+        ASSUMPTION: the OTA's exact QR spec (TLV vs. URL vs. JSON) wasn't publicly available at the
+        time this was written - kept isolated here so it's cheap to change once the spec is public.
         """
         self.ensure_one()
         move = self.move_id

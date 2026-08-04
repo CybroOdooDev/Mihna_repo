@@ -1,35 +1,60 @@
-# Part of Odoo. See LICENSE file for full copyright and licensing details.
+#############################################################################
+#
+#    Cybrosys Technologies Pvt. Ltd.
+#
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
+#
+#    You can modify it under the terms of the GNU LESSER
+#    GENERAL PUBLIC LICENSE (LGPL v3), Version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
+#
+#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
+#    (LGPL v3) along with this program.
+#    If not, see <http://www.gnu.org/licenses/>.
+#
+#############################################################################
 {
-    'name': 'Oman - E-invoicing (Fawtara)',
+    'name': 'Fawtara Oman - E-invoicing',
     'countries': ['om'],
-    'version': '1.0',
+    'version': '19.0.1.0.0',
     'category': 'Accounting/Localizations/EDI',
-    'icon': '/account/static/description/l10n.png',
-    'summary': "Submit PINT OM e-invoices to the Oman Tax Authority through an Accredited Service Provider (ASP)",
+    'icon': '/l10n_om_edi/static/description/icon.png',
+    'summary': "PINT OM e-invoice generation and ASP submission for the Oman Tax Authority's Fawtara program",
     'description': """
-    Oman E-invoicing (Fawtara)
+    Fawtara Oman - E-invoicing
     ==========================
 
-    Adds a submission layer on top of l10n_om_ubl_pint's PINT OM XML generation:
+    Generates the PINT OM e-invoice format (Peppol International Model, Oman specialization) and
+    submits it to the Oman Tax Authority through an Accredited Service Provider (ASP):
 
+    * PINT OM XML generation/import (5-corner Peppol model, Corners 1-4) - usable standalone for
+      manual ASP submission, with no network calls of its own.
     * A per-company choice of Accredited Service Provider (ASP) - businesses in Oman's 5-corner Peppol
       model must route through one of several OTA-accredited providers, there is no direct connection
       and no Odoo-hosted access point for Oman.
     * A submission-tracking model (l10n.om.edi.document) recording the generated invoice XML, the
       separate Tax Data Document (TDD) sent to the Oman Tax Authority, and the ASP's acknowledgement.
-    * A QR-code helper for B2C invoices.
+    * A QR-code helper for invoices.
 
     IMPORTANT: the ASP Provider list here is exactly the Oman Tax Authority's own published
     Accredited Service Provider list (verified 2026-07-30 - see
-    https://fawtara.taxoman.gov.om/accredited-service-providers). All 12 connectors ship without a
-    working submit_invoice/get_status/cancel implementation - this is deliberate, deferred work, not
-    an oversight (no ASP account/production credentials were available at the time of writing). Flick
-    Network's connector has confirmed, working authentication and a real connectivity check; ClearTax's
-    auth is confirmed for their KSA product only; the other 10 have no located public API documentation
-    at all. Each connector raises a clear error on submit/status/cancel until it is completed against
-    that vendor's real API - see each connector's CONFIG_NOTES for their listed contact email.
+    https://fawtara.taxoman.gov.om/accredited-service-providers). Only Flick Network has a real,
+    confirmed connector (working authentication and a real connectivity check) - the other 11
+    providers still appear in the dropdown, since they genuinely are OTA-accredited, but have no
+    connector implementation yet; selecting one surfaces a clear "not configured" error rather than
+    a stub. This is deliberate, deferred work, not an oversight (no ASP account/production
+    credentials were available for the others at the time of writing).
     """,
-    'depends': ['l10n_om', 'l10n_om_ubl_pint', 'certificate'],
+    'author': 'Cybrosys Techno Solutions',
+    'company': 'Cybrosys Techno Solutions',
+    'maintainer': 'Cybrosys Techno Solutions',
+    'website': 'https://www.cybrosys.com',
+    'depends': ['l10n_om', 'account_edi_ubl_cii', 'base_vat', 'certificate'],
     'data': [
         'security/ir.model.access.csv',
         'security/l10n_om_edi_security.xml',
@@ -37,11 +62,14 @@
         'views/l10n_om_edi_document_views.xml',
         'views/account_move_view.xml',
         'views/res_company_view.xml',
+        'views/res_partner_view.xml',
         'views/res_config_settings_view.xml',
         'views/report_invoice.xml',
         'wizard/l10n_om_edi_cancel_wizard_views.xml',
     ],
-    'installable': True,
-    'author': 'Cybrosys Techno Solutions',
+    'images': ['static/description/banner.jpg'],
     'license': 'LGPL-3',
+    'installable': True,
+    'auto_install': False,
+    'application': False,
 }

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_partner_form_inherit_l10n_ae_ubl_pint" model="ir.ui.view">
+        <field name="name">res.partner.form.inherit.l10n_ae_ubl_pint</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="account.view_partner_property_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='vat']" position="after">
+                <field name="l10n_ae_tin" invisible="'AE' not in fiscal_country_codes" placeholder="1234567890" readonly="parent_id"/>
+                <field name="l10n_ae_legal_registration_type" invisible="'AE' not in fiscal_country_codes" readonly="parent_id"/>
+                <field name="l10n_ae_legal_registration_number" invisible="'AE' not in fiscal_country_codes" readonly="parent_id"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

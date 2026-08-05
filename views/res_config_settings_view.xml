@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.l10n_ae_edi</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="account.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//block[@id='peppol']" position="after">
+                <block title="UAE E-Invoicing" id="l10n_ae_edi_settings" invisible="country_code != 'AE'">
+                    <div class="col-12 col-lg-12 o_setting_box">
+                        <div class="o_setting_right_pane border-0">
+                            <div class="text-muted oe_inline mb-3">
+                                The UAE's e-invoicing mandate requires routing through a Ministry of
+                                Finance-Accredited Service Provider (ASP). No specific ASP is
+                                preselected here - choose the one your company has contracted with,
+                                or the documentation-only reference option to explore this screen
+                                without a real provider.
+                            </div>
+                            <div class="row">
+                                <label string="ASP Provider" for="l10n_ae_edi_asp_provider" class="col-lg-3 o_light_label"/>
+                                <field name="l10n_ae_edi_asp_provider"/>
+                            </div>
+
+                            <field name="l10n_ae_edi_asp_required_config" invisible="1"/>
+                            <field name="l10n_ae_edi_asp_config_status" invisible="1"/>
+                            <field name="l10n_ae_edi_asp_mof_accredited" invisible="1"/>
+
+                            <div class="text-muted oe_inline mb-3" invisible="not l10n_ae_edi_asp_provider">
+                                <field name="l10n_ae_edi_asp_config_notes" nolabel="1" readonly="1"/>
+                            </div>
+
+                            <div class="row">
+                                <label string="API Base URL" for="l10n_ae_edi_asp_base_url" class="col-lg-3 o_light_label"/>
+                                <field name="l10n_ae_edi_asp_base_url"/>
+                            </div>
+
+                            <div class="row" invisible="not l10n_ae_edi_asp_required_config or 'client_id' not in l10n_ae_edi_asp_required_config">
+                                <label string="Client ID" for="l10n_ae_edi_asp_client_id" class="col-lg-3 o_light_label"/>
+                                <field name="l10n_ae_edi_asp_client_id"/>
+                            </div>
+                            <div class="row" invisible="not l10n_ae_edi_asp_required_config or 'client_secret' not in l10n_ae_edi_asp_required_config">
+                                <label string="Client Secret" for="l10n_ae_edi_asp_client_secret" class="col-lg-3 o_light_label"/>
+                                <field name="l10n_ae_edi_asp_client_secret" password="True"/>
+                            </div>
+                            <div class="row" invisible="not l10n_ae_edi_asp_required_config or 'api_key' not in l10n_ae_edi_asp_required_config">
+                                <label string="API Key" for="l10n_ae_edi_asp_api_key" class="col-lg-3 o_light_label"/>
+                                <field name="l10n_ae_edi_asp_api_key" password="True"/>
+                            </div>
+                            <div class="row" invisible="not l10n_ae_edi_asp_required_config or 'username' not in l10n_ae_edi_asp_required_config">
+                                <label string="Username" for="l10n_ae_edi_asp_username" class="col-lg-3 o_light_label"/>
+                                <field name="l10n_ae_edi_asp_username"/>
+                            </div>
+                            <div class="row" invisible="not l10n_ae_edi_asp_required_config or 'password' not in l10n_ae_edi_asp_required_config">
+                                <label string="Password" for="l10n_ae_edi_asp_password" class="col-lg-3 o_light_label"/>
+                                <field name="l10n_ae_edi_asp_password" password="True"/>
+                            </div>
+                            <div class="row" invisible="not l10n_ae_edi_asp_required_config or 'certificate_id' not in l10n_ae_edi_asp_required_config">
+                                <label string="Client Certificate" for="l10n_ae_edi_asp_certificate_id" class="col-lg-3 o_light_label"/>
+                                <field name="l10n_ae_edi_asp_certificate_id"/>
+                            </div>
+                            <div class="row" invisible="not l10n_ae_edi_asp_required_config or 'account_id' not in l10n_ae_edi_asp_required_config">
+                                <label string="Account / Tenant / Company ID" for="l10n_ae_edi_asp_account_id" class="col-lg-3 o_light_label"/>
+                                <field name="l10n_ae_edi_asp_account_id"/>
+                            </div>
+                            <div class="row" invisible="not l10n_ae_edi_asp_required_config or 'redirect_url' not in l10n_ae_edi_asp_required_config">
+                                <label string="OAuth Redirect URL" for="l10n_ae_edi_asp_redirect_url" class="col-lg-3 o_light_label"/>
+                                <field name="l10n_ae_edi_asp_redirect_url"/>
+                            </div>
+
+                            <div class="row">
+                                <label string="Environment" for="l10n_ae_edi_environment" class="col-lg-3 o_light_label"/>
+                                <field name="l10n_ae_edi_environment"/>
+                            </div>
+
+                            <div class="row mt-2" invisible="not l10n_ae_edi_asp_provider">
+                                <div class="col-lg-9 offset-lg-3">
+                                    <button name="action_l10n_ae_edi_test_connection" type="object"
+                                            string="Test Connection" class="btn-secondary"/>
+                                    <span class="text-muted ms-2">
+                                        Not implemented by the documentation-only reference connector -
+                                        it will report that plainly. Once a real ASP's connector
+                                        implements a connection test, this becomes meaningful for it.
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>

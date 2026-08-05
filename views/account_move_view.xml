@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_move_form_inherit_l10n_ae_ubl_pint" model="ir.ui.view">
+        <field name="name">account.move.form.inherit.l10n_ae_ubl_pint</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@id='other_tab']" position="after">
+                <page string="UAE e-Invoicing" name="l10n_ae_einvoicing"
+                      invisible="country_code != 'AE' or move_type not in ('out_invoice', 'out_refund')">
+                    <group>
+                        <group string="Special Scenarios (Guidelines s10.4)">
+                            <field name="l10n_ae_flag_free_zone"/>
+                            <field name="l10n_ae_beneficiary_partner_id" invisible="not l10n_ae_flag_free_zone"/>
+                            <field name="l10n_ae_flag_deemed_supply"/>
+                            <field name="l10n_ae_flag_margin_scheme"/>
+                            <field name="l10n_ae_flag_summary_invoice"/>
+                            <field name="l10n_ae_flag_continuous_supply"/>
+                            <field name="l10n_ae_flag_agent_billing"/>
+                            <field name="l10n_ae_flag_ecommerce"/>
+                            <field name="l10n_ae_flag_export" readonly="1"/>
+                        </group>
+                        <group string="Other">
+                            <field name="l10n_ae_reverse_charge_goods_type"/>
+                            <field name="l10n_ae_vat_point_date"/>
+                            <field name="l10n_ae_transaction_type_code" readonly="1"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

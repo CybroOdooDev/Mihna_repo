@@ -4,7 +4,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2025-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -33,17 +33,6 @@ class DepartmentHistory(models.Model):
     employee = fields.Char(string='Employee ID',
                            help="ID of the associated Employee")
     employee_id = fields.Many2one('hr.employee', string='Employee Ref', compute='_compute_employee_id', store=True)
-
-    @api.depends('employee')
-    def _compute_employee_id(self):
-        """
-        Compute the actual hr.employee record from the stored employee ID string.
-        """
-        for rec in self:
-            if rec.employee and rec.employee.isdigit():
-                rec.employee_id = int(rec.employee)
-            else:
-                rec.employee_id = False
     employee_name = fields.Char(string='Employee Name',
                                 help="Name of the employee whose department "
                                      "or job position has changed.")
@@ -56,3 +45,14 @@ class DepartmentHistory(models.Model):
                                     "position changed")
     current_value = fields.Char(string='Designation',
                                 help="Updated Designation")
+
+    @api.depends('employee')
+    def _compute_employee_id(self):
+        """
+        Compute the actual hr.employee record from the stored employee ID string.
+        """
+        for rec in self:
+            if rec.employee and rec.employee.isdigit():
+                rec.employee_id = int(rec.employee)
+            else:
+                rec.employee_id = False

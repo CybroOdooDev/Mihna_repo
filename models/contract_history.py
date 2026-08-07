@@ -4,7 +4,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2025-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -35,6 +35,16 @@ class ContractHistory(models.Model):
                            help="ID of the employee associated with the "
                                 "contract history record.")
     employee_id = fields.Many2one('hr.employee', string='Employee Ref', compute='_compute_employee_id', store=True)
+    employee_name = fields.Char(string='Employee Name',
+                                help="Name of the employee whose contract "
+                                     "history is being updated.")
+    updated_date = fields.Date(string='Updated On',
+                               help="Date when the contract details was "
+                                    "last updated.")
+    changed_field = fields.Char(string='Changed Field',
+                                help="The updated field  of the contract.")
+    current_value = fields.Char(string='Current Value',
+                                help="Updated value of the contract.")
 
     @api.depends('employee')
     def _compute_employee_id(self):
@@ -46,13 +56,3 @@ class ContractHistory(models.Model):
                 rec.employee_id = int(rec.employee)
             else:
                 rec.employee_id = False
-    employee_name = fields.Char(string='Employee Name',
-                                help="Name of the employee whose contract "
-                                     "history is being updated.")
-    updated_date = fields.Date(string='Updated On',
-                               help="Date when the contract details was "
-                                    "last updated.")
-    changed_field = fields.Char(string='Changed Field',
-                                help="The updated field  of the contract.")
-    current_value = fields.Char(string='Current Value',
-                                help="Updated value of the contract.")

@@ -4,7 +4,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2025-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -30,48 +30,99 @@ class HrVersion(models.Model):
     models for HR contracts."""
     _inherit = 'hr.version'
 
-    @api.onchange('wage')
-    def _onchange_wage(self):
-        """Create a record in 'salary.history' when the 'wage' field changes."""
-        self.env['salary.history'].sudo().create([{
-            'employee': self.employee_id.id,
-            'employee_name': self.employee_id,
-            'updated_date': fields.Date.today(),
-            'current_value': self.wage,
-        }])
+    def write(self, vals):
+        """Record history for contract-related fields when they are changed and saved."""
+        track_dict = {}
+        for record in self:
+            track_dict[record.id] = {
+                'wage': record.wage,
+                'contract_date_start': record.contract_date_start,
+                'contract_date_end': record.contract_date_end,
+                'contract_type_id': record.contract_type_id.id if record.contract_type_id else False,
+                'contract_type_name': record.contract_type_id.name if record.contract_type_id else False,
+            }
 
-    @api.onchange('contract_date_start')
-    def _onchange_date_start(self):
-        """Create a record in 'contract.history' when the 'date_start' field
-        changes."""
-        self.env['contract.history'].create([{
-            'employee': self.employee_id.id,
-            'employee_name': self.employee_id,
-            'updated_date': fields.Date.today(),
-            'changed_field': 'Start Date',
-            'current_value': self.date_start,
-        }])
+        res = super(HrVersion, self).write(vals)
 
-    @api.onchange('contract_date_end')
-    def _onchange_date_end(self):
-        """Create a record in 'contract.history' when the 'date_end' field
-        changes."""
-        self.env['contract.history'].create([{
-            'employee': self.employee_id.id,
-            'employee_name': self.employee_id,
-            'updated_date': fields.Date.today(),
-            'changed_field': 'End Date',
-            'current_value': self.date_end,
-        }])
+        for record in self:
+            old_vals = track_dict[record.id]
+            
+            if 'wage' in vals and old_vals['wage'] != record.wage:
+                new_val = record.wage
+                latest = self.env['salary.history'].sudo().search([('employee_id', '=', record.employee_id.id)], order='id desc', limit=1)
+                if not latest or str(latest.current_value) != str(new_val):
+                    if not latest and old_vals['wage']:
+                        self.env['salary.history'].sudo().create({
+                            'employee': str(record.employee_id.id),
+                            'employee_name': record.employee_id.name,
+                            'updated_date': record.create_date or fields.Datetime.now(),
+                            'current_value': str(old_vals['wage'])
+                        })
+                    self.env['salary.history'].sudo().create({
+                        'employee': str(record.employee_id.id),
+                        'employee_name': record.employee_id.name,
+                        'updated_date': fields.Date.today(),
+                        'current_value': str(new_val),
+                    })
+                
+            if 'contract_date_start' in vals and old_vals['contract_date_start'] != record.contract_date_start:
+                new_val = record.contract_date_start
+                latest = self.env['contract.history'].sudo().search([('employee_id', '=', record.employee_id.id), ('changed_field', '=', 'Start Date')], order='id desc', limit=1)
+                if not latest or str(latest.current_value) != str(new_val):
+                    if not latest and old_vals['contract_date_start']:
+                        self.env['contract.history'].sudo().create({
+                            'employee': str(record.employee_id.id),
+                            'employee_name': record.employee_id.name,
+                            'updated_date': record.create_date or fields.Datetime.now(),
+                            'changed_field': 'Start Date',
+                            'current_value': str(old_vals['contract_date_start'])
+                        })
+                    self.env['contract.history'].sudo().create({
+                        'employee': str(record.employee_id.id),
+                        'employee_name': record.employee_id.name,
+                        'updated_date': fields.Date.today(),
+                        'changed_field': 'Start Date',
+                        'current_value': str(new_val),
+                    })
+                
+            if 'contract_date_end' in vals and old_vals['contract_date_end'] != record.contract_date_end:
+                new_val = record.contract_date_end
+                latest = self.env['contract.history'].sudo().search([('employee_id', '=', record.employee_id.id), ('changed_field', '=', 'End Date')], order='id desc', limit=1)
+                if not latest or str(latest.current_value) != str(new_val):
+                    if not latest and old_vals['contract_date_end']:
+                        self.env['contract.history'].sudo().create({
+                            'employee': str(record.employee_id.id),
+                            'employee_name': record.employee_id.name,
+                            'updated_date': record.create_date or fields.Datetime.now(),
+                            'changed_field': 'End Date',
+                            'current_value': str(old_vals['contract_date_end'])
+                        })
+                    self.env['contract.history'].sudo().create({
+                        'employee': str(record.employee_id.id),
+                        'employee_name': record.employee_id.name,
+                        'updated_date': fields.Date.today(),
+                        'changed_field': 'End Date',
+                        'current_value': str(new_val),
+                    })
+                
+            if 'contract_type_id' in vals and old_vals['contract_type_id'] != (record.contract_type_id.id if record.contract_type_id else False):
+                new_val = record.contract_type_id.name if record.contract_type_id else False
+                latest = self.env['contract.history'].sudo().search([('employee_id', '=', record.employee_id.id), ('changed_field', '=', 'Contract Type')], order='id desc', limit=1)
+                if not latest or str(latest.current_value) != str(new_val):
+                    if not latest and old_vals['contract_type_name']:
+                        self.env['contract.history'].sudo().create({
+                            'employee': str(record.employee_id.id),
+                            'employee_name': record.employee_id.name,
+                            'updated_date': record.create_date or fields.Datetime.now(),
+                            'changed_field': 'Contract Type',
+                            'current_value': old_vals['contract_type_name']
+                        })
+                    self.env['contract.history'].sudo().create({
+                        'employee': str(record.employee_id.id),
+                        'employee_name': record.employee_id.name,
+                        'updated_date': fields.Date.today(),
+                        'changed_field': 'Contract Type',
+                        'current_value': str(new_val) if new_val else False,
+                    })
 
-    @api.onchange('contract_type_id')
-    def _onchange_emp_contract_type_id(self):
-        """Create a record in 'contract.history' when the 'contract_type_id' field
-        changes."""
-        self.env['contract.history'].create([{
-            'employee': self.employee_id.id,
-            'employee_name': self.employee_id,
-            'updated_date': fields.Date.today(),
-            'changed_field': 'Contract Type',
-            'current_value': self.contract_type_id.name,
-        }])
+        return res

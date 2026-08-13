@@ -103,6 +103,18 @@ class ConvergeXClient:
         """
         return self._request("POST", "/api/invoices/customers/erp/sync/", json=customer_payload)
 
+    def list_customers(self):
+        """ GET /api/invoices/customers/erp/ - list every Customer Master record already on
+        ConvergeX for this account.
+
+        Used only for "customer_name already exists" recovery: ConvergeX enforces customer_name
+        uniqueness case-insensitively across the whole account, not per erp_uuid, so a sync can
+        collide with an unrelated, previously-synced record sharing (a case-insensitive variant of)
+        the same name. There is no documented lookup-by-name endpoint, so the full list is fetched
+        and matched client-side - fine at the small scale of one account's Customer Master.
+        """
+        return self._request("GET", "/api/invoices/customers/erp/")
+
     # -------------------------------------------------------------------------
     # Invoices
     # -------------------------------------------------------------------------

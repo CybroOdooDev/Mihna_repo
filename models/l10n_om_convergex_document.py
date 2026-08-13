@@ -95,12 +95,12 @@ class L10nOmConvergexDocument(models.Model):
                                          "'submitted', 'ota_accepted') - kept alongside the mapped "
                                          "'Status' selection above for transparency.")
     qr_code = fields.Image(string="QR Code", copy=False, readonly=True, max_width=256, max_height=256)
-    qr_code_tlv_base64 = fields.Char(string="QR Code TLV (Base64)", copy=False, readonly=True)
     error_message = fields.Text(string="Error Message", copy=False, readonly=True)
     retry_count = fields.Integer(default=0, copy=False, readonly=True)
 
     @api.depends('move_id.name')
     def _compute_name(self):
+        """ Use the invoice/credit note's own name as this document's display name. """
         for document in self:
             document.name = document.move_id.name or _("New")
 
@@ -139,15 +139,21 @@ class L10nOmConvergexDocument(models.Model):
 
             for attempt in range(1, MAX_SUBMIT_ATTEMPTS + 1):
                 try:
-                    sync_response = client.sync_customer(move.partner_id._l10n_om_convergex_get_customer_payload())
+                    buyer = move.partner_id.commercial_partner_id
+                    try:
+                        sync_response = client.sync_customer(move.partner_id._l10n_om_convergex_get_customer_payload())
+                    except UserError as sync_error:
+                        # ConvergeX enforces customer_name uniqueness account-wide, not per
+                        # erp_uuid - a rename, or a leftover record from earlier testing sharing
+                        # the same name, can collide even on a partner never synced before. Try to
+                        # recover the real erp_uuid behind that name and retry once before giving
+                        # up on this attempt.
+                        if not buyer._l10n_om_convergex_recover_erp_uuid(client):
+                            raise
+                        sync_response = client.sync_customer(move.partner_id._l10n_om_convergex_get_customer_payload())
                     customer = sync_response.get('customer') or {}
                     if customer.get('erp_uuid'):
-                        move.partner_id.commercial_partner_id.l10n_om_convergex_erp_uuid = customer['erp_uuid']
-                    peppol_lookup = sync_response.get('peppol_lookup') or {}
-                    if peppol_lookup.get('peppol_network_status') or peppol_lookup.get('status_label'):
-                        move.partner_id.commercial_partner_id.l10n_om_convergex_peppol_status = (
-                            peppol_lookup.get('status_label') or peppol_lookup.get('peppol_network_status')
-                        )
+                        buyer.l10n_om_convergex_erp_uuid = customer['erp_uuid']
 
                     try:
                         response = client.create_invoice(document._build_invoice_payload())
@@ -330,7 +336,6 @@ class L10nOmConvergexDocument(models.Model):
             'tracking_number': response.get('tracking_number') or self.tracking_number,
             'processed_reference_number': response.get('processed_reference_number') or self.processed_reference_number,
             'qr_code': qr_binary or self.qr_code,
-            'qr_code_tlv_base64': qr.get('tlv_base64') or self.qr_code_tlv_base64,
             'error_message': False,
         })
 

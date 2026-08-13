@@ -48,7 +48,7 @@
     'company': 'Cybrosys Techno Solutions',
     'maintainer': 'Cybrosys Techno Solutions',
     'website': 'https://www.cybrosys.com',
-    'depends': ['account', 'l10n_om'],
+    'depends': ['account', 'l10n_om', 'base_vat'],
     'data': [
         'security/ir.model.access.csv',
         'security/l10n_om_convergex_security.xml',

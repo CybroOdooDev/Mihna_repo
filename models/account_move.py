@@ -34,6 +34,7 @@ class AccountMove(models.Model):
 
     @api.depends('l10n_om_convergex_document_ids')
     def _compute_l10n_om_convergex_document_count(self):
+        """ Count this move's ConvergeX documents, for the smart button's visibility/badge. """
         for move in self:
             move.l10n_om_convergex_document_count = len(move.l10n_om_convergex_document_ids)
 

@@ -19,7 +19,6 @@
 #
 #############################################################################
 from odoo import fields, models
-
 from odoo.addons.l10n_om_convergex.lib.convergex_client import ConvergeXClient
 
 

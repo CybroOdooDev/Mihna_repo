@@ -50,10 +50,18 @@ class ConvergeXClient:
     """
 
     def __init__(self, base_url, client_id, client_secret, timeout=60):
-        # 60s, not the more typical ~15s: the summary-by-date-range endpoint (used for "already
-        # exists" recovery) was observed live taking ~44s to respond on ConvergeX's own sandbox -
-        # a shorter timeout here was the actual cause of repeated false "Network connectivity
-        # issue" failures, not a real connectivity problem.
+        """ Store the credentials/config this client will use for every call - no request is made
+        here; a fresh JWT is only fetched once an actual call needs one (see `_get_token`).
+
+        :param str base_url: ConvergeX API base URL (e.g. "https://convergex.biz").
+        :param str client_id: ConvergeX Client ID.
+        :param str client_secret: ConvergeX Client Secret.
+        :param int timeout: request timeout in seconds. Defaults to 60s, not the more typical
+            ~15s: the summary-by-date-range endpoint (used for "already exists" recovery) was
+            observed live taking ~44s to respond on ConvergeX's own sandbox - a shorter timeout
+            here was the actual cause of repeated false "Network connectivity issue" failures,
+            not a real connectivity problem.
+        """
         self.base_url = (base_url or "").rstrip("/")
         self.client_id = client_id
         self.client_secret = client_secret

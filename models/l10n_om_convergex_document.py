@@ -21,6 +21,7 @@
 import base64
 import logging
 import time
+from zoneinfo import ZoneInfo
 
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
@@ -30,6 +31,10 @@ from odoo.addons.l10n_om_convergex.lib.convergex_client import (
 )
 
 _logger = logging.getLogger(__name__)
+
+# Oman never observes daylight saving, so this offset (UTC+4) never changes - safe to fix here
+# rather than expose as a configurable field.
+_OMAN_TZ = ZoneInfo('Asia/Muscat')
 
 # ConvergeX's own sandbox has been observed responding anywhere from a few seconds to over 40s,
 # and occasionally drops a connection outright on a request it still processes successfully. These
@@ -50,6 +55,20 @@ def _convergex_invoice_number(move):
     Odoo's own invoice number; Odoo's own name/display is completely unaffected either way.
     """
     return (move.name or '').replace('/', '-')
+
+
+def _convergex_invoice_datetime(move):
+    """ The invoice_date/time actually sent to ConvergeX for `move`.
+
+    ConvergeX's compliance validator rejects a document whose invoice_date/time is later than its
+    own server's current time in Oman (Asia/Muscat) - so a fixed placeholder time (e.g. "09:00")
+    would fail for any invoice dated today and submitted before that fixed time passes. Using the
+    real current time here instead is always safe: for an invoice dated today it's exactly "now",
+    and for one dated any earlier day the whole day has already passed regardless of which time is
+    picked.
+    """
+    now_muscat = fields.Datetime.now().replace(tzinfo=ZoneInfo('UTC')).astimezone(_OMAN_TZ)
+    return "%s %s" % (fields.Date.to_string(move.invoice_date), now_muscat.strftime('%H:%M'))
 
 
 class L10nOmConvergexDocument(models.Model):
@@ -270,7 +289,7 @@ class L10nOmConvergexDocument(models.Model):
             'seller_postal_code': company.zip or '',
             'seller_country_code': company.country_id.code or '',
             'invoice_number': _convergex_invoice_number(move),
-            'invoice_date': "%s 09:00" % fields.Date.to_string(move.invoice_date),
+            'invoice_date': _convergex_invoice_datetime(move),
             'currency': move.currency_id.name,
             # Guaranteed set by _l10n_om_convergex_get_customer_payload(), called on `buyer` just
             # before this in _action_submit() - never fall back to the partner's own database id

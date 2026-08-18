@@ -4,7 +4,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2025-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -265,19 +265,22 @@ class HrPayslip(models.Model):
         res = self.write({'state': 'done'})
         
         if send_payslip_by_email:
+            template = self.env.ref(
+                'hr_payroll_community.email_template_payslip',
+                raise_if_not_found=False)
             for payslip in self:
-                if payslip.employee_id.private_email:
-                    template = self.env.ref(
-                        'hr_payroll_community.email_template_payslip', raise_if_not_found=False)
-                    if template:
-                        template.sudo().send_mail(payslip.id, force_send=True)
+                employee = payslip.employee_id
+                recipient_email = (employee.work_email
+                                    or employee.private_email
+                                    or employee.work_contact_id.email)
+                if template and recipient_email:
+                    template.sudo().send_mail(payslip.id, force_send=True)
         return res
 
     def action_payslip_send(self):
         """Opens a window to compose an email,
         with template message loaded by default"""
         self.ensure_one()
-        self.write({'is_send_mail': True})
         ir_model_data = self.env['ir.model.data']
         try:
             template_id = ir_model_data._xmlid_lookup(
@@ -297,7 +300,6 @@ class HrPayslip(models.Model):
             'default_partner_ids': self.employee_id.work_contact_id.ids,
             'force_email': True,
         }
-        self.write({'is_send_mail': True})
         return {
             'name': _('Compose Email'),
             'type': 'ir.actions.act_window',
@@ -850,10 +852,7 @@ class HrPayslip(models.Model):
             worked_days_lines += worked_days_lines.new(r)
         self.worked_days_line_ids = worked_days_lines
         input_line_ids = self.get_inputs(contracts, date_from, date_to)
-        input_lines = self.input_line_ids.browse([])
-        for r in input_line_ids:
-            input_lines += input_lines.new(r)
-        self.input_line_ids = input_lines
+        self.input_line_ids = self._merge_input_lines(input_line_ids)
         return
 
     @api.onchange('contract_id')
@@ -863,6 +862,23 @@ class HrPayslip(models.Model):
             self.struct_id = False
         self.with_context(contract=True).onchange_employee()
         return
+
+    def _merge_input_lines(self, new_input_dicts):
+        """Merge freshly generated "Other Inputs" line templates with the
+        lines already on the payslip, preserving any amount the user has
+        already typed in for a given input code instead of wiping it back
+        to zero every time the employee/date onchange fires."""
+        existing_by_code = {
+            line.code: line.amount for line in self.input_line_ids
+            if line.code
+        }
+        input_lines = self.input_line_ids.browse([])
+        for r in new_input_dicts:
+            r = dict(r)
+            if r.get('code') in existing_by_code:
+                r['amount'] = existing_by_code[r['code']]
+            input_lines += input_lines.new(r)
+        return input_lines
 
     def get_salary_line_total(self, code):
         """Function for getting total salary line"""
@@ -890,10 +906,7 @@ class HrPayslip(models.Model):
             worked_days_lines += worked_days_lines.new(r)
         self.worked_days_line_ids = worked_days_lines
         input_line_ids = self.get_inputs(contracts, date_from, date_to)
-        input_lines = self.input_line_ids.browse([])
-        for r in input_line_ids:
-            input_lines += input_lines.new(r)
-        self.input_line_ids = input_lines
+        self.input_line_ids = self._merge_input_lines(input_line_ids)
         if self.line_ids.search([('name', '=', 'Meal Voucher')]):
             self.line_ids.search(
                 [('name', '=', 'Meal Voucher')]).salary_rule_id.write(
@@ -919,10 +932,7 @@ class HrPayslip(models.Model):
             worked_days_lines += worked_days_lines.new(r)
         self.worked_days_line_ids = worked_days_lines
         input_line_ids = self.get_inputs(contracts, date_from, date_to)
-        input_lines = self.input_line_ids.browse([])
-        for r in input_line_ids:
-            input_lines += input_lines.new(r)
-        self.input_line_ids = input_lines
+        self.input_line_ids = self._merge_input_lines(input_line_ids)
         if self.line_ids.search([('name', '=', 'Meal Voucher')]):
             self.line_ids.search(
                 [('name', '=', 'Meal Voucher')]).salary_rule_id.write(

@@ -155,7 +155,9 @@
                                     <field name="number_of_hours"/>
                                     <field name="amount" sum="Total Amount"/>
                                     <field name="currency_id" invisible="1"/>
-                                    <field name="contract_id"/>
+                                    <field name="contract_id"
+                                           domain="[('employee_id','=',parent.employee_id)]"
+                                           context="{'default_employee_id': parent.employee_id}"/>
                                     <field name="sequence" invisible="True"/>
                                 </list>
                                 <form string="Worked Day">
@@ -167,7 +169,9 @@
                                         <field name="number_of_hours"/>
                                         <field name="amount"/>
                                         <field name="currency_id" invisible="1"/>
-                                        <field name="contract_id"/>
+                                        <field name="contract_id"
+                                               domain="[('employee_id','=',parent.employee_id)]"
+                                               context="{'default_employee_id': parent.employee_id}"/>
                                     </group>
                                 </form>
                             </field>
@@ -178,7 +182,9 @@
                                     <field name="name"/>
                                     <field name="code"/>
                                     <field name="amount"/>
-                                    <field name="contract_id"/>
+                                    <field name="contract_id"
+                                           domain="[('employee_id','=',parent.employee_id)]"
+                                           context="{'default_employee_id': parent.employee_id}"/>
                                     <field name="sequence" invisible="True"/>
                                 </list>
                                 <form string="Payslip Line">
@@ -187,7 +193,9 @@
                                         <field name="code"/>
                                         <field name="sequence"/>
                                         <field name="amount"/>
-                                        <field name="contract_id"/>
+                                        <field name="contract_id"
+                                               domain="[('employee_id','=',parent.employee_id)]"
+                                               context="{'default_employee_id': parent.employee_id}"/>
                                     </group>
                                 </form>
                             </field>

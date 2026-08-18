@@ -4,7 +4,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2025-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -23,6 +23,7 @@
 from odoo import api, fields, models, _
 
 class HrPayslipRunGenerate(models.TransientModel):
+    """Wizard to select a salary structure and generate a payslip batch."""
     _name = 'hr.payslip.run.generate'
     _description = 'Payslip Run Generation Wizard'
 
@@ -35,9 +36,9 @@ class HrPayslipRunGenerate(models.TransientModel):
 
     @api.model
     def default_get(self, fields):
+        """Populate the default payslip run id from the context."""
         res = super(HrPayslipRunGenerate, self).default_get(fields)
         if self.env.context.get('active_id') and self.env.context.get('active_model') == 'hr.payslip.run':
-            print(self.env.context.get('active_id'),"Dddddddddddddddddddd")
             res['payslip_run_id'] = self.env.context.get('active_id')
         return res
 
@@ -52,7 +53,6 @@ class HrPayslipRunGenerate(models.TransientModel):
             context['active_id'] = self.payslip_run_id.id
             context['active_ids'] = [self.payslip_run_id.id]
             context['batch_run_id'] = self.payslip_run_id.id
-        print(context,"contextcontextcontext")
         return {
             'name': _('Select Employees'),
             'type': 'ir.actions.act_window',

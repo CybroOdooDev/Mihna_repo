@@ -90,10 +90,10 @@
                                         <span t-esc="line.quantity"/>
                                     </td>
                                     <td class="text-right">
-                                        <span t-esc="line.amount" t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                        <span t-out="line.amount" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
                                     </td>
                                     <td class="text-right">
-                                        <span t-esc="line.total" t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                        <span t-out="line.total" t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
                                     </td>
                                 </tr>
                             </tbody>
@@ -110,25 +110,38 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr t-foreach="get_lines_by_contribution_register.get(o.id, [])"
-                                    t-as="p">
-                                    <td>
-                                        <span t-esc="p.get('code', '')"/>
-                                    </td>
-                                    <td>
-                                        <span t-esc="p.get('name', '')"/>
-                                    </td>
-                                    <td>
-                                        <span t-esc="p.get('quantity', '')"/>
-                                    </td>
-                                    <td>
-                                        <span t-esc="p.get('amount', 0)"/>
-                                    </td>
-                                    <td class="text-right">
-                                        <span t-esc="p.get('total', 0)"
-                                              t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
-                                    </td>
-                                </tr>
+                                <t t-foreach="get_lines_by_contribution_register.get(o.id, [])"
+                                   t-as="p">
+                                    <tr t-if="p.get('is_header')" class="fw-bold">
+                                        <td colspan="3">
+                                            <span t-esc="p.get('register_name', '')"/>
+                                        </td>
+                                        <td/>
+                                        <td class="text-right">
+                                            <span t-out="p.get('total', 0)"
+                                                  t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                        </td>
+                                    </tr>
+                                    <tr t-else="">
+                                        <td>
+                                            <span t-esc="p.get('code', '')"/>
+                                        </td>
+                                        <td>
+                                            <span t-esc="p.get('name', '')"/>
+                                        </td>
+                                        <td>
+                                            <span t-esc="p.get('quantity', '')"/>
+                                        </td>
+                                        <td>
+                                            <span t-out="p.get('amount', 0)"
+                                                  t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-out="p.get('total', 0)"
+                                                  t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                        </td>
+                                    </tr>
+                                </t>
                             </tbody>
                         </table>
                         <p class="text-right">

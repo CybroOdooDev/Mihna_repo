@@ -4,7 +4,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2025-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -25,6 +25,7 @@ from odoo.exceptions import UserError
 
 
 class HrPayslipEmployeeLine(models.TransientModel):
+    """Wizard line to select individual employees for payslip generation."""
     _name = 'hr.payslip.employee.line'
     _description = 'Payslip Employee Line'
 
@@ -47,6 +48,7 @@ class HrPayslipEmployees(models.TransientModel):
 
     @api.model
     def default_get(self, fields):
+        """Populate the default employees and structure based on the current context."""
         res = super(HrPayslipEmployees, self).default_get(fields)
 
         active_id = self.env.context.get('batch_run_id') or self.env.context.get('active_id')

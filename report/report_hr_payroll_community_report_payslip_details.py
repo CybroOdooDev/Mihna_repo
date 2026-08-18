@@ -4,7 +4,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2025-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -97,7 +97,11 @@ class ReportHrPayrollCommunityReportPayslipDetails(models.AbstractModel):
         for payslip_id, lines_dict in result.items():
             res.setdefault(payslip_id, [])
             for register, lines in lines_dict.items():
+                # A labeled subtotal row for the register, followed by its
+                # lines - no blank cells or stray "0" values, since this
+                # row has no Code/Quantity/Amount of its own to show.
                 res[payslip_id].append({
+                    'is_header': True,
                     'register_name': register.name,
                     'total': sum(lines.mapped('total')),
                 })

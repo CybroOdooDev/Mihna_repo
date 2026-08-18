@@ -4,7 +4,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2025-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -246,8 +246,7 @@ class HrSalaryRule(models.Model):
                         self.name, self.code))
         else:  # python code
             try:
-                safe_eval(self.condition_python, localdict, mode='exec',
-                          nocopy=True)
+                safe_eval(self.condition_python, localdict, mode='exec')
                 return 'result' in localdict and localdict['result'] or False
             except:
                 raise UserError(

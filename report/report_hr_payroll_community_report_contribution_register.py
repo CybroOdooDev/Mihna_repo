@@ -4,7 +4,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2025-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -32,21 +32,55 @@ class ReportHrPayrollCommunityReportContributionRegister(models.AbstractModel):
     _description = 'Payroll Contribution Register Report'
 
     def _get_payslip_lines(self, register_ids, date_from, date_to):
-        """Function for getting Payslip Lines to Contribution Register Report"""
+        """Function for getting Payslip Lines to Contribution Register Report.
+
+        Always shows every payslip line for the matching payslips, exactly
+        as they appear on the original payslip - not just the lines whose
+        own register_id happens to match this register.
+
+        If the register has a Partner set, the result is further scoped to
+        that specific person's payslips only (Partner here identifies the
+        employee, via hr.employee.work_contact_id, whose payslips this
+        register's report should cover). Registers with no Partner set
+        cover every employee's payslips in the period.
+        """
         result = {}
-        self.env.cr.execute("""
-            SELECT pl.id from hr_payslip_line as pl
-            LEFT JOIN hr_payslip AS hp on (pl.slip_id = hp.id)
-            WHERE (hp.date_from >= %s) AND (hp.date_to <= %s)
-            AND pl.register_id in %s
-            AND hp.state = 'done'
-            ORDER BY pl.slip_id, pl.sequence""",
-                            (date_from, date_to, tuple(register_ids)))
-        line_ids = [x[0] for x in self.env.cr.fetchall()]
-        for line in self.env['hr.payslip.line'].browse(line_ids):
-            result.setdefault(line.register_id.id, self.env['hr.payslip.line'])
-            result[line.register_id.id] += line
+        for register in self.env['hr.contribution.register'].browse(register_ids):
+            domain = [
+                ('slip_id.date_from', '>=', date_from),
+                ('slip_id.date_to', '<=', date_to),
+                ('slip_id.state', '=', 'done'),
+            ]
+            if register.partner_id:
+                domain.append(
+                    ('slip_id.employee_id.work_contact_id', '=', register.partner_id.id))
+            result[register.id] = self.env['hr.payslip.line'].search(
+                domain, order='slip_id, sequence')
         return result
+
+    def _build_display_items(self, lines):
+        """Turn a flat, slip-ordered recordset of payslip lines into a
+        display list grouped by payslip: one bold "payslip name" header
+        item followed by that payslip's own lines - so the payslip name
+        is printed once per group instead of being repeated on every row.
+        """
+        items = []
+        current_slip_id = None
+        for line in lines:
+            if line.slip_id.id != current_slip_id:
+                current_slip_id = line.slip_id.id
+                items.append({
+                    'is_header': True,
+                    'payslip_name': line.slip_id.name,
+                })
+            items.append({
+                'code': line.code,
+                'name': line.name,
+                'quantity': line.quantity,
+                'amount': line.amount,
+                'total': line.total,
+            })
+        return items
 
     @api.model
     def _get_report_values(self, docids, data=None):
@@ -63,17 +97,15 @@ class ReportHrPayrollCommunityReportContributionRegister(models.AbstractModel):
                                                                       day=1,
                                                                       days=-1))[
                                    :10])
-        lines_data = self._get_payslip_lines(register_ids, date_from, date_to)
-        lines_total = {}
+        lines_by_register = self._get_payslip_lines(register_ids, date_from, date_to)
+        lines_data = {}
         for register in contrib_registers:
-            lines = lines_data.get(register.id)
-            lines_total[register.id] = lines and sum(
-                lines.mapped('total')) or 0.0
+            lines = lines_by_register.get(register.id)
+            lines_data[register.id] = self._build_display_items(lines) if lines else []
         return {
             'doc_ids': docids,
             'doc_model': 'hr.contribution.register',
             'docs': contrib_registers,
             'data': data,
             'lines_data': lines_data,
-            'lines_total': lines_total
         }

@@ -43,11 +43,9 @@
             <list string="Salary Rules">
                 <field name="name"/>
                 <field name="code"/>
-                <field name="category_id" invisible="1"/>
-                <field name="sequence" invisible="1"/>
+                <field name="category_id"/>
+                <field name="sequence"/>
                 <field name="register_id"/>
-                                <field name="company_id"
-                       options="{'no_create': True}"/>
                 <field name="company_id" groups="base.group_multi_company"
                        options="{'no_create': True}"/>
             </list>

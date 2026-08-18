@@ -8,7 +8,9 @@
             <pivot string="Payslip Analysis">
                 <field name="name" type="row"/>
                 <field name="date_from" interval="month" type="col"/>
-                <field name="rule_amount" type="measure"/>
+                <field name="basic_wage" type="measure"/>
+                <field name="gross_wage" type="measure"/>
+                <field name="net_wage" type="measure"/>
             </pivot>
         </field>
     </record>
@@ -19,7 +21,9 @@
         <field name="arch" type="xml">
             <graph string="Payslip Analysis">
                 <field name="date_from" type="row"/>
-                <field name="rule_amount" type="measure"/>
+                <field name="basic_wage" type="measure"/>
+                <field name="gross_wage" type="measure"/>
+                <field name="net_wage" type="measure"/>
             </graph>
         </field>
     </record>

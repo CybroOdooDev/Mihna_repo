@@ -4,7 +4,7 @@
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2025-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -61,8 +61,8 @@ class HrContract(models.Model):
         hierarchy (parent=False first,then first level children and so on)
         and without duplicate
         """
-        # structures = self.mapped('struct_id')
-        structures = self.mapped('contract_template_id.struct_id')
+        structures = self.mapped('struct_id') or self.mapped(
+            'contract_template_id.struct_id')
 
         if not structures:
             return []

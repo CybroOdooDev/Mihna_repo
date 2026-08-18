@@ -24,7 +24,6 @@
                         <table class="table table-sm">
                             <thead>
                                 <tr>
-                                    <th>PaySlip Name</th>
                                     <th>Code</th>
                                     <th>Name</th>
                                     <th>Quantity/Rate</th>
@@ -33,46 +32,35 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr t-foreach="lines_data.get(o.id, [])"
-                                    t-as="line">
-                                    <td>
-                                        <span t-esc="line.slip_id.name"/>
-                                    </td>
-                                    <td>
-                                        <span t-esc="line.code"/>
-                                    </td>
-                                    <td>
-                                        <span t-esc="line.name"/>
-                                    </td>
-                                    <td>
-                                        <span t-esc="line.quantity"/>
-                                    </td>
-                                    <td class="text-right">
-                                        <span t-esc="line.amount"
-                                              t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
-                                    </td>
-                                    <td class="text-right">
-                                        <span t-esc="line.total"
-                                              t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <div class="row justify-content-end">
-                            <div class="col-4">
-                                <table class="table table-sm">
-                                    <tr class="border-black">
-                                        <td>
-                                            <strong>Total</strong>
-                                        </td>
-                                        <td class="text-right">
-                                            <span t-esc="lines_total.get(o.id)"
-                                                  t-esc-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                <t t-foreach="lines_data.get(o.id, [])"
+                                   t-as="line">
+                                    <tr t-if="line.get('is_header')" class="fw-bold">
+                                        <td colspan="5">
+                                            <span t-esc="line.get('payslip_name', '')"/>
                                         </td>
                                     </tr>
-                                </table>
-                            </div>
-                        </div>
+                                    <tr t-else="">
+                                        <td>
+                                            <span t-esc="line.get('code', '')"/>
+                                        </td>
+                                        <td>
+                                            <span t-esc="line.get('name', '')"/>
+                                        </td>
+                                        <td>
+                                            <span t-esc="line.get('quantity', '')"/>
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-out="line.get('amount', 0)"
+                                                  t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                        </td>
+                                        <td class="text-right">
+                                            <span t-out="line.get('total', 0)"
+                                                  t-options='{"widget": "monetary", "display_currency": o.company_id.currency_id}'/>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
                     </div>
                 </t>
             </t>

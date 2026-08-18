@@ -1,29 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data noupdate="1">
-        <!-- Contribution Register -->
-        <record id="hr_house_rent_register" model="hr.contribution.register">
-            <field name="name">House Rent Allowance Register</field>
-        </record>
-        <record id="hr_provident_fund_register"
-                model="hr.contribution.register">
-            <field name="name">Provident Fund Register</field>
-        </record>
-        <record id="hr_professional_tax_register"
-                model="hr.contribution.register">
-            <field name="name">Professional Tax Register</field>
-        </record>
-        <record id="hr_meal_voucher_register" model="hr.contribution.register">
-            <field name="name">Meal Voucher Register</field>
-        </record>
-        <!-- Salary Rules -->
+        <!-- Salary Rules - all use the single general "Employees"
+             contribution register (hr_payroll_community_data.xml) instead
+             of one separate register per rule. -->
         <record id="hr_salary_rule_house_rent_allowance1" model="hr.salary.rule">
             <field name="amount_select">percentage</field>
             <field eval="40.0" name="amount_percentage"/>
             <field name="amount_percentage_base">contract.wage</field>
             <field name="code">HRA</field>
             <field name="category_id" ref="hr_payroll_community.ALW"/>
-            <field name="register_id" ref="hr_house_rent_register"/>
+            <field name="register_id" ref="hr_payroll_community.contribution_register_employees"/>
             <field name="name">House Rent Allowance</field>
             <field name="sequence" eval="5"/>
         </record>
@@ -41,7 +28,7 @@
             <field eval="-200.0" name="amount_fix"/>
             <field name="code">PT</field>
             <field name="category_id" ref="hr_payroll_community.DED"/>
-            <field name="register_id" ref="hr_professional_tax_register"/>
+            <field name="register_id" ref="hr_payroll_community.contribution_register_employees"/>
             <field name="name">Professional Tax</field>
         </record>
         <record id="hr_salary_rule_provident_fund1" model="hr.salary.rule">
@@ -51,7 +38,7 @@
             <field name="amount_percentage_base">contract.wage</field>
             <field name="code">PF</field>
             <field name="category_id" ref="hr_payroll_community.DED"/>
-            <field name="register_id" ref="hr_provident_fund_register"/>
+            <field name="register_id" ref="hr_payroll_community.contribution_register_employees"/>
             <field name="name">Provident Fund</field>
         </record>
         <record id="hr_salary_rule_ca_gravie" model="hr.salary.rule">
@@ -67,7 +54,7 @@
             <field eval="10" name="amount_fix"/>
             <field name="code">MA</field>
             <field name="category_id" ref="hr_payroll_community.ALW"/>
-            <field name="register_id" ref="hr_meal_voucher_register"/>
+            <field name="register_id" ref="hr_payroll_community.contribution_register_employees"/>
             <field name="name">Meal Voucher</field>
             <field name="sequence" eval="16"/>
         </record>

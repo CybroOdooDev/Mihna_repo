@@ -1,7 +1,7 @@
-## Module <l10n_om_edi>
+## Module <l10n_om_flick>
 
-#### 04.08.2026
+#### 17.08.2026
 #### Version 19.0.1.0.0
 #### ADD
 
-- Initial commit for Fawtara Oman - E-invoicing
+- Initial commit for Oman E-Invoicing - Flick Network

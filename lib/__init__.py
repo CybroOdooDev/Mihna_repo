@@ -18,4 +18,4 @@
 #    If not, see <http://www.gnu.org/licenses/>.
 #
 #############################################################################
-from . import l10n_om_edi_cancel_wizard
+from . import flick_client

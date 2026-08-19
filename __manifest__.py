@@ -19,53 +19,49 @@
 #
 #############################################################################
 {
-    'name': 'Fawtara Oman - E-invoicing',
-    'countries': ['om'],
+    'name': 'Oman E-Invoicing - Flick Network',
     'version': '19.0.1.0.0',
     'category': 'Accounting/Localizations/EDI',
-    'icon': '/l10n_om_edi/static/description/icon.png',
-    'summary': "PINT OM e-invoice generation and ASP submission for the Oman Tax Authority's Fawtara program",
+    'summary': "Submit Oman e-invoices and credit notes to the Flick Network ASP platform, with "
+               "status tracking",
     'description': """
-    Fawtara Oman - E-invoicing
-    ==========================
+    Oman E-Invoicing - Flick Network
+    =================================
 
-    Generates the PINT OM e-invoice format (Peppol International Model, Oman specialization) and
-    submits it to the Oman Tax Authority through an Accredited Service Provider (ASP):
+    A standalone connector to the Flick Network (flick.network) Accredited Service Provider
+    platform for Oman's Fawtara e-invoicing mandate:
 
-    * PINT OM XML generation/import (5-corner Peppol model, Corners 1-4) - usable standalone for
-      manual ASP submission, with no network calls of its own.
-    * A per-company choice of Accredited Service Provider (ASP) - businesses in Oman's 5-corner Peppol
-      model must route through one of several OTA-accredited providers, there is no direct connection
-      and no Odoo-hosted access point for Oman.
-    * A submission-tracking model (l10n.om.edi.document) recording the generated invoice XML, the
-      separate Tax Data Document (TDD) sent to the Oman Tax Authority, and the ASP's acknowledgement.
-    * A QR-code helper for invoices.
+    * Submits customer invoices and credit notes to Flick Network's Document API, built directly
+      from the invoice/credit note data already in Odoo, as their own flattened PINT-OM JSON schema.
+    * Requires the company to already be registered as a "Participant" on Flick's Peppol network
+      (a one-time manual setup via their dashboard) - the resulting participant_id is used on every
+      submission/status call.
+    * Tracks the submission status (To Send / Submitted / Acknowledged / Rejected / Error) and polls
+      Flick Network for the latest status until acknowledged.
 
-    IMPORTANT: the ASP Provider list here is exactly the Oman Tax Authority's own published
-    Accredited Service Provider list (verified 2026-07-30 - see
-    https://fawtara.taxoman.gov.om/accredited-service-providers). Only Flick Network has a real,
-    confirmed connector (working authentication and a real connectivity check) - the other 11
-    providers still appear in the dropdown, since they genuinely are OTA-accredited, but have no
-    connector implementation yet; selecting one surfaces a clear "not configured" error rather than
-    a stub. This is deliberate, deferred work, not an oversight (no ASP account/production
-    credentials were available for the others at the time of writing).
+    SCOPE: this covers the core customer-invoice flow only (standard invoices and credit notes,
+    Flick's documented "Submit Document" and "Get Document" operations). Flick Network's API also
+    documents an OAuth2 client_credentials flow (not implemented, a static API key is used instead),
+    recipient lookup and document validation (pre-submit) endpoints, and bulk submission - none of
+    those are implemented here yet. No cancel/void endpoint is documented at all (only "Retry
+    Document"), so cancellation is not implemented here either.
+
+    NOTE ON QR CODES: this module does not generate or display a QR code anywhere. Neither Flick's
+    PINT OM data dictionary nor their API reference documents a QR code requirement for Oman
+    e-invoicing at all (unlike e.g. Saudi's ZATCA) - so none is fabricated here just to have one.
     """,
     'author': 'Cybrosys Techno Solutions',
     'company': 'Cybrosys Techno Solutions',
     'maintainer': 'Cybrosys Techno Solutions',
     'website': 'https://www.cybrosys.com',
-    'depends': ['l10n_om', 'account_edi_ubl_cii', 'base_vat', 'certificate'],
+    'depends': ['account', 'l10n_om', 'base_vat'],
     'data': [
         'security/ir.model.access.csv',
-        'security/l10n_om_edi_security.xml',
+        'security/l10n_om_flick_security.xml',
         'data/ir_cron.xml',
-        'views/l10n_om_edi_document_views.xml',
+        'views/l10n_om_flick_document_views.xml',
         'views/account_move_view.xml',
-        'views/res_company_view.xml',
-        'views/res_partner_view.xml',
         'views/res_config_settings_view.xml',
-        'views/report_invoice.xml',
-        'wizard/l10n_om_edi_cancel_wizard_views.xml',
     ],
     'images': ['static/description/banner.jpg'],
     'license': 'LGPL-3',

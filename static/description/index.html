@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Fawtara Oman - E-invoicing</title>
+    <title>Oman E-Invoicing - Flick Network</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css " rel="stylesheet" />
     <link rel="preconnect" href="https://fonts.googleapis.com " />
     <link rel="preconnect" href="https://fonts.gstatic.com " crossorigin />
@@ -97,8 +97,8 @@
     <div class="container-fluid cmpad text-center py-5 py-md-3">
         <div class="row">
             <div class="col-md-12">
-                <h3 class="mainhead" style="font-size: 2.3rem;padding-top: 1rem;font-weight: 700;color: black;">Fawtara Oman - E-invoicing</h3>
-                <p class="para mb-4" style="font-size: 20px;color: #6b7280;">PINT OM e-invoice generation and ASP submission for the Oman Tax Authority's Fawtara program.</p>
+                <h3 class="mainhead" style="font-size: 2.3rem;padding-top: 1rem;font-weight: 700;color: black;">Oman E-Invoicing - Flick Network</h3>
+                <p class="para mb-4" style="font-size: 20px;color: #6b7280;">Submit Oman e-invoices and credit notes straight to the Flick Network Accredited Service Provider platform.</p>
                 <div class="d-flex justify-content-center gap-1 flex-wrap">
                     <a href="mailto:"
                         class="contact-btn email-btn d-flex align-items-center gap-2 justify-content-center"
@@ -187,16 +187,27 @@
             </ul>
             <div class="tab-content bg-white rounded-4" style="border: 2px solid #e9ecef;border-radius: 10px;"
                 id="pills1Content">
-                <div class="tab-pane fade show active" id="screenshot" role="tabpane2">
+                <div class="tab-pane fade show active" id="screenshot" role="tabpanel">
                     <div class="row g-3 py-3">
                         <div class="col-md-12">
                             <div class="screenshot-item text-center" style="background-color:#f8fafc;border-radius:10px;padding:20px;border:2px solid #e9ecef;margin-bottom:20px;">
                                 <h1 style="font-weight:bold; line-height:120%; text-align:center; text-transform:capitalize; font-size: 32px; margin-bottom: 20px;">
-                                    <span style="color:#121212;">ASP </span>
+                                    <span style="color:#121212;">Flick Network </span>
                                     <span style="color: #7f54b3;">Configuration</span>
                                 </h1>
-                                <p style="font-size: 16px; color: #6b7280; margin-bottom: 20px;">Select your Accredited Service Provider and enter its credentials directly from Settings &gt; Invoicing &gt; Oman E-Invoicing (Fawtara).</p>
-                                <img alt="Oman E-Invoicing ASP configuration in Settings" class="img-fluid rounded-3 shadow-sm" loading="lazy" src="./assets/screenshots/OM2.png" style="max-width:100%;border:1px solid #e5e7eb;">
+                                <p style="font-size: 16px; color: #6b7280; margin-bottom: 20px;">Enter your Flick Network (flick.network) API Base URL, API Key, and Participant ID directly from Settings &gt; Invoicing &gt; Flick Network, then verify them with Test Connection.</p>
+                                <img alt="Flick Network (Oman E-Invoicing) configuration in Settings" class="img-fluid rounded-3 shadow-sm" loading="lazy" src="./assets/screenshots/flick1.png" style="max-width:100%;border:1px solid #e5e7eb;">
+                            </div>
+                        </div>
+
+                        <div class="col-md-12">
+                            <div class="screenshot-item text-center" style="background-color:#f8fafc;border-radius:10px;padding:20px;border:2px solid #e9ecef;margin-bottom:20px;">
+                                <h1 style="font-weight:bold; line-height:120%; text-align:center; text-transform:capitalize; font-size: 32px; margin-bottom: 20px;">
+                                    <span style="color:#121212;">Draft </span>
+                                    <span style="color: #7f54b3;">Invoice</span>
+                                </h1>
+                                <p style="font-size: 16px; color: #6b7280; margin-bottom: 20px;">A normal Odoo invoice - no special data entry needed before posting it. Once confirmed, it's ready to submit to Flick Network.</p>
+                                <img alt="Draft customer invoice before posting" class="img-fluid rounded-3 shadow-sm" loading="lazy" src="./assets/screenshots/flick2.png" style="max-width:100%;border:1px solid #e5e7eb;">
                             </div>
                         </div>
 
@@ -204,10 +215,10 @@
                             <div class="screenshot-item text-center" style="background-color:#f8fafc;border-radius:10px;padding:20px;border:2px solid #e9ecef;margin-bottom:20px;">
                                 <h1 style="font-weight:bold; line-height:120%; text-align:center; text-transform:capitalize; font-size: 32px; margin-bottom: 20px;">
                                     <span style="color:#121212;">Submit to </span>
-                                    <span style="color: #7f54b3;">Oman E-Invoicing</span>
+                                    <span style="color: #7f54b3;">Flick Network</span>
                                 </h1>
-                                <p style="font-size: 16px; color: #6b7280; margin-bottom: 20px;">One click on a posted invoice generates the PINT OM XML and starts the submission to your configured ASP.</p>
-                                <img alt="Submit to Oman E-Invoicing button on a posted invoice" class="img-fluid rounded-3 shadow-sm" loading="lazy" src="./assets/screenshots/OM3.png" style="max-width:100%;border:1px solid #e5e7eb;">
+                                <p style="font-size: 16px; color: #6b7280; margin-bottom: 20px;">One click on a posted invoice sends the invoice data straight to Flick Network's Document API - no manual XML file or upload needed.</p>
+                                <img alt="Submit to Flick Network button on a posted invoice" class="img-fluid rounded-3 shadow-sm" loading="lazy" src="./assets/screenshots/flick3.png" style="max-width:100%;border:1px solid #e5e7eb;">
                             </div>
                         </div>
 
@@ -215,10 +226,10 @@
                             <div class="screenshot-item text-center" style="background-color:#f8fafc;border-radius:10px;padding:20px;border:2px solid #e9ecef;margin-bottom:20px;">
                                 <h1 style="font-weight:bold; line-height:120%; text-align:center; text-transform:capitalize; font-size: 32px; margin-bottom: 20px;">
                                     <span style="color:#121212;">Submission </span>
-                                    <span style="color: #7f54b3;">Tracking</span>
+                                    <span style="color: #7f54b3;">Status Ribbon</span>
                                 </h1>
-                                <p style="font-size: 16px; color: #6b7280; margin-bottom: 20px;">A dedicated smart button and a "Submitting" ribbon show the live submission status right on the invoice.</p>
-                                <img alt="Oman E-Invoicing smart button and Submitting ribbon" class="img-fluid rounded-3 shadow-sm" loading="lazy" src="./assets/screenshots/OM4.png" style="max-width:100%;border:1px solid #e5e7eb;">
+                                <p style="font-size: 16px; color: #6b7280; margin-bottom: 20px;">A "Submitted" ribbon shows right on the invoice the moment Flick Network accepts it - no need to open a separate record just to check status.</p>
+                                <img alt="Submitted ribbon shown on a Flick Network invoice" class="img-fluid rounded-3 shadow-sm" loading="lazy" src="./assets/screenshots/flick4.png" style="max-width:100%;border:1px solid #e5e7eb;">
                             </div>
                         </div>
 
@@ -226,10 +237,10 @@
                             <div class="screenshot-item text-center" style="background-color:#f8fafc;border-radius:10px;padding:20px;border:2px solid #e9ecef;margin-bottom:20px;">
                                 <h1 style="font-weight:bold; line-height:120%; text-align:center; text-transform:capitalize; font-size: 32px; margin-bottom: 20px;">
                                     <span style="color:#121212;">Acknowledged </span>
-                                    <span style="color: #7f54b3;">Document + QR Code</span>
+                                    <span style="color: #7f54b3;">Status</span>
                                 </h1>
-                                <p style="font-size: 16px; color: #6b7280; margin-bottom: 20px;">Every submission is tracked with its UUID, ASP reference, the QR code, and downloadable Invoice/Tax Data Document XML.</p>
-                                <img alt="Oman E-Invoicing document acknowledged with QR code and ASP reference" class="img-fluid rounded-3 shadow-sm" loading="lazy" src="./assets/screenshots/OM5.png" style="max-width:100%;border:1px solid #e5e7eb;">
+                                <p style="font-size: 16px; color: #6b7280; margin-bottom: 20px;">Every submission gets its own Flick Network Document record: the Flick Document ID, UUID, and raw status, all in one place - here shown fully Acknowledged.</p>
+                                <img alt="Flick Network document showing Acknowledged status, document ID and UUID" class="img-fluid rounded-3 shadow-sm" loading="lazy" src="./assets/screenshots/flick5.png" style="max-width:100%;border:1px solid #e5e7eb;">
                             </div>
                         </div>
                     </div>
@@ -246,12 +257,40 @@
                                     style="padding: 25px; background-color: #637eea0d; border-radius: 10px;">
                                     <div class="feature-number d-flex align-items-center justify-content-center"
                                         style="width: 45px; height: 45px; background-color: #7877c633; border-radius: 50%; font-size: 1.2rem; font-weight: 600; color: #71639e; margin-bottom: 15px;">
+                                        <i class="fa-solid fa-code"></i>
+                                    </div>
+                                    <h3 class="feature-title"
+                                        style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0; color: black; line-height: 1.3;">
+                                        Direct JSON Submission</h3>
+                                    <p style="margin-top: 10px; font-size: 0.95rem; color: #6b7280;">Sends invoice and credit note data straight to Flick Network's Document API as their own flattened PINT-OM JSON schema - no manual XML file or upload needed.</p>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="feature-item mb-4 d-flex flex-column align-items-center justify-content-center text-center"
+                                    style="padding: 25px; background-color: #637eea0d; border-radius: 10px;">
+                                    <div class="feature-number d-flex align-items-center justify-content-center"
+                                        style="width: 45px; height: 45px; background-color: #7877c633; border-radius: 50%; font-size: 1.2rem; font-weight: 600; color: #71639e; margin-bottom: 15px;">
+                                        <i class="fa-solid fa-network-wired"></i>
+                                    </div>
+                                    <h3 class="feature-title"
+                                        style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0; color: black; line-height: 1.3;">
+                                        Peppol Participant Submission</h3>
+                                    <p style="margin-top: 10px; font-size: 0.95rem; color: #6b7280;">Submits documents against your company's own Flick Peppol "Participant ID" - register once via Flick's dashboard, then enter it in Settings.</p>
+                                </div>
+                            </div>
+
+                            <div class="col-md-4">
+                                <div class="feature-item mb-4 d-flex flex-column align-items-center justify-content-center text-center"
+                                    style="padding: 25px; background-color: #637eea0d; border-radius: 10px;">
+                                    <div class="feature-number d-flex align-items-center justify-content-center"
+                                        style="width: 45px; height: 45px; background-color: #7877c633; border-radius: 50%; font-size: 1.2rem; font-weight: 600; color: #71639e; margin-bottom: 15px;">
                                         <i class="fa-solid fa-file-invoice"></i>
                                     </div>
                                     <h3 class="feature-title"
                                         style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0; color: black; line-height: 1.3;">
-                                        PINT OM XML Generation</h3>
-                                    <p style="margin-top: 10px; font-size: 0.95rem; color: #6b7280;">Produces compliant PINT OM Invoice/CreditNote XML (Peppol International Model, Oman specialization, Corners 1-4) directly from posted invoices and credit notes.</p>
+                                        Credit Note Support</h3>
+                                    <p style="margin-top: 10px; font-size: 0.95rem; color: #6b7280;">Submits credit notes straight from Odoo's own Credit Note flow - no extra data entry needed.</p>
                                 </div>
                             </div>
 
@@ -260,12 +299,12 @@
                                     style="padding: 25px; background-color: #637eea0d; border-radius: 10px;">
                                     <div class="feature-number d-flex align-items-center justify-content-center"
                                         style="width: 45px; height: 45px; background-color: #7877c633; border-radius: 50%; font-size: 1.2rem; font-weight: 600; color: #71639e; margin-bottom: 15px;">
-                                        <i class="fa-solid fa-paper-plane"></i>
+                                        <i class="fa-solid fa-book"></i>
                                     </div>
                                     <h3 class="feature-title"
                                         style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0; color: black; line-height: 1.3;">
-                                        ASP Submission Tracking</h3>
-                                    <p style="margin-top: 10px; font-size: 0.95rem; color: #6b7280;">A dedicated Oman E-Invoicing Document records every submission attempt, the generated XML, the Tax Data Document, and the ASP's acknowledgement.</p>
+                                        Spec-Accurate Payload</h3>
+                                    <p style="margin-top: 10px; font-size: 0.95rem; color: #6b7280;">Only sends fields Flick Network actually documents for Oman (PINT OM) e-invoicing - nothing invented, including no QR code, which isn't part of their documented schema at all.</p>
                                 </div>
                             </div>
 
@@ -274,40 +313,12 @@
                                     style="padding: 25px; background-color: #637eea0d; border-radius: 10px;">
                                     <div class="feature-number d-flex align-items-center justify-content-center"
                                         style="width: 45px; height: 45px; background-color: #7877c633; border-radius: 50%; font-size: 1.2rem; font-weight: 600; color: #71639e; margin-bottom: 15px;">
-                                        <i class="fa-solid fa-qrcode"></i>
+                                        <i class="fa-solid fa-plug-circle-check"></i>
                                     </div>
                                     <h3 class="feature-title"
                                         style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0; color: black; line-height: 1.3;">
-                                        QR Code</h3>
-                                    <p style="margin-top: 10px; font-size: 0.95rem; color: #6b7280;">Automatically prints a supplier-generated QR code (seller name, VATIN, timestamp, total, VAT amount, UUID) on invoices.</p>
-                                </div>
-                            </div>
-
-                            <div class="col-md-4">
-                                <div class="feature-item mb-4 d-flex flex-column align-items-center justify-content-center text-center"
-                                    style="padding: 25px; background-color: #637eea0d; border-radius: 10px;">
-                                    <div class="feature-number d-flex align-items-center justify-content-center"
-                                        style="width: 45px; height: 45px; background-color: #7877c633; border-radius: 50%; font-size: 1.2rem; font-weight: 600; color: #71639e; margin-bottom: 15px;">
-                                        <i class="fa-solid fa-building-shield"></i>
-                                    </div>
-                                    <h3 class="feature-title"
-                                        style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0; color: black; line-height: 1.3;">
-                                        Official ASP List</h3>
-                                    <p style="margin-top: 10px; font-size: 0.95rem; color: #6b7280;">The ASP Provider dropdown is exactly the Oman Tax Authority's own published Accredited Service Provider list - no invented or unverified vendors.</p>
-                                </div>
-                            </div>
-
-                            <div class="col-md-4">
-                                <div class="feature-item mb-4 d-flex flex-column align-items-center justify-content-center text-center"
-                                    style="padding: 25px; background-color: #637eea0d; border-radius: 10px;">
-                                    <div class="feature-number d-flex align-items-center justify-content-center"
-                                        style="width: 45px; height: 45px; background-color: #7877c633; border-radius: 50%; font-size: 1.2rem; font-weight: 600; color: #71639e; margin-bottom: 15px;">
-                                        <i class="fa-solid fa-plug"></i>
-                                    </div>
-                                    <h3 class="feature-title"
-                                        style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0; color: black; line-height: 1.3;">
-                                        Pluggable Connector Architecture</h3>
-                                    <p style="margin-top: 10px; font-size: 0.95rem; color: #6b7280;">Each ASP is a small, isolated Python connector behind one common interface - wiring in a new provider never touches the rest of the module.</p>
+                                        One-Click Test Connection</h3>
+                                    <p style="margin-top: 10px; font-size: 0.95rem; color: #6b7280;">Verify your Flick Network API Key directly from Settings, with a dedicated Test Connection button - before submitting a single invoice.</p>
                                 </div>
                             </div>
 
@@ -320,8 +331,8 @@
                                     </div>
                                     <h3 class="feature-title"
                                         style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0; color: black; line-height: 1.3;">
-                                        Oman-Specific Fields</h3>
-                                    <p style="margin-top: 10px; font-size: 0.95rem; color: #6b7280;">Adds CR Number and a third address line to companies/partners, plus Oman VAT format validation and the Oman VAT Peppol e-address scheme.</p>
+                                        Oman VAT Format Validation</h3>
+                                    <p style="margin-top: 10px; font-size: 0.95rem; color: #6b7280;">Validates the Oman VAT format ("OM" + 10 digits) the moment a partner is saved in Odoo, catching bad data before Flick Network ever rejects it at submission.</p>
                                 </div>
                             </div>
 
@@ -330,12 +341,12 @@
                                     style="padding: 25px; background-color: #637eea0d; border-radius: 10px;">
                                     <div class="feature-number d-flex align-items-center justify-content-center"
                                         style="width: 45px; height: 45px; background-color: #7877c633; border-radius: 50%; font-size: 1.2rem; font-weight: 600; color: #71639e; margin-bottom: 15px;">
-                                        <i class="fa-solid fa-file-shield"></i>
+                                        <i class="fa-solid fa-clock-rotate-left"></i>
                                     </div>
                                     <h3 class="feature-title"
                                         style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0; color: black; line-height: 1.3;">
-                                        Tax Data Document (TDD)</h3>
-                                    <p style="margin-top: 10px; font-size: 0.95rem; color: #6b7280;">Generates the separate Corner-5 report sent to the Oman Tax Authority, distinct from the invoice XML itself.</p>
+                                        Status Polling Cron</h3>
+                                    <p style="margin-top: 10px; font-size: 0.95rem; color: #6b7280;">A scheduled action polls Flick Network for the latest status on every submitted document until it's acknowledged - no manual refresh needed.</p>
                                 </div>
                             </div>
 
@@ -344,26 +355,12 @@
                                     style="padding: 25px; background-color: #637eea0d; border-radius: 10px;">
                                     <div class="feature-number d-flex align-items-center justify-content-center"
                                         style="width: 45px; height: 45px; background-color: #7877c633; border-radius: 50%; font-size: 1.2rem; font-weight: 600; color: #71639e; margin-bottom: 15px;">
-                                        <i class="fa-solid fa-arrows-rotate"></i>
+                                        <i class="fa-solid fa-puzzle-piece"></i>
                                     </div>
                                     <h3 class="feature-title"
                                         style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0; color: black; line-height: 1.3;">
-                                        Retry &amp; Status Sync</h3>
-                                    <p style="margin-top: 10px; font-size: 0.95rem; color: #6b7280;">A clear Retry action for failed submissions, and a scheduled action that polls the ASP for status updates.</p>
-                                </div>
-                            </div>
-
-                            <div class="col-md-4">
-                                <div class="feature-item mb-4 d-flex flex-column align-items-center justify-content-center text-center"
-                                    style="padding: 25px; background-color: #637eea0d; border-radius: 10px;">
-                                    <div class="feature-number d-flex align-items-center justify-content-center"
-                                        style="width: 45px; height: 45px; background-color: #7877c633; border-radius: 50%; font-size: 1.2rem; font-weight: 600; color: #71639e; margin-bottom: 15px;">
-                                        <i class="fa-solid fa-download"></i>
-                                    </div>
-                                    <h3 class="feature-title"
-                                        style="font-size: 1.2rem; font-weight: 600; margin-bottom: 0; color: black; line-height: 1.3;">
-                                        Downloadable Invoice &amp; TDD XML</h3>
-                                    <p style="margin-top: 10px; font-size: 0.95rem; color: #6b7280;">Both generated XML files are kept as attachments on every submission document, ready for the 10-year self-archival requirement.</p>
+                                        Standalone Connector</h3>
+                                    <p style="margin-top: 10px; font-size: 0.95rem; color: #6b7280;">Works entirely on its own - no dependency on any other Oman e-invoicing module. Installs and configures independently, the same way as our other single-ASP connectors.</p>
                                 </div>
                             </div>
 
@@ -381,20 +378,20 @@
                                 <div class="faq-item" style="background-color: #f8fafc; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
                                     <h4 style="font-size: 1.1rem; font-weight: 600; color: #121212; margin-bottom: 10px;">
                                         <i class="fa-solid fa-circle-question" style="color: #7f54b3; margin-right: 8px;"></i>
-                                        Do all 12 ASP providers in the dropdown actually work?
+                                        Does this module build the e-invoice XML itself?
                                     </h4>
                                     <p style="font-size: 0.95rem; color: #6b7280; margin-bottom: 0; padding-left: 30px;">
-                                        No - only Flick Network currently has a real, working connector (authentication, submission, and status polling). The other 11 are genuinely on the Oman Tax Authority's own accredited-provider list and remain selectable, but clearly state they aren't integrated yet rather than pretending to work.
+                                        No. Flick Network's API takes their own flattened PINT-OM JSON schema directly - this module builds that JSON from your posted invoice/credit note and sends it to Flick Network, which handles the Peppol/OTA submission on its own platform.
                                     </p>
                                 </div>
 
                                 <div class="faq-item" style="background-color: #f8fafc; border: 2px solid #e9ecef; border-radius: 10px; padding: 20px; margin-bottom: 20px;">
                                     <h4 style="font-size: 1.1rem; font-weight: 600; color: #121212; margin-bottom: 10px;">
                                         <i class="fa-solid fa-circle-question" style="color: #7f54b3; margin-right: 8px;"></i>
-                                        Can I generate the XML without contracting an ASP first?
+                                        Do I need my own Flick Network account to use this module?
                                     </h4>
                                     <p style="font-size: 0.95rem; color: #6b7280; margin-bottom: 0; padding-left: 30px;">
-                                        Yes. PINT OM XML generation works standalone with no network calls of its own, so you can produce compliant invoice XML and submit it to your ASP manually while you finalize which provider to contract.
+                                        Yes. This module is a connector, not a Flick Network subscription - you'll need your own Flick Network account, registered as a "Participant" on their Peppol network, with an API Key and Participant ID. Enter them in Settings &gt; Invoicing &gt; Flick Network and use the Test Connection button to verify they work before submitting any invoices.
                                     </p>
                                 </div>
 
@@ -543,159 +540,7 @@
             </div>
         </div>
     </div>
-    <div class="container-fluid cmpad py-2 py-md-5">
-        <div class="highlights-section">
-            <h2 class="mainhead text-center" style="font-size: 2rem;font-weight: 700;color: black;">Our
-                <span>Services</span>
-            </h2>
-            <div class="row">
-                <div class="col-md-3 mb-4">
-                    <div class="highlight-card h-100 high d-flex flex-column justify-content-center align-items-center text-center"
-                        style="background-color: #8d76d51f;
-    backdrop-filter: blur(20px);
-    border-radius: 10px;
-    padding: 32px;
-    border: 2px solid #71639e1a;
-    position: relative;
-    overflow: hidden;">
-                        <div class="card-icon d-flex align-items-center justify-content-center gap-2"
-                            style="width: 60px;height: 60px;border-radius: 10px;margin-bottom: 24px;position: relative;overflow: hidden;background-color: #71639e;">
-                            <img src="./assets/icons/setting.png" alt="" width="30" height="30">
-                        </div>
-                        <h3 class="card-title"
-                            style="font-size: 20px;font-weight: 600;color: black;letter-spacing: -0.025em;">
-                            Odoo Customization</h3>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-4">
-                    <div class="highlight-card h-100 high d-flex flex-column justify-content-center align-items-center text-center"
-                        style="background-color: #8d76d51f;
-    backdrop-filter: blur(20px);
-    border-radius: 10px;
-    padding: 32px;
-    border: 2px solid #71639e1a;
-    position: relative;
-    overflow: hidden;">
-                        <div class="card-icon d-flex align-items-center justify-content-center gap-2"
-                            style="width: 60px;height: 60px;border-radius: 10px;margin-bottom: 24px;position: relative;overflow: hidden;background-color: #71639e;">
-                            <img src="./assets/icons/imple.png" alt="" width="30" height="30">
-                        </div>
-                        <h3 class="card-title"
-                            style="font-size: 20px;font-weight: 600;color: black;letter-spacing: -0.025em;">
-                            Odoo Implementation</h3>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-4">
-                    <div class="highlight-card h-100 high d-flex flex-column justify-content-center align-items-center text-center"
-                        style="background-color: #8d76d51f;
-    backdrop-filter: blur(20px);
-    border-radius: 10px;
-    padding: 32px;
-    border: 2px solid #71639e1a;
-    position: relative;
-    overflow: hidden;">
-                        <div class="card-icon d-flex align-items-center justify-content-center gap-2"
-                            style="width: 60px;height: 60px;border-radius: 10px;margin-bottom: 24px;position: relative;overflow: hidden;background-color: #71639e;">
-                            <img src="./assets/icons/support.png" alt="" width="30" height="30">
-                        </div>
-                        <h3 class="card-title"
-                            style="font-size: 20px;font-weight: 600;color: black;letter-spacing: -0.025em;">
-                            Odoo Support</h3>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-4">
-                    <div class="highlight-card h-100 high d-flex flex-column justify-content-center align-items-center text-center"
-                        style="background-color: #8d76d51f;
-    backdrop-filter: blur(20px);
-    border-radius: 10px;
-    padding: 32px;
-    border: 2px solid #71639e1a;
-    position: relative;
-    overflow: hidden;">
-                        <div class="card-icon d-flex align-items-center justify-content-center gap-2"
-                            style="width: 60px;height: 60px;border-radius: 10px;margin-bottom: 24px;position: relative;overflow: hidden;background-color: #71639e;">
-                            <img src="./assets/icons/transfer.png" alt="" width="30" height="30">
-                        </div>
-                        <h3 class="card-title"
-                            style="font-size: 20px;font-weight: 600;color: black;letter-spacing: -0.025em;">
-                            Odoo Migration</h3>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-4">
-                    <div class="highlight-card h-100 high d-flex flex-column justify-content-center align-items-center text-center"
-                        style="background-color: #8d76d51f;
-    backdrop-filter: blur(20px);
-    border-radius: 10px;
-    padding: 32px;
-    border: 2px solid #71639e1a;
-    position: relative;
-    overflow: hidden;">
-                        <div class="card-icon d-flex align-items-center justify-content-center gap-2"
-                            style="width: 60px;height: 60px;border-radius: 10px;margin-bottom: 24px;position: relative;overflow: hidden;background-color: #71639e;">
-                            <img src="./assets/icons/idea.png" alt="" width="30" height="30">
-                        </div>
-                        <h3 class="card-title"
-                            style="font-size: 20px;font-weight: 600;color: black;letter-spacing: -0.025em;">
-                            Odoo Integration</h3>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-4">
-                    <div class="highlight-card h-100 high d-flex flex-column justify-content-center align-items-center text-center"
-                        style="background-color: #8d76d51f;
-    backdrop-filter: blur(20px);
-    border-radius: 10px;
-    padding: 32px;
-    border: 2px solid #71639e1a;
-    position: relative;
-    overflow: hidden;">
-                        <div class="card-icon d-flex align-items-center justify-content-center gap-2"
-                            style="width: 60px;height: 60px;border-radius: 10px;margin-bottom: 24px;position: relative;overflow: hidden;background-color: #71639e;">
-                            <img src="./assets/icons/chat.png" alt="" width="30" height="30">
-                        </div>
-                        <h3 class="card-title"
-                            style="font-size: 20px;font-weight: 600;color: black;letter-spacing: -0.025em;">
-                            Odoo Consultancy</h3>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-4">
-                    <div class="highlight-card h-100 high d-flex flex-column justify-content-center align-items-center text-center"
-                        style="background-color: #8d76d51f;
-    backdrop-filter: blur(20px);
-    border-radius: 10px;
-    padding: 32px;
-    border: 2px solid #71639e1a;
-    position: relative;
-    overflow: hidden;">
-                        <div class="card-icon d-flex align-items-center justify-content-center gap-2"
-                            style="width: 60px;height: 60px;border-radius: 10px;margin-bottom: 24px;position: relative;overflow: hidden;background-color: #71639e;">
-                            <img src="./assets/icons/chart.png" alt="" width="30" height="30">
-                        </div>
-                        <h3 class="card-title"
-                            style="font-size: 20px;font-weight: 600;color: black;letter-spacing: -0.025em;">
-                            Odoo Licensing</h3>
-                    </div>
-                </div>
-                <div class="col-md-3 mb-4">
-                    <div class="highlight-card h-100 high d-flex flex-column justify-content-center align-items-center text-center"
-                        style="background-color: #8d76d51f;
-    backdrop-filter: blur(20px);
-    border-radius: 10px;
-    padding: 32px;
-    border: 2px solid #71639e1a;
-    position: relative;
-    overflow: hidden;">
-                        <div class="card-icon d-flex align-items-center justify-content-center gap-2"
-                            style="width: 60px;height: 60px;border-radius: 10px;margin-bottom: 24px;position: relative;overflow: hidden;background-color: #71639e;">
-                            <img src="./assets/icons/people.png" alt="" width="30" height="30">
-                        </div>
-                        <h3 class="card-title"
-                            style="font-size: 20px;font-weight: 600;color: black;letter-spacing: -0.025em;">
-                            Hire Odoo Developer</h3>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+
 </body>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js "></script>
 

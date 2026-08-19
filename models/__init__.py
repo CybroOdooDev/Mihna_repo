@@ -18,9 +18,8 @@
 #    If not, see <http://www.gnu.org/licenses/>.
 #
 #############################################################################
-from . import account_edi_xml_pint_om
 from . import res_company
 from . import res_config_settings
 from . import res_partner
-from . import l10n_om_edi_document
+from . import l10n_om_flick_document
 from . import account_move

@@ -1,17 +1,14 @@
-<?xml version="1.0" ?>
+<?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data>
-        <!-- Active by default: safe to run even before an ASP is configured, since
-             _cron_poll_submission_status degrades to a no-op for companies without a connector
-             (see res.company.l10n_om_edi_asp_provider). -->
-        <record id="ir_cron_l10n_om_edi_document_sync" model="ir.cron">
-            <field name="name">Oman E-Invoicing: Submission Status Sync</field>
-            <field name="model_id" ref="model_l10n_om_edi_document"/>
-            <field name="state">code</field>
-            <field name="code">model._cron_poll_submission_status()</field>
-            <field name="interval_number">1</field>
-            <field name="interval_type">hours</field>
-            <field name="active" eval="True"/>
-        </record>
-    </data>
+    <!-- Active by default: safe to run even before Flick Network credentials are configured, since
+         _cron_poll_status degrades to a no-op for companies without an API Key/Participant ID set. -->
+    <record id="ir_cron_l10n_om_flick_poll_status" model="ir.cron">
+        <field name="name">Flick Network: Poll Submission Status</field>
+        <field name="model_id" ref="model_l10n_om_flick_document"/>
+        <field name="state">code</field>
+        <field name="code">model._cron_poll_status()</field>
+        <field name="interval_number">1</field>
+        <field name="interval_type">hours</field>
+        <field name="active" eval="True"/>
+    </record>
 </odoo>

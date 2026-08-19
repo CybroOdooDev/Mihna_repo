@@ -18,62 +18,64 @@
 #    If not, see <http://www.gnu.org/licenses/>.
 #
 #############################################################################
-from odoo import api, fields, models
+from odoo import api, fields, models, _
+from odoo.exceptions import UserError
 
 
 class AccountMove(models.Model):
-    """ Adds the "Submit to Oman E-Invoicing" action/smart button, and recognizes imported PINT OM
-    XML files. """
+    """ Adds the "Submit to Flick Network" action/smart button. """
     _inherit = 'account.move'
 
-    l10n_om_edi_document_ids = fields.One2many(
-        comodel_name='l10n.om.edi.document', inverse_name='move_id', string="Oman E-Invoicing Documents")
-    l10n_om_edi_document_count = fields.Integer(compute='_compute_l10n_om_edi_document_count')
-    l10n_om_edi_state = fields.Selection(related='l10n_om_edi_document_ids.l10n_om_edi_state', string="Oman E-Invoicing State")
+    l10n_om_flick_document_ids = fields.One2many(
+        comodel_name='l10n.om.flick.document', inverse_name='move_id', string="Flick Network Documents")
+    l10n_om_flick_document_count = fields.Integer(compute='_compute_l10n_om_flick_document_count')
+    l10n_om_flick_state = fields.Selection(
+        related='l10n_om_flick_document_ids.state', string="Flick Network Status")
 
-    @api.depends('l10n_om_edi_document_ids')
-    def _compute_l10n_om_edi_document_count(self):
-        """ Count this move's Oman E-Invoicing documents, for the smart button's visibility/badge. """
+    @api.depends('l10n_om_flick_document_ids')
+    def _compute_l10n_om_flick_document_count(self):
+        """ Count this move's Flick Network documents, for the smart button's visibility/badge. """
         for move in self:
-            move.l10n_om_edi_document_count = len(move.l10n_om_edi_document_ids)
+            move.l10n_om_flick_document_count = len(move.l10n_om_flick_document_ids)
 
-    def _l10n_om_edi_get_or_create_document(self):
-        """ Return this move's active (not rejected/cancelled) submission document, creating one
-        if none exists yet. """
+    def _l10n_om_flick_get_or_create_document(self):
+        """ Return this move's active (not rejected) Flick Network document, creating one if none
+        exists yet. """
         self.ensure_one()
-        document = self.l10n_om_edi_document_ids.filtered(lambda d: d.l10n_om_edi_state not in ('rejected', 'cancelled'))[:1]
+        document = self.l10n_om_flick_document_ids.filtered(lambda d: d.state != 'rejected')[:1]
         if not document:
-            document = self.env['l10n.om.edi.document'].create({
+            document = self.env['l10n.om.flick.document'].create({
                 'move_id': self.id,
                 'company_id': self.company_id.id,
             })
         return document
 
-    def action_l10n_om_edi_submit(self):
-        """ Generate the PINT OM + TDD XML and submit them to the company's configured ASP. """
+    def action_l10n_om_flick_submit(self):
+        """ Submit this move to Flick Network.
+
+        Checks credentials are configured *before* creating a document or making any API call, and
+        raises immediately if not - Odoo shows a UserError raised from a button action as a
+        blocking popup right away, which is a much clearer signal than creating a document, letting
+        the whole submit flow fail, and burying the same message in that document's Error field.
+        """
         for move in self:
-            document = move._l10n_om_edi_get_or_create_document()
+            company = move.company_id
+            if not (company.l10n_om_flick_api_key and company.l10n_om_flick_participant_id):
+                raise UserError(_(
+                    "No Flick Network API Key/Participant ID is configured for %(company)s. Please "
+                    "enter your credentials in Settings > Accounting > Flick Network before "
+                    "submitting.", company=company.display_name,
+                ))
+            document = move._l10n_om_flick_get_or_create_document()
             document._action_submit()
 
-    def action_l10n_om_edi_view_documents(self):
-        """ Open the list/form of this move's Oman E-Invoicing documents (the smart button action). """
+    def action_l10n_om_flick_view_documents(self):
+        """ Open this move's Flick Network documents (the smart button action). """
         self.ensure_one()
         return {
             'type': 'ir.actions.act_window',
-            'name': "Oman E-Invoicing Documents",
-            'res_model': 'l10n.om.edi.document',
+            'name': "Flick Network Documents",
+            'res_model': 'l10n.om.flick.document',
             'view_mode': 'list,form',
             'domain': [('move_id', '=', self.id)],
         }
-
-    def _get_import_file_type(self, file_data):
-        """ Identify PINT OM files (billing and self-billing). """
-        # EXTENDS 'account_edi_ubl_cii'
-        tree = file_data['xml_tree']
-        if tree is not None and tree.findtext('{*}CustomizationID') in (
-            'urn:peppol:pint:billing-1@om-1',
-            'urn:peppol:pint:selfbilling-1@om-1',
-        ):
-            return 'account.edi.xml.pint_om'
-
-        return super()._get_import_file_type(file_data)

@@ -1,28 +1,30 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <odoo>
-    <record id="view_move_form_inherit_l10n_om_edi" model="ir.ui.view">
-        <field name="name">account.move.form.inherit.l10n_om_edi</field>
+    <record id="view_move_form_inherit_l10n_om_flick" model="ir.ui.view">
+        <field name="name">account.move.form.inherit.l10n_om_flick</field>
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_move_form"/>
         <field name="arch" type="xml">
             <xpath expr="//div[@name='button_box']" position="inside">
-                <field name="l10n_om_edi_document_ids" invisible="1"/>
-                <button name="action_l10n_om_edi_view_documents" type="object" class="oe_stat_button"
-                        icon="fa-file-text-o" invisible="not l10n_om_edi_document_count">
+                <field name="l10n_om_flick_document_ids" invisible="1"/>
+                <button name="action_l10n_om_flick_view_documents" type="object" class="oe_stat_button"
+                        icon="fa-file-text-o" invisible="not l10n_om_flick_document_count">
                     <div class="o_field_widget o_stat_info">
-                        <span class="o_stat_text">Oman E-Invoicing</span>
+                        <span class="o_stat_text">Flick Network</span>
                     </div>
                 </button>
             </xpath>
             <xpath expr="//widget[@name='web_ribbon']" position="before">
-                <widget name="web_ribbon" title="Submitting" bg_color="text-bg-info" invisible="l10n_om_edi_state != 'in_progress'"/>
-                <widget name="web_ribbon" title="Rejected" bg_color="text-bg-danger" invisible="l10n_om_edi_state != 'rejected'"/>
+                <widget name="web_ribbon" title="Submitted" bg_color="text-bg-info"
+                        invisible="l10n_om_flick_state != 'submitted'"/>
+                <widget name="web_ribbon" title="Rejected" bg_color="text-bg-danger"
+                        invisible="l10n_om_flick_state != 'rejected'"/>
             </xpath>
             <button name="action_invoice_sent" position="before">
-                <button name="action_l10n_om_edi_submit" string="Submit to Oman E-Invoicing" type="object"
+                <button name="action_l10n_om_flick_submit" string="Submit to Flick Network" type="object"
                         groups="account.group_account_invoice"
                         class="oe_highlight"
-                        invisible="state != 'posted' or country_code != 'OM' or move_type not in ('out_invoice', 'out_refund') or l10n_om_edi_state in ('in_progress', 'accepted')"/>
+                        invisible="state != 'posted' or country_code != 'OM' or move_type not in ('out_invoice', 'out_refund') or l10n_om_flick_state in ('submitted', 'accepted')"/>
             </button>
         </field>
     </record>

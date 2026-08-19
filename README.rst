@@ -2,9 +2,9 @@
     :target: https://www.gnu.org/licenses/lgpl-3.0-standalone.html
     :alt: License: LGPL-3
 
-Fawtara Oman - E-invoicing
-==============================
-* Fawtara Oman - E-invoicing
+Oman E-invoicing - Flick Network
+==========================
+* Oman E-invoicing - Flick Network
 
 Configuration
 =============

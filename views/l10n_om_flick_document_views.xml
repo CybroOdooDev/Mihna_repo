@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="view_l10n_om_flick_document_list" model="ir.ui.view">
+        <field name="name">l10n.om.flick.document.list</field>
+        <field name="model">l10n.om.flick.document</field>
+        <field name="arch" type="xml">
+            <list string="Flick Network Documents" default_order="create_date desc">
+                <field name="name"/>
+                <field name="move_id"/>
+                <field name="flick_document_id"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'accepted'"
+                       decoration-danger="state in ('rejected', 'error')"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_l10n_om_flick_document_form" model="ir.ui.view">
+        <field name="name">l10n.om.flick.document.form</field>
+        <field name="model">l10n.om.flick.document</field>
+        <field name="arch" type="xml">
+            <form string="Flick Network Document">
+                <header>
+                    <button name="action_retry_submission" string="Retry Submission" type="object"
+                            invisible="state not in ('to_send', 'error')"
+                            class="oe_highlight"/>
+                    <field name="state" widget="statusbar" statusbar_visible="to_send,submitted,accepted"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="move_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="flick_status"/>
+                        </group>
+                        <group>
+                            <field name="flick_document_id"/>
+                            <field name="flick_uuid"/>
+                        </group>
+                    </group>
+                    <group string="Error" invisible="not error_message">
+                        <field name="error_message" nolabel="1"/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_l10n_om_flick_document" model="ir.actions.act_window">
+        <field name="name">Flick Network Documents</field>
+        <field name="res_model">l10n.om.flick.document</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_l10n_om_flick_document"
+              name="Flick Network Documents"
+              action="action_l10n_om_flick_document"
+              parent="account.menu_finance_entries"
+              groups="account.group_account_invoice"
+              sequence="62"/>
+</odoo>

@@ -5,8 +5,7 @@
         <field name="name">hr.payslip.view.list</field>
         <field name="model">hr.payslip</field>
         <field name="arch" type="xml">
-            <list decoration-info="state in ('confirm','hr_check','accont_check')"
-                  decoration-muted="state == 'cancel'" string="Payslips">
+            <list decoration-muted="state == 'cancel'" string="Payslips">
                 <field name="number"/>
                 <field name="employee_id"/>
                 <field name="name"/>

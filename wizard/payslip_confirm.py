@@ -31,8 +31,13 @@ class PayslipConfirm(models.TransientModel):
         """Mass Confirmation of Payslip"""
         record_ids = self.env.context.get('active_ids', [])
         for each in record_ids:
+            # only draft payslips are eligible for confirmation -- 'done' is
+            # already confirmed, 'cancel' is voided, and 'paid' must never be
+            # re-run through action_payslip_done() (it recomputes the sheet
+            # from scratch and would revert an already-paid payslip back to
+            # 'done' with a brand new set of lines, silently rewriting a
+            # financial record that's already been paid out).
             payslip_id = self.env['hr.payslip'].search([('id', '=', each),
-                                                        ('state', 'not in',
-                                                         ['cancel', 'done'])])
+                                                        ('state', '=', 'draft')])
             if payslip_id:
                 payslip_id.action_payslip_done()

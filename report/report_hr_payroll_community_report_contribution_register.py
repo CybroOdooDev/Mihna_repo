@@ -49,7 +49,7 @@ class ReportHrPayrollCommunityReportContributionRegister(models.AbstractModel):
             domain = [
                 ('slip_id.date_from', '>=', date_from),
                 ('slip_id.date_to', '<=', date_to),
-                ('slip_id.state', '=', 'done'),
+                ('slip_id.state', 'in', ('done', 'paid')),
             ]
             if register.partner_id:
                 domain.append(

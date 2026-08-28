@@ -55,7 +55,7 @@ class HrPayslipRun(models.Model):
                                (datetime.now() + relativedelta(months=+1, day=1,
                                                                days=-1)).date())
                            )
-    credit_note = fields.Boolean(string='Credit Note',
+    credit_note = fields.Boolean(string='Credit Note', default=False,
                                  help="If its checked, indicates that all"
                                       "payslips generated from here are refund"
                                       "payslips.")
@@ -68,9 +68,14 @@ class HrPayslipRun(models.Model):
         """Function for state change and resetting payslips"""
         for run in self:
             for slip in run.slip_ids:
-                if slip.state == 'done':
+                # this action is also reachable from a 'paid' batch (see the
+                # "Set to Draft" button's visibility), so paid payslips need
+                # the same unwind-then-reset treatment as done ones -- missing
+                # that left a paid slip untouched while its batch flipped to
+                # draft around it, an inconsistent state.
+                if slip.state in ('done', 'paid'):
                     slip.action_payslip_cancel()
-                if slip.state in ['cancel', 'done']:
+                if slip.state in ('cancel', 'done', 'paid'):
                     slip.action_payslip_draft()
         return self.write({'state': 'draft'})
 

@@ -22,8 +22,6 @@ access_hr_payslip_worked_days_community_user,access.hr.payslip.worked.days.commu
 access_hr_payslip_run,access.hr.payslip.run,hr.payslip.run,hr_payroll_community.group_hr_payroll_community_manager,crud,
 hr_payslip_run_multi_company_rule,Payslip Batches multi company,hr.payslip.run,,crud,"['|', ('company_id', '=', False), ('company_id', 'in', company_ids)]"
 access_hr_rule_input_community_user,access.hr.rule.input.community.user,hr.rule.input,hr_payroll_community.group_hr_payroll_community_user,crud,
-access_hr_contract_advantage_template_community_user,access.hr.contract.advantage.template.community.user,hr.contract.advantage.template,hr_payroll_community.group_hr_payroll_community_user,crud,
-access_hr_contract_advantage_template_hr_user,access.hr.contract.advantage.template.hr.user,hr.contract.advantage.template,hr.group_hr_user,r,
 access_hr_payslip_employees,access.hr.payslip.employees,hr.payslip.employees,base.group_user,crud,
 access_hr_payslip_employee_line,access.hr.payslip.employee.line,hr.payslip.employee.line,base.group_user,crud,
 access_hr_payslip_run_generate,access.hr.payslip.run.generate,hr.payslip.run.generate,base.group_user,crud,

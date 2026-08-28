@@ -83,7 +83,7 @@ class HrSalaryRule(models.Model):
                                        'code fields in lowercase as a variable'
                                        ' names (hra, ma, lta, etc.) and the '
                                        'variable basic.')
-    condition_python = fields.Text(string='Python Condition', required=True,
+    condition_python = fields.Text(string='Python Condition',
                                    default='''
     # Available variables:
     #----------------------

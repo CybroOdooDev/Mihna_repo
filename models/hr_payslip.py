@@ -20,6 +20,7 @@
 #    If not, see <http://www.gnu.org/licenses/>.
 #
 #############################################################################
+import re
 from datetime import date, datetime, time
 from dateutil.relativedelta import relativedelta
 from odoo import api, fields, models, _
@@ -61,20 +62,16 @@ class HrPayslip(models.Model):
                           default=lambda self: fields.Date.to_string(
                               (datetime.now() + relativedelta(months=+1, day=1,
                                                               days=-1)).date()))
-    # this is chaos: 4 states are defined, 3 are used ('verify' isn't)
-    # and 5 exist ('confirm' seems to have existed)
     state = fields.Selection(selection=[
         ('draft', 'Draft'),
-        ('verify', 'Waiting'),
         ('done', 'Validated'),
         ('paid', 'Paid'),
         ('cancel', 'Canceled'),
     ], string='Status', index=True, readonly=True, copy=False, default='draft', tracking=True,
         help="""* When the payslip is created the status is \'Draft\'
-                \n* If the payslip is under verification, 
-                the status is \'Waiting\'.
-                \n* If the payslip is confirmed then status is set to \'Done\'.
-                \n* When user cancel payslip the status is \'Rejected\'.""")
+                \n* If the payslip is confirmed then status is set to \'Validated\'.
+                \n* Once payment has been made the status is set to \'Paid\'.
+                \n* When user cancels the payslip the status is \'Canceled\'.""")
     line_ids = fields.One2many('hr.payslip.line',
                                'slip_id',
                                string='Payslip Lines',
@@ -105,7 +102,7 @@ class HrPayslip(models.Model):
         compute='_compute_details_by_salary_rule_category_ids',
         string='Details by Salary Rule Category', help="Details from the salary"
                                                        " rule category")
-    credit_note = fields.Boolean(string='Credit Note',
+    credit_note = fields.Boolean(string='Credit Note', default=False,
                                  help="Indicates this payslip has "
                                       "a refund of another")
     payslip_run_id = fields.Many2one('hr.payslip.run',
@@ -212,15 +209,21 @@ class HrPayslip(models.Model):
         by dynamically summing the appropriate computed payslip lines based on 
         category codes ('BASIC', 'GROSS', 'NET', 'COMP').
         """
+        def _name_has_word(line, word):
+            """Match `word` as a whole word in the line's name (case-insensitive),
+            not merely as a substring -- avoids e.g. 'Internet Allowance'
+            being mistaken for a 'Net' line just because it contains 'net'."""
+            return bool(re.search(r'\b%s\b' % re.escape(word), line.name.lower()))
+
         for payslip in self:
             payslip.basic_wage = sum(payslip.line_ids.filtered(lambda l: l.category_id.code == 'BASIC' or l.code == 'BASIC').mapped('total'))
-            
-            gross_lines = payslip.line_ids.filtered(lambda l: l.category_id.code == 'GROSS' or l.code == 'GROSS' or 'gross' in l.name.lower())
+
+            gross_lines = payslip.line_ids.filtered(lambda l: l.category_id.code == 'GROSS' or l.code == 'GROSS' or _name_has_word(l, 'gross'))
             payslip.gross_wage = sum(gross_lines.mapped('total')) if gross_lines else payslip.basic_wage
-            
-            payslip.net_wage = sum(payslip.line_ids.filtered(lambda l: l.category_id.code == 'NET' or l.code == 'NET' or 'net' in l.name.lower()).mapped('total'))
-            
-            comp_lines = payslip.line_ids.filtered(lambda l: l.category_id.code == 'COMP' or l.code == 'COMP' or 'employer' in l.name.lower() or 'company' in l.name.lower())
+
+            payslip.net_wage = sum(payslip.line_ids.filtered(lambda l: l.category_id.code == 'NET' or l.code == 'NET' or _name_has_word(l, 'net')).mapped('total'))
+
+            comp_lines = payslip.line_ids.filtered(lambda l: l.category_id.code == 'COMP' or l.code == 'COMP' or _name_has_word(l, 'employer') or _name_has_word(l, 'company'))
             payslip.employer_cost = sum(comp_lines.mapped('total'))
 
     def _compute_details_by_salary_rule_category_ids(self):
@@ -612,8 +615,8 @@ class HrPayslip(models.Model):
                  from_date,to_date fields"""
                 if to_date is None:
                     to_date = fields.Date.today()
-                self.env.cr.execute("""SELECT sum(case when hp.credit_note = 
-                False then (pl.total) else (-pl.total) end)
+                self.env.cr.execute("""SELECT sum(case when hp.credit_note IS NOT TRUE
+                then (pl.total) else (-pl.total) end)
                 FROM hr_payslip as hp, hr_payslip_line as pl
                 WHERE hp.employee_id = %s AND hp.state = 'done'
                 AND hp.date_from >= %s AND hp.date_to <= %s AND hp.id 
@@ -859,6 +862,8 @@ class HrPayslip(models.Model):
     @api.onchange('date_from')
     def onchange_date_from(self):
         """Function for getting contract for employee"""
+        if not self.date_from or not self.date_to:
+            return
         date_from = self.date_from
         date_to = self.date_to
         contract_ids = []

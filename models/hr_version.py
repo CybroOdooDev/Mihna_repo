@@ -68,19 +68,3 @@ class HrContract(models.Model):
             return []
         # YTI TODO return browse records
         return list(set(structures._get_parent_structure().ids))
-
-    def get_attribute(self, code, attribute):
-        """Function for return code for Contract"""
-        return self.env['hr.contract.advantage.template'].search(
-                [('code', '=', code)],
-                limit=1)[attribute]
-
-    def set_attribute_value(self, code, active):
-        """Function for set code for Contract"""
-        for contract in self:
-            if active:
-                value = self.env['hr.contract.advantage.template'].search(
-                    [('code', '=', code)], limit=1).default_value
-                contract[code] = value
-            else:
-                contract[code] = 0.0

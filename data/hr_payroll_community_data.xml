@@ -152,6 +152,23 @@
             <field eval="[(6, 0, [ref('hr_rule_basic'), ref('hr_rule_taxable'),ref('hr_rule_net')])]" name="rule_ids"/>
             <field name="company_id" ref="base.main_company"/>
         </record>
+    </data>
+    <!-- Give the default "Employee" structure type a fallback structure, so
+         a contract that never had one explicitly set (and has no contract
+         template either) still resolves a salary structure on its payslips
+         instead of silently leaving it blank. hr.structure_type_employee
+         was created by the core `hr` module under noupdate="1", and a
+         <function> tag is itself gated by its own enclosing <data>'s
+         noupdate flag too, so this needs its own noupdate="0" block;
+         nesting it under the noupdate="1" block above (or the file's
+         noupdate="1" default) makes it a silent no-op on every update. -->
+    <data noupdate="0">
+        <function name="write" model="hr.payroll.structure.type">
+            <value eval="[ref('hr.structure_type_employee')]"/>
+            <value eval="{'default_struct_id': ref('structure_base')}"/>
+        </function>
+    </data>
+    <data noupdate="1">
         <!-- Decimal Precision -->
         <record forcecreate="True" id="decimal_payroll" model="decimal.precision">
             <field name="name">Payroll</field>

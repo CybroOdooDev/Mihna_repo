@@ -34,8 +34,8 @@ class HrPayslipReport(models.Model):
     date_from = fields.Date(string='From', help="Starting Date for Report")
     date_to = fields.Date(string='To', help="Ending Date for Report")
     state = fields.Selection(
-        [('draft', 'Draft'), ('verify', 'Waiting'), ('done', 'Done'),
-         ('cancel', 'Rejected')],
+        [('draft', 'Draft'), ('done', 'Validated'), ('paid', 'Paid'),
+         ('cancel', 'Canceled')],
         string='Status', help="Select Status for Report")
     job_id = fields.Many2one('hr.job', string='Job Title',
                              help="Choose Hr Job")
@@ -131,6 +131,17 @@ class HrPayslipReport(models.Model):
              """
         return from_str
 
+    def _where(self):
+        """Construct the WHERE clause.
+
+        Cancelled payslips are voided records, not real payroll -- they
+        must never contribute to Basic/Gross/Net/Employer Cost totals,
+        and there is no way for a user to filter them back in (the search
+        view only offers Draft/Done), so they are excluded unconditionally
+        here rather than left for a report filter to (fail to) catch.
+        """
+        return "WHERE ps.state != 'cancel'"
+
     def _group_by(self):
         """No aggregation: each report row maps 1:1 to a payslip line."""
         return ""
@@ -142,5 +153,6 @@ class HrPayslipReport(models.Model):
                    %s
                    FROM %s
                    %s
+                   %s
                    )""" % (
-            self._table, self._select(), self._from(), self._group_by()))
+            self._table, self._select(), self._from(), self._where(), self._group_by()))

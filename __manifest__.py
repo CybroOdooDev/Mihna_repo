@@ -54,7 +54,6 @@
         'report/report_payslip_templates.xml',
         'report/report_payslip_details_templates.xml',
         'views/hr_version_views.xml',
-        'views/hr_contract_advantage_template_views.xml',
         'views/hr_salary_rule_views.xml',
         'views/hr_salary_rule_category_views.xml',
         'views/hr_contribution_register_views.xml',

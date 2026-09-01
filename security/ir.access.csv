@@ -1,0 +1,7 @@
+id,name,model_id,group_id/id,operation
+access_salary_advance_user,access.salary.advance,salary.advance,base.group_user,cru
+access_salary_advance_officer,access.salary.advance,salary.advance,hr.group_hr_user,crud
+access_salary_advance_manager,access.salary.advance,salary.advance,hr.group_hr_manager,crud
+access_account_manager,access.salary.advance,salary.advance,account.group_account_manager,crud
+access_salary_advance_payment_wizard_account,access.salary.advance.payment.wizard,salary.advance.payment.wizard,account.group_account_user,crud
+access_salary_advance_payment_wizard_hr,access.salary.advance.payment.wizard,salary.advance.payment.wizard,hr.group_hr_user,crud

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_tax_form_inherit_l10n_ae_aigentrix" model="ir.ui.view">
+        <field name="name">account.tax.form.inherit.l10n_ae_aigentrix</field>
+        <field name="model">account.tax</field>
+        <field name="inherit_id" ref="account.view_tax_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='advanced_options']//field[@name='invoice_legal_notes']" position="after">
+                <field name="l10n_ae_aigentrix_tax_category"/>
+                <field name="l10n_ae_aigentrix_vat_exempt_reason_code"
+                       invisible="l10n_ae_aigentrix_tax_category != 'E'"
+                       required="l10n_ae_aigentrix_tax_category == 'E'"/>
+                <field name="l10n_ae_aigentrix_vat_exempt_reason_text"
+                       invisible="l10n_ae_aigentrix_tax_category != 'E'"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

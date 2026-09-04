@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_l10n_ae_aigentrix_document_list" model="ir.ui.view">
+        <field name="name">l10n.ae.aigentrix.document.list</field>
+        <field name="model">l10n.ae.aigentrix.document</field>
+        <field name="arch" type="xml">
+            <list string="Aigentrix Documents" default_order="create_date desc">
+                <field name="name"/>
+                <field name="move_id"/>
+                <field name="entry_id"/>
+                <field name="type"/>
+                <field name="state" widget="badge"
+                       decoration-success="state in ('ACKNOWLEDGED', 'DELIVERED', 'VALIDATION_PASSED')"
+                       decoration-danger="state in ('REJECTED', 'ERROR', 'VALIDATION_FAILED', 'TRANSMISSION_FAILED')"/>
+                <field name="tax_status"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_l10n_ae_aigentrix_document_form" model="ir.ui.view">
+        <field name="name">l10n.ae.aigentrix.document.form</field>
+        <field name="model">l10n.ae.aigentrix.document</field>
+        <field name="arch" type="xml">
+            <form string="Aigentrix Document">
+                <header>
+                    <button name="action_refresh_status" string="Refresh Status" type="object"
+                            invisible="not entry_id"/>
+                    <button name="action_advance_to_submitted" string="Submit to Peppol Network" type="object"
+                            class="oe_highlight"
+                            invisible="not entry_id or state not in ('DRAFT', 'VALIDATION_FAILED')"/>
+                    <button name="action_fetch_validation_errors" string="Fetch Validation Errors" type="object"
+                            invisible="not entry_id"/>
+                    <button name="action_view_status_timeline" string="View Status Timeline" type="object"
+                            invisible="not entry_id"/>
+                    <button name="action_delete_entry" string="Delete From Aigentrix" type="object"
+                            confirm="This removes the entry from Aigentrix and this local document. Continue?"/>
+                    <field name="state" widget="statusbar"
+                           statusbar_visible="DRAFT,VALIDATION_PASSED,SUBMITTED,DELIVERED,ACKNOWLEDGED"/>
+                </header>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="move_id"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                            <field name="type"/>
+                            <field name="environment"/>
+                        </group>
+                        <group>
+                            <field name="entry_id"/>
+                            <field name="invoice_ref"/>
+                            <field name="document_id_en"/>
+                            <field name="tax_status"/>
+                        </group>
+                    </group>
+                    <group string="Amounts (as reported by Aigentrix)">
+                        <group>
+                            <field name="legal_tax_inclusive_amount"/>
+                            <field name="legal_final_payable"/>
+                        </group>
+                        <group>
+                            <field name="tax_total_tax_amount"/>
+                            <field name="remote_created_at"/>
+                        </group>
+                    </group>
+                    <group string="Downloads">
+                        <field name="download_file_name"/>
+                        <button name="action_download_pdf" string="Download PDF" type="object"
+                                class="btn-secondary" invisible="not entry_id"/>
+                        <button name="action_download_xml" string="Download XML" type="object"
+                                class="btn-secondary" invisible="not entry_id"/>
+                    </group>
+                    <group string="Error" invisible="not error_log">
+                        <field name="error_log" nolabel="1"/>
+                    </group>
+                    <group string="Validation Errors" invisible="not validation_errors">
+                        <field name="validation_errors" nolabel="1"/>
+                    </group>
+                    <group string="Validation Warnings" invisible="not validation_warnings">
+                        <field name="validation_warnings" nolabel="1"/>
+                    </group>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_l10n_ae_aigentrix_document" model="ir.actions.act_window">
+        <field name="name">Aigentrix Documents</field>
+        <field name="res_model">l10n.ae.aigentrix.document</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="menu_l10n_ae_aigentrix_document"
+              name="Aigentrix Documents"
+              action="action_l10n_ae_aigentrix_document"
+              parent="account.menu_finance_entries"
+              groups="account.group_account_invoice"
+              sequence="63"/>
+</odoo>

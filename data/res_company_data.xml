@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!-- A ready-to-use UAE company so this module can be tried out immediately after install,
+         without first having to manually create/configure a United Arab Emirates company by
+         hand. Only the fields Section 5.1 of the API guide marks as required for the seller
+         (sellerName/sellerVatTrn/sellerRegisteredName/sellerAddressLine1/sellerCity/
+         sellerCountryCode) are filled in - the Aigentrix API Key/Base URL/Company ID/Peppol
+         Participant ID still have to be entered by hand (Company form > Aigentrix E-Invoice tab),
+         since those are credentials this module cannot know in advance. -->
+    <record id="demo_company_ae" model="res.company">
+        <field name="name">UAE Company (Aigentrix)</field>
+        <field name="street">Business Bay</field>
+        <field name="city">Dubai</field>
+        <field name="state_id" ref="base.state_ae_du"/>
+        <field name="country_id" ref="base.ae"/>
+        <field name="currency_id" ref="base.AED"/>
+        <field name="vat">100123456700003</field>
+    </record>
+</odoo>

@@ -44,7 +44,7 @@
     ],
     'assets': {
         'web.assets_backend': [
-            'history_employee/static/src/css/timeline_view.scss',
+            'history_employee/static/src/scss/timeline_view.scss',
             'history_employee/static/src/js/timeline_view.js',
             'history_employee/static/src/xml/timeline_view.xml',
         ],

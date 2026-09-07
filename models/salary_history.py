@@ -24,7 +24,7 @@ from odoo import api, fields, models
 
 
 class SalaryHistory(models.Model):
-    """Model  for tracking salary history information."""
+    """Model for tracking salary history information."""
     _name = 'salary.history'
     _description = 'Salary History'
     _rec_name = 'employee_name'

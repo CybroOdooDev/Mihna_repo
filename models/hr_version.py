@@ -51,7 +51,7 @@ class HrVersion(models.Model):
                 new_val = record.wage
                 latest = self.env['salary.history'].sudo().search([('employee_id', '=', record.employee_id.id)], order='id desc', limit=1)
                 if not latest or str(latest.current_value) != str(new_val):
-                    if not latest and old_vals['wage']:
+                    if not latest:
                         self.env['salary.history'].sudo().create({
                             'employee': str(record.employee_id.id),
                             'employee_name': record.employee_id.name,
@@ -69,7 +69,7 @@ class HrVersion(models.Model):
                 new_val = record.contract_date_start
                 latest = self.env['contract.history'].sudo().search([('employee_id', '=', record.employee_id.id), ('changed_field', '=', 'Start Date')], order='id desc', limit=1)
                 if not latest or str(latest.current_value) != str(new_val):
-                    if not latest and old_vals['contract_date_start']:
+                    if not latest:
                         self.env['contract.history'].sudo().create({
                             'employee': str(record.employee_id.id),
                             'employee_name': record.employee_id.name,
@@ -89,7 +89,7 @@ class HrVersion(models.Model):
                 new_val = record.contract_date_end
                 latest = self.env['contract.history'].sudo().search([('employee_id', '=', record.employee_id.id), ('changed_field', '=', 'End Date')], order='id desc', limit=1)
                 if not latest or str(latest.current_value) != str(new_val):
-                    if not latest and old_vals['contract_date_end']:
+                    if not latest:
                         self.env['contract.history'].sudo().create({
                             'employee': str(record.employee_id.id),
                             'employee_name': record.employee_id.name,
@@ -109,7 +109,7 @@ class HrVersion(models.Model):
                 new_val = record.contract_type_id.name if record.contract_type_id else False
                 latest = self.env['contract.history'].sudo().search([('employee_id', '=', record.employee_id.id), ('changed_field', '=', 'Contract Type')], order='id desc', limit=1)
                 if not latest or str(latest.current_value) != str(new_val):
-                    if not latest and old_vals['contract_type_name']:
+                    if not latest:
                         self.env['contract.history'].sudo().create({
                             'employee': str(record.employee_id.id),
                             'employee_name': record.employee_id.name,

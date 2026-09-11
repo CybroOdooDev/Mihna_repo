@@ -1,0 +1,9 @@
+id,name,model_id,group_id/id,operation,domain
+access_department_history_base_user,department.history.user,department.history,base.group_user,r,
+access_salary_history_base_user,salary.history.user,salary.history,base.group_user,r,
+access_hourly_cost_base_user,hourly.cost.user,hourly.cost,base.group_user,r,
+access_contract_history_base_user,contract.history.user,contract.history,base.group_user,r,
+access_department_history_manager,department.history.manager,department.history,hr.group_hr_manager,crud,
+access_salary_history_manager,salary.history.manager,salary.history,hr.group_hr_manager,crud,
+access_hourly_cost_manager,hourly.cost.manager,hourly.cost,hr.group_hr_manager,crud,
+access_contract_history_manager,contract.history.manager,contract.history,hr.group_hr_manager,crud,

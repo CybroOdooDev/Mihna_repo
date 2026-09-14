@@ -1,0 +1,5 @@
+id,name,model_id,group_id/id,operation,domain
+access_reg_categories_user,reg.categories user,reg.categories,base.group_user,r,
+access_reg_categories_manager,reg.categories manager,reg.categories,hr_attendance.group_hr_attendance_manager,crud,
+access_attendance_regular_user,attendance.regular user,attendance.regular,base.group_user,cru,"[('employee_id.user_id', '=', user.id)]"
+access_attendance_regular_manager,attendance.regular manager,attendance.regular,hr_attendance.group_hr_attendance_manager,crud,

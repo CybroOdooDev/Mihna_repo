@@ -1,0 +1,201 @@
+# -*- coding: utf-8 -*-
+#############################################################################
+#    A part of OpenHRMS Project <https://www.openhrms.com>
+#
+#    Cybrosys Technologies Pvt. Ltd.
+#
+#    Copyright (C) 2025-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
+#
+#    You can modify it under the terms of the GNU LESSER
+#    GENERAL PUBLIC LICENSE (LGPL v3), Version 3.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
+#
+#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
+#    (LGPL v3) along with this program.
+#    If not, see <http://www.gnu.org/licenses/>.
+#
+###############################################################################
+from datetime import date
+from odoo import api, fields, models, _
+from odoo.exceptions import UserError, ValidationError
+
+
+class EmployeeVerification(models.Model):
+    """Creates the model Employee Verification"""
+    _name = 'employee.verification'
+    _inherit = ['mail.thread', 'mail.activity.mixin']
+    _description = "Employee Verification"
+
+    @api.constrains('expected_date')
+    def onchange_expected_date(self):
+        self.ensure_one()
+        if self.expected_date and (self.assigned_date > self.expected_date):
+            raise ValidationError(_("The expected date should be in the future compared to the assigned date."))
+
+    name = fields.Char(string='ID', readonly=True, copy=False,
+                       help="Verification Id")
+    employee_id = fields.Many2one('hr.employee', string='Employee',
+                                  required=True,
+                                  help='You can choose the employee for '
+                                       'background verification')
+    address_id = fields.Many2one(related='employee_id.address_id',
+                                 string='Work Address', readonly=False,
+                                 help="Work address of the employee")
+    private_street = fields.Char(
+        related='employee_id.private_street',
+        string='Private Street',
+        readonly=False,
+        help="Private street address of the employee")
+    private_street2 = fields.Char(
+        related='employee_id.private_street2',
+        string='Private Street2',
+        readonly=False,
+        help="Private street2 address of the employee")
+    private_city = fields.Char(
+        related='employee_id.private_city',
+        string='Private City',
+        readonly=False,
+        help="Private city of the employee")
+    private_state_id = fields.Many2one(
+        related='employee_id.private_state_id',
+        string='Private State',
+        readonly=False,
+        help="Private state of the employee")
+    private_zip = fields.Char(
+        related='employee_id.private_zip',
+        string='Private Zip',
+        readonly=False,
+        help="Private zip of the employee")
+    private_country_id = fields.Many2one(
+        related='employee_id.private_country_id',
+        string='Private Country',
+        readonly=False,
+        help="Private country of the employee")
+
+    candidate_street = fields.Char(
+        string='Street', compute='_compute_candidate_address_display')
+    candidate_street2 = fields.Char(
+        string='Street 2', compute='_compute_candidate_address_display')
+    candidate_city = fields.Char(
+        string='City', compute='_compute_candidate_address_display')
+    candidate_state_id = fields.Many2one(
+        'res.country.state', string='State', compute='_compute_candidate_address_display')
+    candidate_zip = fields.Char(
+        string='Zip', compute='_compute_candidate_address_display')
+    candidate_country_id = fields.Many2one(
+        'res.country', string='Country', compute='_compute_candidate_address_display')
+    has_candidate_address = fields.Boolean(
+        string='Has Candidate Address', compute='_compute_candidate_address_display')
+
+    @api.depends('employee_id.private_street', 'employee_id.private_street2',
+                 'employee_id.private_city', 'employee_id.private_state_id',
+                 'employee_id.private_zip', 'employee_id.private_country_id',
+                 'address_id', 'address_id.street', 'address_id.city')
+    def _compute_candidate_address_display(self):
+        for rec in self:
+            emp = rec.sudo().employee_id
+            if emp and (emp.private_street or emp.private_city):
+                rec.candidate_street = emp.private_street
+                rec.candidate_street2 = emp.private_street2
+                rec.candidate_city = emp.private_city
+                rec.candidate_state_id = emp.private_state_id
+                rec.candidate_zip = emp.private_zip
+                rec.candidate_country_id = emp.private_country_id
+                rec.has_candidate_address = True
+            elif rec.address_id and (rec.address_id.street or rec.address_id.city):
+                rec.candidate_street = rec.address_id.street
+                rec.candidate_street2 = rec.address_id.street2
+                rec.candidate_city = rec.address_id.city
+                rec.candidate_state_id = rec.address_id.state_id
+                rec.candidate_zip = rec.address_id.zip
+                rec.candidate_country_id = rec.address_id.country_id
+                rec.has_candidate_address = True
+            else:
+                rec.candidate_street = False
+                rec.candidate_street2 = False
+                rec.candidate_city = False
+                rec.candidate_state_id = False
+                rec.candidate_zip = False
+                rec.candidate_country_id = False
+                rec.has_candidate_address = False
+    assigned_id = fields.Many2one('res.users', string='Assigned By',
+                                  readonly=True,
+                                  default=lambda self: self.env.uid,
+                                  help="Assigned Login User")
+    agency_id = fields.Many2one('res.partner', string='Agency',
+                                domain=[('verification_agent', '=', True)],
+                                help='You can choose a Verification Agent')
+    resume_ids = fields.Many2many('ir.attachment',
+                                  string="Resume of Applicant",
+                                  help='You can attach the copy of your '
+                                       'document',
+                                  copy=False)
+    description_by_agency = fields.Char(string='Description', readonly=True,
+                                        help="Description by agency")
+    assigned_date = fields.Date(string="Assigned Date", readonly=True,
+                                default=fields.Date.context_today,
+                                help="Record Assigned Date")
+    expected_date = fields.Date(string='Expected Date',
+                                help='Expected date of completion of '
+                                     'background verification')
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('assign', 'Assigned'),
+        ('submit', 'Verification Completed'),
+    ], string='Status', default='draft',
+        help="State for the Employee Verification")
+    company_id = fields.Many2one('res.company', string='Company',
+                                 default=lambda self: self.env.company,
+                                 help="Company of the current record")
+    agency_attachment_ids = fields.Many2many('ir.attachment',
+                                             'agency_attachments_rel',
+                                             'verification', 'attachment',
+                                             string="Agency Attachment",
+                                             help='Attachment from the agency',
+                                             copy=False, readonly=True)
+
+    def action_assign_statusbar(self):
+        """Method action_assign_statusbar will assign the verification
+        of the contact to an agency and mail to agency"""
+        if self.agency_id:
+            if self.has_candidate_address or self.resume_ids:
+                for file in self.resume_ids:
+                    file.public=True
+                self.state = 'assign'
+                template = self.env.ref(
+                    'employee_background.assign_agency_email_template')
+                self.env['mail.template'].browse(template.id).send_mail(
+                    self.id,
+                    force_send=True)
+            else:
+                raise UserError(
+                    _("There should be at least address or resume"
+                      " of the employee."))
+        else:
+            raise UserError(
+                _("Agency is not assigned. Please select one of the Agency."))
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Supering the create method of the model Employee Verification and
+        also adding verification_id into the vals for creating the record."""
+        for vals in vals_list:
+            seq = self.env['ir.sequence'].next_by_code(
+                'employee.verification') or '/'
+            vals['name'] = seq
+        return super(EmployeeVerification, self).create(vals_list)
+
+    def unlink(self):
+        """Supering the unlink method of the model Employee Verification to
+        raise an error when unlinking the record in model which is not in draft
+        state"""
+        for record in self:
+            if record.state != 'draft':
+                raise UserError(
+                    _('You cannot delete the verification created.'))
+        return super(EmployeeVerification, self).unlink()

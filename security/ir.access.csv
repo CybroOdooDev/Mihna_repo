@@ -1,0 +1,2 @@
+id,name,model_id,group_id/id,operation
+access_employee_verification_manager,access.employee.verification.manager,employee.verification,hr.group_hr_manager,crud

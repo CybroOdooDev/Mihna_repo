@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 #############################################################################
-#    A part of Open HRMS Project <https://www.openhrms.com>
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
@@ -15,13 +14,8 @@
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
 #
-#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
-#    (LGPL v3) along with this program.
-#    If not, see <http://www.gnu.org/licenses/>.
-#
 #############################################################################
 from odoo import api, fields, models, _
-# from odoo.addons import decimal_precision as dp
 from odoo.exceptions import UserError, ValidationError
 from odoo.tools.safe_eval import safe_eval
 
@@ -173,7 +167,6 @@ class HrSalaryRule(models.Model):
             children_rules += rule.child_ids._recursive_search_of_rules()
         return [(rule.id, rule.sequence) for rule in self] + children_rules
 
-    # TODO should add some checks on the type of result (should be float)
     def _compute_rule(self, localdict):
         """
         :param localdict: dictionary containing the environement in which to

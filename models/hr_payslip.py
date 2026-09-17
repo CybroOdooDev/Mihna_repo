@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 #############################################################################
-#    A part of Open HRMS Project <https://www.openhrms.com>
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
@@ -14,10 +13,6 @@
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
-#
-#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
-#    (LGPL v3) along with this program.
-#    If not, see <http://www.gnu.org/licenses/>.
 #
 #############################################################################
 import re
@@ -157,6 +152,14 @@ class HrPayslip(models.Model):
 
     @api.model
     def _get_daily_rate(self, contract, date_from, date_to, total_days=30.0):
+        """Calculate the daily wage rate for an employee.
+
+        @param contract: hr.version record
+        @param date_from: Start date of the period
+        @param date_to: End date of the period
+        @param total_days: Total days in the payroll period (defaults to 30.0)
+        @return: float representing daily rate
+        """
         payroll_days = self._get_payroll_days(contract, date_from, date_to, total_days)
         if payroll_days:
             return self._get_contract_wage(contract) / payroll_days
@@ -182,6 +185,17 @@ class HrPayslip(models.Model):
 
     @api.model
     def _compute_worked_day_amount(self, worked_day_dict, contract, date_from, date_to, total_days=30.0):
+        """Compute the monetary amount for a worked day line.
+
+        Calculates amount as daily rate multiplied by the number of days if the worked day is paid.
+
+        @param worked_day_dict: Dictionary containing worked day details
+        @param contract: hr.version record
+        @param date_from: Start date of the period
+        @param date_to: End date of the period
+        @param total_days: Total days in the payroll period
+        @return: float representing the computed monetary amount
+        """
         if self._is_paid_worked_day(worked_day_dict):
             daily_rate = self._get_daily_rate(contract, date_from, date_to, total_days)
             return daily_rate * worked_day_dict.get('number_of_days', 0.0)
@@ -226,6 +240,7 @@ class HrPayslip(models.Model):
             comp_lines = payslip.line_ids.filtered(lambda l: l.category_id.code == 'COMP' or l.code == 'COMP' or _name_has_word(l, 'employer') or _name_has_word(l, 'company'))
             payslip.employer_cost = sum(comp_lines.mapped('total'))
 
+    @api.depends('line_ids', 'line_ids.category_id', 'line_ids.total')
     def _compute_details_by_salary_rule_category_ids(self):
         """Compute function for Salary Rule Category for getting
          all Categories"""
@@ -353,7 +368,7 @@ class HrPayslip(models.Model):
         }
 
     def unlink(self):
-        """Function for unlink the Payslip"""
+        """Prevent deletion of payslips that are not in Draft or Canceled state."""
         if any(self.filtered(
                 lambda payslip: payslip.state not in ('draft', 'cancel'))):
             raise UserError(
@@ -361,7 +376,6 @@ class HrPayslip(models.Model):
                   ))
         return super(HrPayslip, self).unlink()
 
-    # TODO move this function into hr_contract module, on hr.employee object
     @api.model
     def get_contract(self, employee, date_from, date_to):
         """
@@ -387,7 +401,7 @@ class HrPayslip(models.Model):
         return self.env['hr.version'].search(clause_final).ids
 
     def action_compute_sheet(self):
-        """Function for compute Payslip sheet"""
+        """Compute the payslip lines and generate the payslip reference number."""
         for payslip in self:
             number = payslip.number or self.env['ir.sequence'].next_by_code(
                 'salary.slip')
@@ -402,6 +416,7 @@ class HrPayslip(models.Model):
             lines = [(0, 0, line) for line in
                      self._get_payslip_lines(contract_ids, payslip.id)]
             payslip.write({'line_ids': lines, 'number': number})
+        return True
 
     @api.model
     def get_worked_day_lines(self, contracts, date_from, date_to):
@@ -605,6 +620,7 @@ class HrPayslip(models.Model):
             usability purposes"""
 
             def __getattr__(self, attr):
+                """Attribute access delegating to the underlying payslip object."""
                 try:
                     return getattr(self.dict, attr)
                 except AttributeError:
@@ -861,7 +877,7 @@ class HrPayslip(models.Model):
 
     @api.onchange('date_from')
     def onchange_date_from(self):
-        """Function for getting contract for employee"""
+        """Recompute worked day lines and input lines when date_from changes."""
         if not self.date_from or not self.date_to:
             return
         date_from = self.date_from
@@ -869,7 +885,7 @@ class HrPayslip(models.Model):
         contract_ids = []
         if self.contract_id:
             contract_ids = self.contract_id.ids
-        # # computation of the salary input
+        # computation of the salary input
         contracts = self.env['hr.version'].browse(contract_ids)
         worked_days_line_ids = self.get_worked_day_lines(contracts, date_from,
                                                          date_to)
@@ -887,7 +903,7 @@ class HrPayslip(models.Model):
 
     @api.onchange('date_to')
     def onchange_date_to(self):
-        """Function for getting contract for employee"""
+        """Recompute worked day lines and input lines when date_to changes."""
         if (not self.employee_id) or (not self.date_from) or (not self.date_to):
             return
         date_from = self.date_from

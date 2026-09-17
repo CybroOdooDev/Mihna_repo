@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 #############################################################################
-#    A part of Open HRMS Project <https://www.openhrms.com>
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
@@ -15,17 +14,13 @@
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
 #
-#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
-#    (LGPL v3) along with this program.
-#    If not, see <http://www.gnu.org/licenses/>.
-#
 #############################################################################
 {
-    'name': 'Odoo 19 HR Payroll',
-    'version': '19.5.1.0.0',
+    'name': 'Odoo 20 HR Payroll',
+    'version': '20.0.1.0.0',
     'category': 'Human Resources',
-    'summary': """Odoo 19 HR Payroll, Odoo19 Payroll, Payroll, Odoo Payroll,
-    Payroll V19, Odoo19, Payroll Management, Odoo19 Payslip""",
+    'summary': """Odoo 20 HR Payroll, Odoo20 Payroll, Payroll, Odoo Payroll,
+    Payroll V20, Odoo20, Payroll Management, Odoo20 Payslip""",
     'description': """The system automates payroll management by streamlining
      key processes such as calculating employee salaries, deductions, and 
      benefits based on predefined rules and regulations. It also facilitates
@@ -44,6 +39,7 @@
     'data': [
         'data/ir_module_category_data.xml',
         'security/hr_payroll_community_security.xml',
+        'security/ir.access.csv',
         'data/ir_sequence_data.xml',
         'data/hr_payroll_community_data.xml',
         'wizard/hr_payslip_run_generate_views.xml',
@@ -68,7 +64,6 @@
         'wizard/payslip_confirm_views.xml',
         'report/hr_payslip_report_views.xml',
         'data/mail_template_data.xml',
-        'security/ir.access.csv',
     ],
     'demo': ['data/hr_payroll_community_demo.xml'],
     'images': ['static/description/banner.jpg'],

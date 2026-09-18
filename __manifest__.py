@@ -17,11 +17,11 @@
 #############################################################################
 {
     'name': 'Open HRMS Core',
-    'version': '19.5.2.0.0',
+    'version': '20.0.1.0.0',
     'category': 'Generic Modules/Human Resources',
-    'summary': """Open HRMS Odoo19, HRMS odoo19, Odoo HR, HR Dashboard, 
-     Odoo19 Payroll, HR Management, Odoo Branch, Odoo Loan, Salary Advance, 
-     Odoo19,Payroll,Dashboard,Accounting,HR Kit,HR,Odoo Apps, Odoo19""",
+    'summary': """Open HRMS Odoo20, HRMS odoo20, Odoo HR, HR Dashboard, 
+     Odoo20 Payroll, HR Management, Odoo Branch, Odoo Loan, Salary Advance, 
+     Odoo20,Payroll,Dashboard,Accounting,HR Kit,HR,Odoo Apps, Odoo20""",
     'description': """Openhrms, Main module of Open HRMS,Payroll, Payroll 
      Accounting, Expense, Dashboard,Employees, Employee Document, Resignation, 
      Salary Advance, Loan Management, Gratuity, Service Request, Gosi, 

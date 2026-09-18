@@ -134,7 +134,7 @@
                                     <div class="input-group">
                                         <div class="input-group-prepend">
                                             <div class="input-group-text">
-                                                <i class="fa fa-search"/>
+                                                <i class="oi" data-icon="search" style="color: #ffffff !important;"/>
                                             </div>
                                         </div>
                                         <input type="search"
@@ -167,7 +167,7 @@
                                                  t-att-title="app.name"
                                                  t-attf-src="{{app.webIconData}}"
                                             />
-                                    <b class="a_app_menu_title"><t t-esc="app.name"/></b>
+                                    <b class="a_app_menu_title"><t t-out="app.name"/></b>
                                 </a>
                             </t>
                         </div>
@@ -177,7 +177,7 @@
                     <div t-if="this.state.isSearchOpen" class="custom-search-overlay" t-on-click="this.closeCustomSearchIfOutside">
                         <div class="custom-search-modal">
                             <div class="custom-search-header">
-                                <i class="fa fa-search"/>
+                                <i class="oi" data-icon="search"/>
                                 <input type="text" t-ref="this.searchInput" t-on-input="this._searchMenusSchedule" t-on-keydown="this.onSearchKeyDown" placeholder="Search apps..." autocomplete="off"/>
                                 <div class="esc-hint" t-on-click="this.closeCustomSearch">esc</div>
                             </div>
@@ -186,7 +186,7 @@
                                 <t t-foreach="this.state.results" t-as="result" t-key="result.id">
                                     <a t-attf-class="custom-search-item {{result_index == this.state.activeIndex ? 'active' : ''}}" t-attf-href="/odoo/action-{{result.actionID}}#menu_id={{result.id}}" t-on-click="this.closeCustomSearch">
                                         <img t-if="result.webIconData" t-attf-src="data:image/png;base64,{{result.webIconData}}"/>
-                                        <i t-else="" class="fa fa-folder-o"/>
+                                        <i t-else="" class="oi" data-icon="folder"/>
                                         <span t-out="result.name"/>
                                         <div class="item-enter">↵</div>
                                     </a>

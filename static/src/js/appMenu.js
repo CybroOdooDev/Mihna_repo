@@ -160,7 +160,7 @@ patch(NavBar.prototype, {
                     overlay.style.display = 'flex';
                     overlay.style.alignItems = 'center';
                     overlay.style.justifyContent = 'center';
-                    overlay.innerHTML = '<i class="fa fa-circle-o-notch fa-spin fa-3x fa-fw" style="color: #1B5298;"></i>';
+                    overlay.innerHTML = '<i class="oi oi-spin oi-3x" data-icon="autorenew" style="color: #1B5298;"></i>';
                     
                     // Odoo's ActionManager completely destroys and replaces its child DOM when the new view is ready.
                     // By appending our overlay to the top-level view wrapper (actionManager.firstElementChild), 

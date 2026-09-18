@@ -319,7 +319,9 @@ body.o_dark {
 }
 
 /* Resize the standard bell icon in the systray to match other icons */
-.o_menu_systray i.fa-bell {
+.o_menu_systray i.fa-bell,
+.o_menu_systray [data-icon="notifications"],
+.o_menu_systray [data-icon="bell"] {
     font-size: 1.15rem !important;
 }
 

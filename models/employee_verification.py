@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 #############################################################################
-#    A part of OpenHRMS Project <https://www.openhrms.com>
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
-#    Copyright (C) 2025-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
+#    Copyright (C) 2026-TODAY Cybrosys Technologies(<https://www.cybrosys.com>)
 #    Author: Cybrosys Techno Solutions(<https://www.cybrosys.com>)
 #
 #    You can modify it under the terms of the GNU LESSER
@@ -15,11 +14,7 @@
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
 #
-#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
-#    (LGPL v3) along with this program.
-#    If not, see <http://www.gnu.org/licenses/>.
-#
-###############################################################################
+#############################################################################
 from datetime import date
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError, ValidationError
@@ -31,18 +26,52 @@ class EmployeeVerification(models.Model):
     _inherit = ['mail.thread', 'mail.activity.mixin']
     _description = "Employee Verification"
 
-    @api.constrains('expected_date')
-    def onchange_expected_date(self):
-        self.ensure_one()
-        if self.expected_date and (self.assigned_date > self.expected_date):
-            raise ValidationError(_("The expected date should be in the future compared to the assigned date."))
-
+    # -------------------------------------------------------------------------
+    # FIELDS DECLARATION
+    # -------------------------------------------------------------------------
     name = fields.Char(string='ID', readonly=True, copy=False,
                        help="Verification Id")
+    state = fields.Selection([
+        ('draft', 'Draft'),
+        ('assign', 'Assigned'),
+        ('submit', 'Verification Completed'),
+    ], string='Status', default='draft',
+        help="State for the Employee Verification")
     employee_id = fields.Many2one('hr.employee', string='Employee',
                                   required=True,
                                   help='You can choose the employee for '
                                        'background verification')
+    agency_id = fields.Many2one('res.partner', string='Agency',
+                                domain=[('verification_agent', '=', True)],
+                                help='You can choose a Verification Agent')
+    assigned_id = fields.Many2one('res.users', string='Assigned By',
+                                  readonly=True,
+                                  default=lambda self: self.env.uid,
+                                  help="Assigned Login User")
+    assigned_date = fields.Date(string="Assigned Date", readonly=True,
+                                default=fields.Date.context_today,
+                                help="Record Assigned Date")
+    expected_date = fields.Date(string='Expected Date',
+                                help='Expected date of completion of '
+                                     'background verification')
+    company_id = fields.Many2one('res.company', string='Company',
+                                 default=lambda self: self.env.company,
+                                 help="Company of the current record")
+    resume_ids = fields.Many2many('ir.attachment',
+                                  string="Resume of Applicant",
+                                  help='You can attach the copy of your '
+                                       'document',
+                                  copy=False)
+    agency_attachment_ids = fields.Many2many('ir.attachment',
+                                             'agency_attachments_rel',
+                                             'verification', 'attachment',
+                                             string="Agency Attachment",
+                                             help='Attachment from the agency',
+                                             copy=False, readonly=True)
+    description_by_agency = fields.Char(string='Description', readonly=True,
+                                        help="Description by agency")
+
+    # Related Employee Address Fields
     address_id = fields.Many2one(related='employee_id.address_id',
                                  string='Work Address', readonly=False,
                                  help="Work address of the employee")
@@ -77,6 +106,7 @@ class EmployeeVerification(models.Model):
         readonly=False,
         help="Private country of the employee")
 
+    # Computed Candidate Address Fields
     candidate_street = fields.Char(
         string='Street', compute='_compute_candidate_address_display')
     candidate_street2 = fields.Char(
@@ -92,11 +122,16 @@ class EmployeeVerification(models.Model):
     has_candidate_address = fields.Boolean(
         string='Has Candidate Address', compute='_compute_candidate_address_display')
 
+    # -------------------------------------------------------------------------
+    # COMPUTE METHODS
+    # -------------------------------------------------------------------------
     @api.depends('employee_id.private_street', 'employee_id.private_street2',
                  'employee_id.private_city', 'employee_id.private_state_id',
                  'employee_id.private_zip', 'employee_id.private_country_id',
                  'address_id', 'address_id.street', 'address_id.city')
     def _compute_candidate_address_display(self):
+        """Compute candidate address display values from either the employee's
+        private address or fallback to their work address."""
         for rec in self:
             emp = rec.sudo().employee_id
             if emp and (emp.private_street or emp.private_city):
@@ -123,49 +158,51 @@ class EmployeeVerification(models.Model):
                 rec.candidate_zip = False
                 rec.candidate_country_id = False
                 rec.has_candidate_address = False
-    assigned_id = fields.Many2one('res.users', string='Assigned By',
-                                  readonly=True,
-                                  default=lambda self: self.env.uid,
-                                  help="Assigned Login User")
-    agency_id = fields.Many2one('res.partner', string='Agency',
-                                domain=[('verification_agent', '=', True)],
-                                help='You can choose a Verification Agent')
-    resume_ids = fields.Many2many('ir.attachment',
-                                  string="Resume of Applicant",
-                                  help='You can attach the copy of your '
-                                       'document',
-                                  copy=False)
-    description_by_agency = fields.Char(string='Description', readonly=True,
-                                        help="Description by agency")
-    assigned_date = fields.Date(string="Assigned Date", readonly=True,
-                                default=fields.Date.context_today,
-                                help="Record Assigned Date")
-    expected_date = fields.Date(string='Expected Date',
-                                help='Expected date of completion of '
-                                     'background verification')
-    state = fields.Selection([
-        ('draft', 'Draft'),
-        ('assign', 'Assigned'),
-        ('submit', 'Verification Completed'),
-    ], string='Status', default='draft',
-        help="State for the Employee Verification")
-    company_id = fields.Many2one('res.company', string='Company',
-                                 default=lambda self: self.env.company,
-                                 help="Company of the current record")
-    agency_attachment_ids = fields.Many2many('ir.attachment',
-                                             'agency_attachments_rel',
-                                             'verification', 'attachment',
-                                             string="Agency Attachment",
-                                             help='Attachment from the agency',
-                                             copy=False, readonly=True)
 
+    # -------------------------------------------------------------------------
+    # CONSTRAINS METHODS
+    # -------------------------------------------------------------------------
+    @api.constrains('expected_date', 'assigned_date')
+    def onchange_expected_date(self):
+        """Validate that the expected completion date is greater than or equal
+        to the assigned date."""
+        for record in self:
+            if record.expected_date and record.assigned_date and (record.assigned_date > record.expected_date):
+                raise ValidationError(_("The expected date should be in the future compared to the assigned date."))
+
+    # -------------------------------------------------------------------------
+    # CRUD METHODS
+    # -------------------------------------------------------------------------
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Supering the create method of the model Employee Verification and
+        also adding verification_id into the vals for creating the record."""
+        for vals in vals_list:
+            seq = self.env['ir.sequence'].next_by_code(
+                'employee.verification') or '/'
+            vals['name'] = seq
+        return super().create(vals_list)
+
+    def unlink(self):
+        """Supering the unlink method of the model Employee Verification to
+        raise an error when unlinking the record in model which is not in draft
+        state."""
+        for record in self:
+            if record.state != 'draft':
+                raise UserError(
+                    _('You cannot delete the verification created.'))
+        return super().unlink()
+
+    # -------------------------------------------------------------------------
+    # ACTION METHODS
+    # -------------------------------------------------------------------------
     def action_assign_statusbar(self):
         """Method action_assign_statusbar will assign the verification
-        of the contact to an agency and mail to agency"""
+        of the contact to an agency and mail to agency."""
         if self.agency_id:
             if self.has_candidate_address or self.resume_ids:
                 for file in self.resume_ids:
-                    file.public=True
+                    file.public = True
                 self.state = 'assign'
                 template = self.env.ref(
                     'employee_background.assign_agency_email_template')
@@ -179,23 +216,3 @@ class EmployeeVerification(models.Model):
         else:
             raise UserError(
                 _("Agency is not assigned. Please select one of the Agency."))
-
-    @api.model_create_multi
-    def create(self, vals_list):
-        """Supering the create method of the model Employee Verification and
-        also adding verification_id into the vals for creating the record."""
-        for vals in vals_list:
-            seq = self.env['ir.sequence'].next_by_code(
-                'employee.verification') or '/'
-            vals['name'] = seq
-        return super(EmployeeVerification, self).create(vals_list)
-
-    def unlink(self):
-        """Supering the unlink method of the model Employee Verification to
-        raise an error when unlinking the record in model which is not in draft
-        state"""
-        for record in self:
-            if record.state != 'draft':
-                raise UserError(
-                    _('You cannot delete the verification created.'))
-        return super(EmployeeVerification, self).unlink()

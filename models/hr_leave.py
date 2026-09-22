@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 #############################################################################
-#    A part of Open HRMS Project <https://www.openhrms.com>
 #
 #    Cybrosys Technologies Pvt. Ltd.
 #
@@ -14,10 +13,6 @@
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU LESSER GENERAL PUBLIC LICENSE (LGPL v3) for more details.
-#
-#    You should have received a copy of the GNU LESSER GENERAL PUBLIC LICENSE
-#    (LGPL v3) along with this program.
-#    If not, see <http://www.gnu.org/licenses/>.
 #
 #############################################################################
 from datetime import timedelta
@@ -76,20 +71,19 @@ class HrLeave(models.Model):
                 rec.overlapping_leaves_ids = False
 
     def action_approve(self, check_state=True):
-        """This method is used to approve leave requests. It checks if the
-        current user has the necessary permissions, ensures that the leave
-        request is in the 'confirm' state, and takes appropriate action
-        based on the presence of pending tasks."""
-        if not self.env.user.has_group('hr_holidays.group_hr_holidays_user'):
-            raise UserError(
-                _('Only an HR Officer or Manager can approve leave requests.'))
-        for holiday in self:
-            if holiday.state != 'confirm':
+        """This method is used to approve leave requests. If there are pending tasks,
+        opens task reassignment; otherwise delegates to super().action_approve."""
+        has_tasks = any(holiday.pending_task_ids for holiday in self)
+        if has_tasks:
+            if not self.env.user.has_group('hr_holidays.group_hr_holidays_user'):
                 raise UserError(
-                    _('Leave request must be confirmed ("To Approve") in '
-                      'order to approve it.'))
-            if holiday.pending_task_ids:
-                if holiday.user_id:
+                    _('Only an HR Officer or Manager can approve leave requests.'))
+            for holiday in self:
+                if holiday.state != 'confirm':
+                    raise UserError(
+                        _('Leave request must be confirmed ("To Approve") in '
+                          'order to approve it.'))
+                if holiday.pending_task_ids and holiday.user_id:
                     ctx = dict(self.env.context or {})
                     ctx.update({
                         'default_leave_req_id': self.id,
@@ -102,8 +96,7 @@ class HrLeave(models.Model):
                         'target': 'new',
                         'context': ctx,
                     }
-            else:
-                holiday._action_validate(check_state=check_state)
+        return super().action_approve(check_state=check_state)
 
     def action_book_ticket(self):
         """Open the form view to book a flight ticket for the current
@@ -190,6 +183,8 @@ class HrLeave(models.Model):
 
     @api.depends('employee_id', 'work_entry_type_id', 'virtual_remaining_leaves')
     def _compute_remaining_leaves(self):
+        """Compute the remaining legal leaves based on the employee's
+        available time off for the selected time type."""
         for leave in self:
             if not leave.employee_id or not leave.work_entry_type_id:
                 leave.remaining_leaves = 0.0

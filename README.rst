@@ -1,6 +1,19 @@
-.. image:: https://img.shields.io/badge/license-LGPL--3-green.svg
-    :target: https://www.gnu.org/licenses/lgpl-3.0-standalone.html
+.. |license| image:: https://img.shields.io/badge/license-LGPL--3-blue.svg
+    :target: http://www.gnu.org/licenses/lgpl-3.0-standalone.html
     :alt: License: LGPL-3
+
+.. |odoo| image:: https://img.shields.io/badge/Odoo-20.0-875A7B.svg
+    :target: https://www.odoo.com
+    :alt: Odoo 20.0
+
+.. |edition| image:: https://img.shields.io/badge/Edition-Community-1ABC9C.svg
+    :alt: Community Edition
+
+.. |maintainer| image:: https://img.shields.io/badge/maintainer-Cybrosys-875A7B.svg
+    :target: https://cybrosys.com
+    :alt: Maintainer: Cybrosys Techno Solutions
+
+|license| |odoo| |edition| |maintainer|
 
 Open HRMS Vacation Management
 =============================
@@ -9,42 +22,46 @@ Vacation Management for Open HRMS.
 This module encompasses functionalities for efficiently handling and managing
 employee vacations within the organization.
 
-Installation
-============
-- www.odoo.com/documentation/19.0/setup/install.html
-- Install our custom addon
+Key Features
+------------
 
-License
--------
-General Public License, v3.0 (LGPL v3).
-(https://www.gnu.org/licenses/lgpl-3.0-standalone.html)
+* Approval of remaining leaves.
+* Overlapping leaves.
+* Vacation travel expense.
+* Pending task update and re-assign task.
+* Leave notification
+
+Installation
+------------
+No external dependencies.
+
+Configuration
+-------------
+No additional configuration is required.
 
 Company
 -------
 * `Cybrosys Techno Solutions <https://cybrosys.com/>`__
 
-Credits
+License
 -------
-* Developer: (V18) Raneesha M K
-             (V17) Dhanya Babu,
-             (V19) Rheshikes P K
-Contact : odoo@cybrosys.com
+Lesser General Public License, Version 3 (LGPL v3).
+(http://www.gnu.org/licenses/lgpl-3.0-standalone.html)
 
-Website:
-https://www.openhrms.com
-https://www.cybrosys.com
-
-Bug Tracker
------------
-Bugs are tracked on GitHub Issues. In case of trouble, please check there if your issue has already been reported.
+Contacts
+--------
+* Mail Contact : odoo@cybrosys.com
+* Website : https://cybrosys.com
 
 Maintainer
 ==========
 .. image:: https://cybrosys.com/images/logo.png
    :target: https://cybrosys.com
 
-For support and more information, please visit https://www.cybrosys.com
 
-Further information
-===================
-HTML Description: `<static/description/index.html>`__
+This module is maintained by Cybrosys Technologies.
+
+For support and more information, please visit `Our Website <https://cybrosys.com/>`__
+
+
+

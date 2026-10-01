@@ -44,6 +44,56 @@ _OMAN_TZ = ZoneInfo('Asia/Muscat')
 MAX_SUBMIT_ATTEMPTS = 3
 SUBMIT_RETRY_DELAY = 5  # seconds between attempts
 
+# UN/ECE Rec 20 unit codes (https://docs.peppol.eu/poac/om/pint-om/trn-invoice/codelist/UNECERec20/)
+UOM_TO_UNECE_CODE = {
+    'uom.product_uom_unit': 'H87',       # piece / each (preferred by Oman OTA)
+    'uom.product_uom_dozen': 'DZN',
+    'uom.product_uom_kgm': 'KGM',
+    'uom.product_uom_gram': 'GRM',
+    'uom.product_uom_day': 'DAY',
+    'uom.product_uom_hour': 'HUR',
+    'uom.product_uom_minute': 'MIN',
+    'uom.product_uom_ton': 'TNE',
+    'uom.product_uom_meter': 'MTR',
+    'uom.product_uom_km': 'KMT',
+    'uom.product_uom_cm': 'CMT',
+    'uom.product_uom_litre': 'LTR',
+    'uom.product_uom_cubic_meter': 'MTQ',
+    'uom.product_uom_lb': 'LBR',
+    'uom.product_uom_oz': 'ONZ',
+    'uom.product_uom_inch': 'INH',
+    'uom.product_uom_foot': 'FOT',
+    'uom.product_uom_mile': 'SMI',
+    'uom.product_uom_floz': 'OZA',
+    'uom.product_uom_qt': 'QTL',
+    'uom.product_uom_gal': 'GLL',
+    'uom.product_uom_cubic_inch': 'INQ',
+    'uom.product_uom_cubic_foot': 'FTQ',
+    'uom.product_uom_square_meter': 'MTK',
+    'uom.product_uom_square_foot': 'FTK',
+    'uom.product_uom_yard': 'YRD',
+    'uom.product_uom_millimeter': 'MMT',
+    'uom.product_uom_kwh': 'KWH',
+}
+
+
+def _get_uom_unece_code(uom, is_service=False):
+    """ Map a product UoM to its UN/ECE Rec 20 code. Defaults to 'E48' for service items,
+    and 'H87' (piece) for other items. """
+    if is_service:
+        return 'E48'
+    if uom:
+        xmlid = uom.get_external_id()
+        if xmlid and uom.id in xmlid:
+            return UOM_TO_UNECE_CODE.get(xmlid[uom.id], 'H87')
+    return 'H87'
+
+
+def _get_item_type(product):
+    """ BTOM-019 Goods vs Services: 'goods' (or 'G') vs 'services' (or 'SVC').
+    Blank defaults to goods on ConvergeX. """
+    return 'services' if product and product.type == 'service' else 'goods'
+
 
 def _convergex_invoice_number(move):
     """ The invoice_number actually sent to ConvergeX for `move`.
@@ -69,6 +119,7 @@ def _convergex_invoice_datetime(move):
     """
     now_muscat = fields.Datetime.now().replace(tzinfo=ZoneInfo('UTC')).astimezone(_OMAN_TZ)
     return "%s %s" % (fields.Date.to_string(move.invoice_date), now_muscat.strftime('%H:%M'))
+
 
 
 class L10nOmConvergexDocument(models.Model):
@@ -131,42 +182,83 @@ class L10nOmConvergexDocument(models.Model):
         """ Public wrapper around `_action_submit`, callable from view buttons. """
         self._action_submit()
 
+    def _validate_before_submission(self, move, is_b2b):
+        """ Validate line items and partner attributes against Oman Peppol PINT rules before sending to ConvergeX. """
+        company = self.company_id
+        lines = move.invoice_line_ids.filtered(lambda l: l.display_type == 'product')
+        if not lines:
+            raise UserError(_("Invoice %s has no product lines to submit.", move.name))
+
+        for index, line in enumerate(lines, start=1):
+            product = line.product_id
+            item_type = _get_item_type(product)
+            hs_code = (line.l10n_om_hs_code or (product.l10n_om_hs_code if product else '') or '').strip()
+            isic_code = (
+                line.l10n_om_isic_code
+                or (product.l10n_om_isic_code if product else '')
+                or company.l10n_om_default_isic_code
+                or ''
+            ).strip()
+
+            # Rule IBR-079-OM / IBR-080-OM / IBR-174-OM: Full Tax B2B Goods lines require 12-digit HS code
+            if is_b2b and item_type == 'goods':
+                if not hs_code:
+                    raise UserError(_(
+                        "Line %d ('%s'): 12-digit Oman HS Code (item_classification_identifier) is mandatory "
+                        "for Goods lines on B2B / Full Tax invoices. Please set it on the invoice line or the product.",
+                        index, line.name or product.name or '/'
+                    ))
+                if not (hs_code.isdigit() and len(hs_code) == 12):
+                    raise UserError(_(
+                        "Line %d ('%s'): Oman HS Code must be exactly 12 digits, found '%s'.",
+                        index, line.name or product.name or '/', hs_code
+                    ))
+
+            # Rule IBR-081-OM: Full Tax lines require 6-digit ISIC code
+            if is_b2b:
+                if not isic_code:
+                    raise UserError(_(
+                        "Line %d ('%s'): 6-digit Oman ISIC Code (BTOM-033) is required for Full Tax invoices. "
+                        "Please configure the Default Oman ISIC Code in Settings > Accounting > ConvergeX "
+                        "or set it on the line/product.",
+                        index, line.name or product.name or '/'
+                    ))
+                if not (isic_code.isdigit() and len(isic_code) == 6):
+                    raise UserError(_(
+                        "Line %d ('%s'): Oman ISIC Code must be exactly 6 digits, found '%s'.",
+                        index, line.name or product.name or '/', isic_code
+                    ))
+
     def _action_submit(self):
-        """ Sync the buyer to ConvergeX's Customer Master, then submit the invoice/credit note.
+        """ Submit the invoice/credit note to ConvergeX, using either Single Entry or legacy two-step workflow.
 
         Retries the whole sequence up to MAX_SUBMIT_ATTEMPTS times on failure (see the module-level
-        comment on that constant) - a genuinely persistent problem (e.g. ConvergeX's Peppol network
-        config not being active, or a real "already exists" name collision with no recoverable
-        record) still ends in 'error' with a clear message; only transient blips self-heal here.
+        comment on that constant) - a genuinely persistent problem still ends in 'error' with a
+        clear message; only transient blips self-heal here.
         """
         for document in self:
             move = document.move_id
             company = document.company_id
             if not (company.l10n_om_convergex_client_id and company.l10n_om_convergex_client_secret):
-                # Same check as account_move.py's action_l10n_om_convergex_submit, repeated here so
-                # the "Retry Submission" button on this document (which calls _action_submit
-                # directly, bypassing that one) also fails immediately and clearly rather than deep
-                # inside the first API call.
                 raise UserError(_(
                     "No ConvergeX Client ID/Client Secret is configured for %(company)s. Please "
                     "enter your credentials in Settings > Accounting > ConvergeX before submitting.",
                     company=company.display_name,
                 ))
+
+            buyer = move.partner_id.commercial_partner_id
+            is_b2b = bool(buyer.is_company)
+            document._validate_before_submission(move, is_b2b)
+
             client = company._l10n_om_convergex_get_client()
             last_error = None
             response = None
 
             for attempt in range(1, MAX_SUBMIT_ATTEMPTS + 1):
                 try:
-                    buyer = move.partner_id.commercial_partner_id
                     try:
                         sync_response = client.sync_customer(move.partner_id._l10n_om_convergex_get_customer_payload())
                     except UserError as sync_error:
-                        # ConvergeX enforces customer_name uniqueness account-wide, not per
-                        # erp_uuid - a rename, or a leftover record from earlier testing sharing
-                        # the same name, can collide even on a partner never synced before. Try to
-                        # recover the real erp_uuid behind that name and retry once before giving
-                        # up on this attempt.
                         if not buyer._l10n_om_convergex_recover_erp_uuid(client):
                             raise
                         sync_response = client.sync_customer(move.partner_id._l10n_om_convergex_get_customer_payload())
@@ -174,15 +266,10 @@ class L10nOmConvergexDocument(models.Model):
                     if customer.get('erp_uuid'):
                         buyer.l10n_om_convergex_erp_uuid = customer['erp_uuid']
 
+                    payload = document._build_invoice_payload(client=client)
                     try:
-                        response = client.create_invoice(document._build_invoice_payload())
+                        response = client.create_invoice(payload)
                     except UserError as create_error:
-                        # Whether ConvergeX explicitly said "already exists", or this was a
-                        # network/timeout error reading the response - either way the invoice may
-                        # already have been created there (observed live: a transient blip on the
-                        # way back can lose a response for a request ConvergeX already processed).
-                        # Try to recover its tracking details before treating this as a real
-                        # failure; if that also comes up empty, surface the original error.
                         try:
                             response = document._recover_existing_invoice(client)
                         except UserError:
@@ -207,37 +294,49 @@ class L10nOmConvergexDocument(models.Model):
     def _recover_existing_invoice(self, client):
         """ Recover this document's tracking details from ConvergeX directly by invoice number,
         since `create_invoice` reported it as already existing there. Uses the fast by-number
-        lookup (includes qr_code) rather than scanning the summary-by-date endpoint, which was
-        observed live taking 40-60+ seconds and degrading further as more invoices accumulate for
-        the same day - a real scalability problem on ConvergeX's side, not just a slow one-off. """
+        lookup (includes qr_code) and fetches compliance evidence to retrieve the internal invoice UUID. """
         self.ensure_one()
         move = self.move_id
+        inv_number = _convergex_invoice_number(move)
         try:
-            return client.get_references_by_number(_convergex_invoice_number(move))
+            ref = client.get_references_by_number(inv_number)
+            if not ref.get('id'):
+                try:
+                    comp = client.get_compliance_evidence(inv_number)
+                    if isinstance(comp, list) and comp and comp[0].get('invoice'):
+                        ref['id'] = comp[0]['invoice']
+                except Exception:
+                    pass
+            return ref
         except UserError:
-            # Fall back to the slow date-range scan only if the fast lookup itself comes up empty -
-            # keeps the door open for a real answer rather than surfacing the original error right
-            # away, while no longer relying on it as the primary path.
             date_str = fields.Date.to_string(move.invoice_date)
             summary = client.get_summary_by_date_range(date_str, date_str)
             for result in summary.get('results') or []:
-                if result.get('invoice_number') == _convergex_invoice_number(move):
+                if result.get('invoice_number') == inv_number:
+                    if not result.get('id'):
+                        try:
+                            comp = client.get_compliance_evidence(inv_number)
+                            if isinstance(comp, list) and comp and comp[0].get('invoice'):
+                                result['id'] = comp[0]['invoice']
+                        except Exception:
+                            pass
                     return result
             raise UserError(_(
                 "ConvergeX reports invoice number '%(number)s' already exists, but it could not be "
                 "recovered by either the by-number lookup or a search of its issue date "
                 "(%(date)s).",
-                number=_convergex_invoice_number(move), date=date_str,
+                number=inv_number, date=date_str,
             ))
 
-    def _build_invoice_payload(self):
-        """ Build the JSON body for POST /api/invoices/create/ from `self.move_id`.
+    def _build_invoice_payload(self, client=None):
+        """ Build the JSON body for ConvergeX invoice create endpoint from `self.move_id`.
 
-        Only the standard-invoice and credit-note profiles are covered - debit notes, self-billing,
-        exempt/reverse-charge, and multi-currency are not built here yet.
+        Includes required line-level fields: UN/ECE Rec 20 unit_of_measure,
+        item_type, item_classification_identifier (Oman HS code), and industrial_classification_code (ISIC).
         """
         self.ensure_one()
         move = self.move_id
+        company = self.company_id
         is_credit_note = move.move_type == 'out_refund'
         buyer = move.partner_id.commercial_partner_id
         is_b2b = bool(buyer.is_company)
@@ -248,9 +347,21 @@ class L10nOmConvergexDocument(models.Model):
         for index, line in enumerate(lines, start=1):
             tax = line.tax_ids[:1]
             tax_rate = tax.amount if tax else 0.0
-            line_items.append({
+            product = line.product_id
+            is_service = product.type == 'service' if product else False
+            item_type = _get_item_type(product)
+            uom_code = _get_uom_unece_code(line.product_uom_id, is_service=is_service)
+            hs_code = (line.l10n_om_hs_code or (product.l10n_om_hs_code if product else '') or '').strip()
+            isic_code = (
+                line.l10n_om_isic_code
+                or (product.l10n_om_isic_code if product else '')
+                or company.l10n_om_default_isic_code
+                or ''
+            ).strip()
+
+            line_dict = {
                 'line_number': index,
-                'item_description': line.name or line.product_id.name or '/',
+                'item_description': line.name or product.name or '/',
                 'quantity': "%.3f" % line.quantity,
                 'unit_price': "%.3f" % line.price_unit,
                 'tax_rate': "%.2f" % tax_rate,
@@ -259,27 +370,26 @@ class L10nOmConvergexDocument(models.Model):
                 'invoice_line_identifier': str(index),
                 'item_net_amount': "%.3f" % line.price_subtotal,
                 'item_vat_category_code': 'S' if tax_rate else 'Z',
-            })
+                'unit_of_measure': uom_code,
+                'item_type': item_type,
+            }
+            if hs_code:
+                line_dict['item_classification_identifier'] = hs_code
+            if isic_code:
+                line_dict['industrial_classification_code'] = isic_code
+
+            line_items.append(line_dict)
             key = "%.2f" % tax_rate
             bucket = tax_totals.setdefault(key, {'tax_category_code': 'S' if tax_rate else 'Z',
                                                   'tax_rate': key, 'taxable_amount': 0.0, 'tax_amount': 0.0})
             bucket['taxable_amount'] += line.price_subtotal
             bucket['tax_amount'] += (line.price_total - line.price_subtotal)
 
-        company = self.company_id
         payload = {
-            # ConvergeX treats invoice_type as mandatory in practice (their own Postman examples
-            # claim it can be omitted - that is not true against the live API; see the Settings
-            # help text for l10n_om_convergex_invoice_type_uuid).
             'invoice_type': (
                 company.l10n_om_convergex_credit_note_type_uuid if is_credit_note
                 else company.l10n_om_convergex_invoice_type_uuid
             ),
-            # Seller fields are documented as "Optional" (auto-populated from your ConvergeX
-            # Company Profile) - sent explicitly here instead, from Odoo's own company record, so
-            # invoice creation doesn't depend on that separate ConvergeX-side profile being complete
-            # (Admin > Companies > PEPPOL Network Setup there is a different place to configure it
-            # and easy to leave incomplete).
             'seller_trading_name': company.name,
             'seller_identifier': company.vat or company.partner_id.vat or '',
             'seller_vat_identifier': company.vat or company.partner_id.vat or '',
@@ -291,9 +401,6 @@ class L10nOmConvergexDocument(models.Model):
             'invoice_number': _convergex_invoice_number(move),
             'invoice_date': _convergex_invoice_datetime(move),
             'currency': move.currency_id.name,
-            # Guaranteed set by _l10n_om_convergex_get_customer_payload(), called on `buyer` just
-            # before this in _action_submit() - never fall back to the partner's own database id
-            # here, since that isn't UUID-shaped and ConvergeX's create-invoice validator rejects it.
             'customer_erp_uuid': buyer.l10n_om_convergex_erp_uuid,
             'subtotal': "%.3f" % move.amount_untaxed,
             'tax_amount': "%.3f" % move.amount_tax,
@@ -304,10 +411,6 @@ class L10nOmConvergexDocument(models.Model):
             'invoice_transaction_type': TRANSACTION_TYPE_B2B if is_b2b else TRANSACTION_TYPE_B2C,
             'specification_identifier': SPECIFICATION_IDENTIFIER,
             'business_process_type': BUSINESS_PROCESS_TYPE,
-            # Without this, ConvergeX leaves the invoice sitting at "Received" indefinitely, only
-            # forwarding it to PEPPOL/the Oman Tax Authority once someone manually clicks "Submit
-            # to Government" in their own portal - confirmed live, not documented as the default
-            # behaviour anywhere in their API docs.
             'send_to_government': True,
             'line_items': line_items,
             'tax_details': [
@@ -324,16 +427,25 @@ class L10nOmConvergexDocument(models.Model):
         if is_credit_note and move.reversed_entry_id:
             preceding = move.reversed_entry_id
             preceding_document = preceding.l10n_om_convergex_document_ids[:1]
+            preceding_uuid = preceding_document.convergex_invoice_id
+            if not preceding_uuid:
+                c = client or company._l10n_om_convergex_get_client()
+                try:
+                    comp = c.get_compliance_evidence(_convergex_invoice_number(preceding))
+                    if isinstance(comp, list) and comp and comp[0].get('invoice'):
+                        preceding_uuid = comp[0]['invoice']
+                        preceding_document.convergex_invoice_id = preceding_uuid
+                except Exception:
+                    pass
             payload.update({
                 'preceding_invoice_number': _convergex_invoice_number(preceding),
                 'preceding_invoice_issue_date': fields.Date.to_string(preceding.invoice_date),
-                # BTOM-031 is required by ConvergeX; only available once the original invoice has
-                # itself been submitted through this same connector and returned an invoice id.
-                'preceding_invoice_uuid': preceding_document.convergex_invoice_id or '',
+                'preceding_invoice_uuid': preceding_uuid or '',
                 'credit_debit_note_reason_code': 'Correction',
             })
 
         return payload
+
 
     def _write_response(self, response):
         """ Store a successful create-invoice response on `self`. """

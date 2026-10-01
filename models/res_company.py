@@ -45,6 +45,12 @@ class ResCompany(models.Model):
         help="Same as the Standard Invoice Type UUID above, but for credit notes. ConvergeX's "
              "documented default is their 'Credit Note (OTA)' type.",
     )
+    l10n_om_default_isic_code = fields.Char(
+        string="Default Oman ISIC Code",
+        size=6,
+        help="6-digit Oman Industrial Classification Code (BTOM-033) for economic activity.",
+    )
+
 
     def _l10n_om_convergex_get_client(self):
         """ Return a `ConvergeXClient` configured with this company's credentials. """

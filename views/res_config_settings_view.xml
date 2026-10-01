@@ -33,7 +33,12 @@
                                 <label string="Credit Note Type UUID" for="l10n_om_convergex_credit_note_type_uuid" class="col-lg-3 o_light_label"/>
                                 <field name="l10n_om_convergex_credit_note_type_uuid"/>
                             </div>
+                            <div class="row">
+                                <label string="Default ISIC Code" for="l10n_om_default_isic_code" class="col-lg-3 o_light_label"/>
+                                <field name="l10n_om_default_isic_code" placeholder="e.g. 471101 (6 digits)"/>
+                            </div>
                             <div class="row mt-2" invisible="not l10n_om_convergex_client_id">
+
                                 <div class="col-lg-9 offset-lg-3">
                                     <button name="action_l10n_om_convergex_test_connection" type="object"
                                             string="Test Connection" class="btn-secondary"/>

@@ -136,6 +136,12 @@ class ConvergeXClient:
         """
         return self._request("POST", "/api/invoices/create/", json=invoice_payload)
 
+    def get_compliance_evidence(self, invoice_number):
+        """ GET /api/invoices/<invoice_number>/compliance/ - retrieve compliance evidence for an invoice,
+        which also exposes the ConvergeX internal invoice UUID. """
+        from urllib.parse import quote
+        return self._request("GET", f"/api/invoices/{quote(invoice_number, safe='')}/compliance/")
+
     def get_references_by_number(self, invoice_number):
         """ GET /api/invoices/by-number/<invoice_number>/references/ - recover the tracking number,
         processed reference, and QR code for an invoice that ConvergeX reports as already created.

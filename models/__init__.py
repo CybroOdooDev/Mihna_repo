@@ -23,3 +23,6 @@ from . import res_config_settings
 from . import res_partner
 from . import l10n_om_convergex_document
 from . import account_move
+from . import product_template
+from . import account_move_line
+

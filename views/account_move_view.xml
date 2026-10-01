@@ -26,6 +26,13 @@
                         class="oe_highlight"
                         invisible="state != 'posted' or country_code != 'OM' or move_type not in ('out_invoice', 'out_refund') or l10n_om_convergex_state in ('submitted', 'ota_accepted')"/>
             </button>
+            <xpath expr="//field[@name='invoice_line_ids']/list//field[@name='tax_ids']" position="after">
+                <field name="l10n_om_hs_code" optional="hide" placeholder="12-digit HS Code"
+                       column_invisible="parent.country_code != 'OM'"/>
+                <field name="l10n_om_isic_code" optional="hide" placeholder="6-digit ISIC Code"
+                       column_invisible="parent.country_code != 'OM'"/>
+            </xpath>
+
         </field>
     </record>
 </odoo>

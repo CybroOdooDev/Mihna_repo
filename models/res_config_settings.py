@@ -32,6 +32,8 @@ class ResConfigSettings(models.TransientModel):
                                                       readonly=False)
     l10n_om_convergex_credit_note_type_uuid = fields.Char(related='company_id.l10n_om_convergex_credit_note_type_uuid',
                                                           readonly=False)
+    l10n_om_default_isic_code = fields.Char(related='company_id.l10n_om_default_isic_code', readonly=False)
+
 
     def action_l10n_om_convergex_test_connection(self):
         """ Fetch a JWT token with the currently-saved Client ID/Secret to confirm they're valid.

@@ -8,8 +8,13 @@ Oman E-invoicing - ConvergeX
 
 Configuration
 =============
-- Install our custom addon
-- Additional configuration not required
+1. Go to Accounting > Configuration > Settings.
+2. Under the ConvergeX (Oman E-Invoicing) section:
+   - Enter your Client ID and Client Secret.
+   - Verify the API Base URL.
+   - Enter your Default Oman ISIC Code.
+   - Click Test Connection to verify your credentials.
+3. Ensure your Company has an Oman VAT ID and address configured.
 
 License
 -------

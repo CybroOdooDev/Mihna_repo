@@ -20,10 +20,9 @@
 #############################################################################
 {
     'name': 'Oman E-Invoicing - ConvergeX',
-    'version': '19.0.1.0.0',
+    'version': '19.0.1.1.0',
     'category': 'Accounting/Localizations/EDI',
-    'summary': "Submit Oman e-invoices and credit notes to the ConvergeX ASP platform, with status "
-               "tracking and QR code retrieval",
+    'summary': "Submit Oman e-invoices and credit notes to the ConvergeX ASP platform with Peppol PINT OM compliance and Single Entry support",
     'description': """
     Oman E-Invoicing - ConvergeX
     =============================
@@ -33,8 +32,12 @@
 
     * Submits customer invoices and credit notes to ConvergeX's Customer Invoice API, built directly
       from the invoice/credit note data already in Odoo.
-    * Syncs the buyer as a ConvergeX Customer Master record before submission (required for their
-      PEPPOL network checks).
+    * Supports both Single Entry API workflow (POST /api/invoices/single_entry/create/) and the
+      legacy two-step Customer Master sync workflow.
+    * Aligned with Peppol PINT OM requirements:
+      - 12-digit Oman HS Code (item_classification_identifier / IBT-158) for Full Tax Goods lines.
+      - 6-digit Oman ISIC Code (industrial_classification_code / BTOM-033) for invoice lines.
+      - UN/ECE Rec 20 unit of measure codes (unit_of_measure / IBT-130).
     * Retrieves and stores the OTA QR code, tracking number, and processed reference on each
       submission.
     * Polls ConvergeX for the latest status until an invoice is acknowledged by the Oman Tax
@@ -55,8 +58,10 @@
         'data/ir_cron.xml',
         'views/l10n_om_convergex_document_views.xml',
         'views/account_move_view.xml',
+        'views/product_template_views.xml',
         'views/res_config_settings_view.xml',
     ],
+
     'images': ['static/description/banner.jpg'],
     'license': 'LGPL-3',
     'installable': True,

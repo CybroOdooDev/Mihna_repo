@@ -1,0 +1,408 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="linda_ai_interview.ChartCanvas">
+        <div class="o_linda_chart" t-att-style="'height:' + props.height + 'px'">
+            <canvas t-ref="canvas"/>
+        </div>
+    </t>
+
+    <t t-name="linda_ai_interview.SplitBars">
+        <div t-foreach="splitRows" t-as="r" t-key="r.key" class="o_linda_hbar" t-att-title="r.label + ': ' + r.n">
+            <div class="o_label"><i t-if="r.icon" t-att-class="'fa ' + r.icon + ' me-1'" t-att-style="'color:' + r.color"/><t t-out="r.label"/></div>
+            <div class="o_track"><div class="o_fill" t-att-style="'width:' + r.pct + '%; background:' + r.color"/></div>
+            <div class="o_value" t-out="r.n"/>
+        </div>
+    </t>
+
+    <!-- ================= Campaign dashboard ================= -->
+    <t t-name="linda_ai_interview.CampaignDashboard">
+        <div class="o_linda_dashboard o_action">
+            <t t-if="!state.campaignId">
+                <div class="o_linda_dash_header"><h2>Linda – campaigns</h2></div>
+                <div class="o_linda_dash_body">
+                    <div t-if="!state.campaigns.length" class="text-muted p-4">No campaign yet. Create one under Recruitment → AI Interview → Campaigns.</div>
+                    <div class="row g-3">
+                        <div t-foreach="state.campaigns" t-as="c" t-key="c.id" class="col-md-4">
+                            <div class="o_linda_tile o_clickable" t-on-click="() => this.pickCampaign(c.id)">
+                                <div class="fw-bold" t-out="c.name"/>
+                                <div class="small text-muted"><t t-out="c.job_id and c.job_id[1]"/> · <t t-out="c.state"/></div>
+                                <div class="d-flex gap-3 mt-2 small">
+                                    <span><b t-out="c.invited_count"/> invited</span>
+                                    <span><b t-out="c.submitted_count"/> submitted</span>
+                                    <span><b t-out="c.review_pending_count"/> to review</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+            <t t-elif="state.data">
+                <t t-set="d" t-value="state.data"/>
+                <div class="o_linda_dash_header d-flex justify-content-between align-items-center">
+                    <div>
+                        <button class="btn btn-link px-0 small" t-on-click="backToList"><i class="fa fa-arrow-left me-1"/>All campaigns</button>
+                        <h2 class="mb-0" t-out="d.campaign.name"/>
+                        <div class="text-muted small"><t t-out="d.campaign.job"/> · <t t-out="d.campaign.template"/> · from <t t-out="d.campaign.date_start"/><t t-if="d.campaign.date_end"> to <t t-out="d.campaign.date_end"/></t></div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-secondary" t-on-click="openAnalysis"><i class="fa fa-table me-1"/>Pivot / graph</button>
+                        <button class="btn btn-secondary" t-on-click="openCampaign">Campaign</button>
+                    </div>
+                </div>
+                <div class="o_linda_dash_body">
+                    <div class="o_linda_kpis">
+                        <div class="o_linda_tile"><div class="o_kpi" t-out="d.kpis.invited"/><div class="o_kpi_label">Invited</div></div>
+                        <div class="o_linda_tile"><div class="o_kpi" t-out="d.kpis.started"/><div class="o_kpi_label">Started</div></div>
+                        <div class="o_linda_tile"><div class="o_kpi" t-out="d.kpis.submitted"/><div class="o_kpi_label">Submitted</div></div>
+                        <div class="o_linda_tile"><div class="o_kpi" t-out="d.kpis.expired"/><div class="o_kpi_label">Expired</div></div>
+                        <div class="o_linda_tile"><div class="o_kpi"><t t-out="d.kpis.completion_rate"/>%</div><div class="o_kpi_label">Completion rate</div></div>
+                        <div class="o_linda_tile"><div class="o_kpi"><t t-out="d.kpis.average_score"/></div><div class="o_kpi_label">Average total /100</div></div>
+                        <div class="o_linda_tile"><div class="o_kpi" t-out="d.kpis.reviews_pending"/><div class="o_kpi_label">Reviews pending</div></div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-lg-4">
+                            <div class="o_linda_panel">
+                                <h5>Funnel</h5>
+                                <div t-foreach="funnel" t-as="f" t-key="f.stage" class="o_linda_hbar" t-att-title="f.stage + ': ' + f.n">
+                                    <div class="o_label text-capitalize" t-out="f.stage"/>
+                                    <div class="o_track"><div class="o_fill" t-att-style="'width:' + f.pct + '%; background:' + f.color"/></div>
+                                    <div class="o_value"><t t-out="f.n"/><span t-if="f.drop !== null" class="o_drop"> −<t t-out="f.drop"/>%</span></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="o_linda_panel">
+                                <h5>Recommendation band</h5>
+                                <t t-call="linda_ai_interview.SplitBars"><t t-set="splitRows" t-value="bandSplit"/></t>
+                                <h5 class="mt-3">AI-assistance risk</h5>
+                                <t t-call="linda_ai_interview.SplitBars"><t t-set="splitRows" t-value="riskSplit"/></t>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="o_linda_panel">
+                                <h5>Language chosen</h5>
+                                <t t-call="linda_ai_interview.SplitBars"><t t-set="splitRows" t-value="languageSplit"/></t>
+                                <h5 class="mt-3">Daily completions</h5>
+                                <ChartCanvas config="dailyConfig" height="140"/>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="o_linda_panel mt-3">
+                        <h5>Score spread per dimension <small class="text-muted">(scored candidates; 1 = insufficient … 5 = strong)</small></h5>
+                        <ChartCanvas config="spreadConfig" height="240"/>
+                    </div>
+
+                    <div class="o_linda_panel mt-3">
+                        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                            <h5 class="mb-0 me-auto">Candidates</h5>
+                            <input class="form-control form-control-sm w-auto" placeholder="Search name…" t-model="state.filters.search"/>
+                            <select class="form-select form-select-sm w-auto" t-model="state.filters.state">
+                                <option value="">All statuses</option>
+                                <option t-foreach="Object.entries(labels.states)" t-as="o" t-key="o[0]" t-att-value="o[0]" t-out="o[1]"/>
+                            </select>
+                            <select class="form-select form-select-sm w-auto" t-model="state.filters.band">
+                                <option value="">All bands</option>
+                                <option t-foreach="Object.entries(labels.bands)" t-as="o" t-key="o[0]" t-att-value="o[0]" t-out="o[1]"/>
+                            </select>
+                            <select class="form-select form-select-sm w-auto" t-model="state.filters.risk">
+                                <option value="">All risks</option>
+                                <option t-foreach="Object.entries(labels.risks)" t-as="o" t-key="o[0]" t-att-value="o[0]" t-out="o[1]"/>
+                            </select>
+                        </div>
+                        <div class="d-flex flex-wrap gap-2 mb-2">
+                            <span class="small text-muted align-self-center"><t t-out="state.selected.size"/> selected</span>
+                            <button class="btn btn-sm btn-secondary" t-on-click="compare"><i class="fa fa-columns me-1"/>Compare</button>
+                            <button t-if="d.can_manage" class="btn btn-sm btn-secondary" t-on-click="remind"><i class="fa fa-envelope-o me-1"/>Send reminder</button>
+                            <button t-if="d.can_manage" class="btn btn-sm btn-secondary" t-on-click="nextStage"><i class="fa fa-forward me-1"/>Move reviewed to next stage</button>
+                            <button class="btn btn-sm btn-secondary" t-on-click="exportXlsx"><i class="fa fa-file-excel-o me-1"/>Export to Excel</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-hover o_linda_table">
+                                <thead>
+                                    <tr>
+                                        <th><input type="checkbox" t-on-change="toggleAll"/></th>
+                                        <th class="o_clickable" t-on-click="() => this.sortBy('name')">Candidate <i t-att-class="sortIcon('name')"/></th>
+                                        <th class="o_clickable" t-on-click="() => this.sortBy('state')">Status <i t-att-class="sortIcon('state')"/></th>
+                                        <th class="o_clickable text-end" t-on-click="() => this.sortBy('total')">Total <i t-att-class="sortIcon('total')"/></th>
+                                        <th>Band</th>
+                                        <th t-foreach="Object.entries(labels.dimensions)" t-as="dim" t-key="dim[0]" class="o_clickable text-end"
+                                            t-on-click="() => this.sortBy('dim:' + dim[0])" t-att-title="dim[1]">
+                                            <t t-out="dim[1].split(' ')[0]"/> <i t-att-class="sortIcon('dim:' + dim[0])"/>
+                                        </th>
+                                        <th>AI risk</th>
+                                        <th class="o_clickable text-end" t-on-click="() => this.sortBy('flags')">Signals <i t-att-class="sortIcon('flags')"/></th>
+                                        <th class="o_clickable text-end" t-on-click="() => this.sortBy('tokens')" title="AI tokens used (input + output), interview and scoring">AI tokens <i t-att-class="sortIcon('tokens')"/></th>
+                                        <th>Reviewer</th>
+                                        <th>Decision</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr t-foreach="rows" t-as="r" t-key="r.id">
+                                        <td><input type="checkbox" t-att-checked="state.selected.has(r.id)" t-on-change="() => this.toggle(r.id)"/></td>
+                                        <td><a href="#" t-on-click.prevent="() => this.openCandidate(r)" t-out="r.name"/>
+                                            <i t-if="r.needs_review" class="fa fa-user-circle-o text-warning ms-1" title="Needs human review"/></td>
+                                        <td t-out="labels.states[r.state]"/>
+                                        <td class="text-end fw-bold"><t t-if="r.total" t-out="r.total"/></td>
+                                        <td><span t-if="r.band" class="o_linda_dot" t-att-style="'background:' + bandColor(r.band)"/><t t-out="r.band ? labels.bands[r.band] : ''"/></td>
+                                        <td t-foreach="Object.keys(labels.dimensions)" t-as="dk" t-key="dk" class="text-end" t-att-class="scoreClass(r.scores[dk])">
+                                            <t t-out="r.scores[dk] || '–'"/>
+                                        </td>
+                                        <td><span t-if="r.risk" class="o_linda_dot" t-att-style="'background:' + riskColor(r.risk)"/><t t-out="r.risk ? labels.risks[r.risk] : ''"/></td>
+                                        <td class="text-end" t-out="r.flags"/>
+                                        <td class="text-end" t-att-title="'Cost: ' + r.cost"><t t-if="r.tokens" t-out="num(r.tokens)"/></td>
+                                        <td t-out="r.reviewer"/>
+                                        <td t-out="r.decision ? labels.decisions[r.decision] : ''"/>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </div>
+    </t>
+
+    <t t-name="linda_ai_interview.CompareDialog">
+        <Dialog title="'Compare candidates'" size="'lg'">
+            <table class="table table-sm o_linda_table">
+                <thead>
+                    <tr><th/><th t-foreach="props.rows" t-as="r" t-key="r.id" t-out="r.name"/></tr>
+                </thead>
+                <tbody>
+                    <tr><td>Total /100</td><td t-foreach="props.rows" t-as="r" t-key="r.id" class="fw-bold" t-out="r.total"/></tr>
+                    <tr><td>Band</td><td t-foreach="props.rows" t-as="r" t-key="r.id" t-out="r.band ? props.labels.bands[r.band] : '–'"/></tr>
+                    <tr t-foreach="dims" t-as="dim" t-key="dim">
+                        <td t-out="props.labels.dimensions[dim]"/>
+                        <td t-foreach="props.rows" t-as="r" t-key="r.id" t-att-class="r.scores[dim] and r.scores[dim] === best(dim) ? 'fw-bold' : ''">
+                            <t t-out="r.scores[dim] || '–'"/>
+                        </td>
+                    </tr>
+                    <tr><td>AI-assistance risk</td><td t-foreach="props.rows" t-as="r" t-key="r.id" t-out="r.risk ? props.labels.risks[r.risk] : '–'"/></tr>
+                    <tr><td>Integrity signals</td><td t-foreach="props.rows" t-as="r" t-key="r.id" t-out="r.flags"/></tr>
+                    <tr><td>Language</td><td t-foreach="props.rows" t-as="r" t-key="r.id" t-out="r.language ? props.labels.languages[r.language] : '–'"/></tr>
+                    <tr><td>Decision</td><td t-foreach="props.rows" t-as="r" t-key="r.id" t-out="r.decision ? props.labels.decisions[r.decision] : '–'"/></tr>
+                </tbody>
+            </table>
+            <t t-set-slot="footer"><button class="btn btn-primary" t-on-click="props.close">Close</button></t>
+        </Dialog>
+    </t>
+
+    <!-- ================= Candidate dashboard ================= -->
+    <t t-name="linda_ai_interview.ReplayPlayer">
+        <div class="o_linda_replay">
+            <button t-if="!state.loaded" class="btn btn-sm btn-secondary" t-on-click="load"><i class="fa fa-keyboard-o me-1"/>Typing replay</button>
+            <t t-else="">
+                <div t-if="!state.log.length" class="small text-muted">No typing recorded.</div>
+                <t t-else="">
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                        <button class="btn btn-sm btn-secondary" t-on-click="play"><i t-att-class="state.playing ? 'fa fa-pause' : 'fa fa-play'"/></button>
+                        <input type="range" class="form-range flex-fill" t-att-min="start" t-att-max="end" t-att-value="state.t" t-on-input="onSlide"/>
+                        <select class="form-select form-select-sm w-auto" t-model.number="state.speed">
+                            <option value="1">1×</option><option value="10">10×</option><option value="30">30×</option>
+                        </select>
+                        <span class="small text-muted"><t t-out="elapsed"/>s</span>
+                    </div>
+                    <div class="small text-muted mb-1">
+                        <t t-out="stats.ins"/> chars typed · <t t-out="stats.del"/> deleted · <t t-out="stats.pastes"/> paste attempts · <t t-out="stats.minutes"/> min
+                    </div>
+                    <pre class="o_linda_replay_text" t-out="text"/>
+                </t>
+            </t>
+        </div>
+    </t>
+
+    <t t-name="linda_ai_interview.CandidateDashboard">
+        <div class="o_linda_dashboard o_action">
+            <t t-if="state.data">
+                <t t-set="d" t-value="state.data"/>
+                <div class="o_linda_dash_header d-flex justify-content-between align-items-start">
+                    <div>
+                        <button t-if="s.campaign_id" class="btn btn-link px-0 small" t-on-click="openCampaign"><i class="fa fa-arrow-left me-1"/><t t-out="s.campaign"/></button>
+                        <h2 class="mb-0"><a href="#" t-on-click.prevent="openApplicant" t-out="s.candidate"/></h2>
+                        <div class="text-muted small"><t t-out="s.job"/> · <t t-out="s.template"/> · <t t-out="d.labels.states[s.state]"/> · <t t-out="s.duration"/> min<t t-if="s.language"> · <t t-out="s.language"/></t> · reviewer <t t-out="s.reviewer || '–'"/></div>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-secondary" t-on-click="print"><i class="fa fa-print me-1"/>PDF</button>
+                        <button class="btn btn-secondary" t-on-click="openForm">Form</button>
+                    </div>
+                </div>
+                <div class="o_linda_dash_body">
+                    <div t-if="s.scoring_state === 'queued'" class="alert alert-info">Scoring is in progress…</div>
+                    <div t-if="s.scoring_state === 'failed'" class="alert alert-danger">Scoring failed: <t t-out="s.scoring_error"/></div>
+                    <div class="o_linda_kpis">
+                        <div class="o_linda_tile"><div class="o_kpi"><t t-out="s.total"/></div><div class="o_kpi_label">Total /100</div></div>
+                        <div class="o_linda_tile"><div class="o_kpi"><span class="o_linda_dot" t-att-style="'background:' + statusColor('band', s.band)"/><t t-out="s.band ? d.labels.bands[s.band] : '–'"/></div>
+                            <div class="o_kpi_label">Band<t t-if="s.band_confirmed"> (confirmed)</t></div></div>
+                        <div class="o_linda_tile"><div class="o_kpi"><span class="o_linda_dot" t-att-style="'background:' + statusColor('risk', s.risk)"/><t t-out="s.risk ? d.labels.risks[s.risk] : '–'"/></div>
+                            <div class="o_kpi_label">AI-assistance risk</div></div>
+                        <div class="o_linda_tile"><div class="o_kpi" t-out="s.red_flags"/><div class="o_kpi_label">Red-flag dimensions</div></div>
+                        <div class="o_linda_tile"><div class="o_kpi" t-out="signals.length"/><div class="o_kpi_label">Integrity signals</div></div>
+                        <div class="o_linda_tile"><div class="o_kpi" t-out="num(s.tokens)"/><div class="o_kpi_label">AI tokens · cost <t t-out="s.cost"/></div></div>
+                    </div>
+                    <div t-if="s.live_recheck" class="alert alert-warning mt-2"><i class="fa fa-exclamation-triangle me-1"/>Medium/High AI-assistance risk: give a short live coding question in the technical round.</div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-lg-5">
+                            <div class="o_linda_panel">
+                                <h5>Dimension scores<t t-if="s.campaign_id"> vs campaign average</t></h5>
+                                <ChartCanvas t-if="d.scores.length" config="chartConfig" height="260"/>
+                                <div t-else="" class="text-muted">Not scored yet.</div>
+                            </div>
+                            <div class="o_linda_panel mt-3">
+                                <h5>Integrity timeline</h5>
+                                <div t-if="!d.flags.length" class="text-muted small">No events.</div>
+                                <div t-foreach="d.flags" t-as="f" t-key="f.id" class="o_linda_timeline_item">
+                                    <span class="small text-muted" t-out="f.timestamp"/>
+                                    <span t-att-class="weightClass(f.weight)" class="ms-2">
+                                        <i t-att-class="f.signal ? 'fa fa-flag' : 'fa fa-circle-o'"/> <b t-out="f.label"/>
+                                    </span>
+                                    <div t-if="f.detail" class="small ms-4" t-out="f.detail"/>
+                                </div>
+                            </div>
+                            <div class="o_linda_panel mt-3 o_linda_usage">
+                                <h5>AI token usage by section</h5>
+                                <div t-if="!d.usage.length" class="text-muted small">No AI calls yet.</div>
+                                <table t-else="" class="table table-sm small mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Section</th>
+                                            <th class="text-end" title="Questions, follow-ups and document answers while the candidate works">Interview</th>
+                                            <th class="text-end" title="Scoring and integrity checks after submission">Scoring</th>
+                                            <th class="text-end">Total</th>
+                                            <th class="text-end">Cost</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr t-foreach="d.usage" t-as="u" t-key="u.section">
+                                            <td t-out="u.label"/>
+                                            <td class="text-end" t-out="num(u.interview)"/>
+                                            <td class="text-end" t-out="num(u.scoring)"/>
+                                            <td class="text-end fw-bold" t-out="num(u.total)"/>
+                                            <td class="text-end" t-out="u.cost"/>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="fw-bold">
+                                            <td>Total</td>
+                                            <td class="text-end" t-out="num(usageTotal.interview)"/>
+                                            <td class="text-end" t-out="num(usageTotal.scoring)"/>
+                                            <td class="text-end" t-out="num(usageTotal.total)"/>
+                                            <td class="text-end" t-out="usageTotal.cost"/>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                                <div class="small text-muted mt-1">Attitude is scored from the voice interview, so its scoring tokens are counted there.</div>
+                            </div>
+                        </div>
+                        <div class="col-lg-7">
+                            <div class="o_linda_panel">
+                                <h5>Evidence</h5>
+                                <div t-foreach="d.scores" t-as="sc" t-key="sc.id" class="o_linda_evidence">
+                                    <div class="d-flex justify-content-between">
+                                        <b><t t-out="sc.label"/> <span class="text-muted small">(<t t-out="sc.weight"/>%)</span></b>
+                                        <span>
+                                            <span t-if="sc.red_flag" class="badge text-bg-danger me-1">red flag</span>
+                                            <span t-if="sc.needs_review" class="badge text-bg-warning me-1" t-att-title="'AI runs: ' + sc.run1 + ' / ' + sc.run2">needs review</span>
+                                            <b class="fs-5" t-out="sc.final"/>/5
+                                            <span t-if="sc.human_score" class="small text-muted"> (AI <t t-out="sc.ai_score"/>)</span>
+                                        </span>
+                                    </div>
+                                    <div class="small" t-out="sc.rationale"/>
+                                    <details>
+                                        <summary class="small">Criteria</summary>
+                                        <div t-foreach="sc.criteria" t-as="c" t-key="c_index" class="o_linda_criterion">
+                                            <div><b t-out="c.score"/> · <t t-out="c.name"/></div>
+                                            <div class="small text-muted" t-out="c.rationale"/>
+                                            <div t-foreach="c.evidence or []" t-as="ev" t-key="ev_index" class="o_linda_quote">“<t t-out="ev.quote"/>” <span class="text-muted">— <t t-out="ev.section"/></span></div>
+                                        </div>
+                                    </details>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="o_linda_panel mt-3">
+                        <ul class="nav nav-tabs mb-3">
+                            <li t-foreach="d.sections" t-as="sec" t-key="sec.type" class="nav-item">
+                                <a href="#" class="nav-link" t-att-class="{active: state.tab === sec.type}" t-on-click.prevent="() => this.setTab(sec.type)" t-out="sec.label"/>
+                            </li>
+                        </ul>
+                        <t t-if="section">
+                            <div t-foreach="section.responses" t-as="r" t-key="r.id" class="o_linda_response">
+                                <div class="fw-bold" t-out="r.title or r.prompt"/>
+                                <div t-if="r.title" class="small text-muted" style="white-space: pre-wrap" t-out="r.prompt"/>
+                                <t t-if="state.tab === 'written'">
+                                    <div class="o_linda_answer" t-out="r.answer || '(no answer)'"/>
+                                    <ReplayPlayer t-if="r.has_keystrokes" sessionId="s.id" responseId="r.id"/>
+                                </t>
+                                <t t-if="state.tab === 'coding' or state.tab === 'learn'">
+                                    <details t-if="r.doc"><summary class="small">Document given</summary><pre class="small" t-out="r.doc"/></details>
+                                    <div class="small mt-1">Language: <b t-out="r.language || '–'"/> · hidden + visible tests: <b><t t-out="r.tests_passed"/>/<t t-out="r.tests_total"/></b></div>
+                                    <pre class="o_linda_final_code" t-out="r.code || '(no code)'"/>
+                                    <details t-if="r.test_results.length">
+                                        <summary class="small">Test results</summary>
+                                        <table class="table table-sm small">
+                                            <tr><th>#</th><th>Status</th><th>Hidden</th><th>Input</th><th>Expected</th><th>Output</th></tr>
+                                            <tr t-foreach="r.test_results" t-as="t" t-key="t_index" t-att-class="t.passed ? '' : 'table-danger'">
+                                                <td t-out="t_index + 1"/><td t-out="t.status"/><td t-out="t.hidden ? 'yes' : ''"/>
+                                                <td><pre t-out="t.stdin"/></td><td><pre t-out="t.expected"/></td><td><pre t-out="t.stdout || t.stderr"/></td>
+                                            </tr>
+                                        </table>
+                                    </details>
+                                    <div t-if="r.run_log.length" class="small text-muted">Runs while working: <t t-foreach="r.run_log" t-as="run" t-key="run_index"><t t-out="run.passed"/>/<t t-out="run.total"/> </t></div>
+                                    <div t-foreach="r.doc_questions" t-as="q" t-key="q_index" class="o_linda_qa"><b>Asked:</b> <t t-out="q.q"/><br/><b>Linda:</b> <t t-out="q.a"/></div>
+                                    <div t-foreach="r.followups" t-as="f" t-key="f_index" class="o_linda_qa"><b>Q:</b> <t t-out="f.q"/><br/><b>A:</b> <t t-out="f.a || '(no answer)'"/></div>
+                                    <ReplayPlayer t-if="r.has_keystrokes" sessionId="s.id" responseId="r.id"/>
+                                </t>
+                                <t t-if="state.tab === 'voice'">
+                                    <div class="o_linda_answer" t-out="r.transcript || '(no answer)'"/>
+                                    <div t-foreach="r.followups" t-as="f" t-key="f_index" class="o_linda_qa"><b>Q:</b> <t t-out="f.q"/><br/><b>A:</b> <t t-out="f.a || '(no answer)'"/></div>
+                                    <div class="d-flex flex-wrap gap-2 mt-1">
+                                        <audio t-foreach="r.audio" t-as="a" t-key="a.id" controls="" preload="none" t-att-src="audioUrl(a.id)" t-att-title="a.name"/>
+                                    </div>
+                                </t>
+                            </div>
+                        </t>
+                    </div>
+
+                    <div class="o_linda_panel mt-3" t-if="d.can_review and d.scores.length">
+                        <h5>Review</h5>
+                        <table class="table table-sm align-middle">
+                            <tr><th>Dimension</th><th>AI</th><th>Override</th><th>Reason (required for an override)</th></tr>
+                            <tr t-foreach="d.scores" t-as="sc" t-key="sc.id">
+                                <td t-out="sc.label"/>
+                                <td t-out="sc.ai_score"/>
+                                <td>
+                                    <select class="form-select form-select-sm" t-model="state.review.overrides[sc.id].human_score" t-att-disabled="s.state === 'reviewed'">
+                                        <option value="">–</option>
+                                        <option t-foreach="[1,2,3,4,5]" t-as="n" t-key="n" t-att-value="n" t-out="n"/>
+                                    </select>
+                                </td>
+                                <td><input class="form-control form-control-sm" t-model="state.review.overrides[sc.id].reason" t-att-disabled="s.state === 'reviewed'"/></td>
+                            </tr>
+                        </table>
+                        <div class="row g-2">
+                            <div class="col-md-8">
+                                <textarea class="form-control" rows="3" placeholder="Notes: integrity checks done, points for the technical round…" t-model="state.review.notes" t-att-disabled="s.state === 'reviewed'"/>
+                            </div>
+                            <div class="col-md-4">
+                                <select class="form-select mb-2" t-model="state.review.decision" t-att-disabled="s.state === 'reviewed'">
+                                    <option value="">Decision…</option>
+                                    <option t-foreach="Object.entries(d.labels.decisions)" t-as="o" t-key="o[0]" t-att-value="o[0]" t-out="o[1]"/>
+                                </select>
+                                <div class="d-flex gap-2" t-if="s.state === 'scored'">
+                                    <button class="btn btn-secondary" t-att-disabled="state.saving" t-on-click="() => this.save(false)">Save</button>
+                                    <button class="btn btn-primary" t-att-disabled="state.saving" t-on-click="() => this.save(true)">Confirm band &amp; decision</button>
+                                </div>
+                                <div t-elif="s.state === 'reviewed'" class="text-success"><i class="fa fa-check me-1"/>Reviewed</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </t>
+        </div>
+    </t>
+</templates>

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_linda_campaign_dashboard_home" model="ir.actions.client">
+        <field name="name">Linda dashboard</field>
+        <field name="tag">linda_campaign_dashboard</field>
+    </record>
+
+    <menuitem id="menu_linda_root" name="AI Interview" parent="hr_recruitment.menu_hr_recruitment_root" sequence="15"
+              groups="hr_recruitment.group_hr_recruitment_interviewer"/>
+    <menuitem id="menu_linda_campaigns" name="Campaigns" parent="menu_linda_root" action="action_ai_interview_campaign" sequence="10"/>
+    <menuitem id="menu_linda_dashboard" name="Campaign dashboard" parent="menu_linda_root" action="action_linda_campaign_dashboard_home" sequence="15"/>
+    <menuitem id="menu_linda_to_review" name="To review" parent="menu_linda_root" action="action_ai_interview_session_to_review" sequence="20"/>
+    <menuitem id="menu_linda_sessions" name="All interviews" parent="menu_linda_root" action="action_ai_interview_session" sequence="30"/>
+
+    <menuitem id="menu_linda_config" name="AI Interview (Linda)" parent="hr_recruitment.menu_hr_recruitment_configuration"
+              sequence="50" groups="hr_recruitment.group_hr_recruitment_manager"/>
+    <menuitem id="menu_linda_templates" name="Templates" parent="menu_linda_config" action="action_ai_interview_template" sequence="10"/>
+    <menuitem id="menu_linda_questions" name="Question bank" parent="menu_linda_config" action="action_ai_interview_question" sequence="20"/>
+    <menuitem id="menu_linda_generate" name="Generate pool questions" parent="menu_linda_config" action="action_ai_interview_question_generate" sequence="25"/>
+    <menuitem id="menu_linda_criteria" name="Rubric criteria" parent="menu_linda_config" action="action_ai_interview_criterion" sequence="30"/>
+    <menuitem id="menu_linda_providers" name="AI &amp; speech providers" parent="menu_linda_config" action="action_ai_interview_provider" sequence="40"/>
+    <menuitem id="menu_linda_notice" name="Consent notice" parent="menu_linda_config" action="action_ai_interview_consent_notice" sequence="50"/>
+    <menuitem id="menu_linda_call_log" name="AI call log" parent="menu_linda_config" action="action_ai_interview_call_log" sequence="60"/>
+</odoo>

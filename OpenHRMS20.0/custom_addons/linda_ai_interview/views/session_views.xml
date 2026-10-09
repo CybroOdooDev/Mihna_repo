@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="ai_interview_session_view_list" model="ir.ui.view">
+        <field name="name">ai.interview.session.list</field>
+        <field name="model">ai.interview.session</field>
+        <field name="arch" type="xml">
+            <list create="0" decoration-muted="state in ('expired', 'cancelled')">
+                <field name="name"/>
+                <field name="job_id" optional="show"/>
+                <field name="campaign_id" optional="show"/>
+                <field name="state" widget="badge" decoration-info="state in ('invited', 'in_progress')"
+                       decoration-warning="state in ('submitted', 'scored')" decoration-success="state == 'reviewed'"/>
+                <field name="total_score" avg="Average"/>
+                <field name="band" widget="badge" decoration-success="band == 'strong'" decoration-warning="band == 'borderline'"
+                       decoration-danger="band == 'not_recommended'"/>
+                <field name="score_coding" optional="hide"/>
+                <field name="score_learning" optional="hide"/>
+                <field name="score_attitude" optional="hide"/>
+                <field name="score_oral_english" optional="hide"/>
+                <field name="score_written_english" optional="hide"/>
+                <field name="risk" widget="badge" decoration-success="risk == 'low'" decoration-warning="risk == 'medium'"
+                       decoration-danger="risk == 'high'"/>
+                <field name="red_flag_count" optional="show"/>
+                <field name="language" optional="hide"/>
+                <field name="reviewer_id" optional="show" widget="many2one_avatar_user"/>
+                <field name="decision" optional="show"/>
+                <field name="tokens_total" string="AI tokens" optional="hide"/>
+                <field name="cost_total" optional="hide"/>
+            </list>
+        </field>
+    </record>
+    <record id="ai_interview_session_view_form" model="ir.ui.view">
+        <field name="name">ai.interview.session.form</field>
+        <field name="model">ai.interview.session</field>
+        <field name="arch" type="xml">
+            <form create="0">
+                <header>
+                    <button name="action_invite" type="object" string="Send invite" class="btn-primary"
+                            invisible="state not in ('draft', 'expired')" groups="hr_recruitment.group_hr_recruitment_user"/>
+                    <button name="action_send_reminder" type="object" string="Send reminder"
+                            invisible="state != 'invited'" groups="hr_recruitment.group_hr_recruitment_user"/>
+                    <button name="action_open_dashboard" type="object" string="Open scorecard" class="btn-primary"
+                            invisible="state not in ('scored', 'reviewed')"/>
+                    <button name="action_confirm_review" type="object" string="Confirm review" class="btn-primary"
+                            invisible="state != 'scored'"/>
+                    <button name="action_reopen_review" type="object" string="Reopen review" invisible="state != 'reviewed'"/>
+                    <button name="action_print_scorecard" type="object" string="Print PDF" invisible="state not in ('scored', 'reviewed')"/>
+                    <button name="action_rescore" type="object" string="Re-score" invisible="state not in ('submitted', 'scored')"
+                            groups="hr_recruitment.group_hr_recruitment_user"/>
+                    <button name="action_cancel" type="object" string="Cancel" invisible="state in ('scored', 'reviewed', 'cancelled')"
+                            groups="hr_recruitment.group_hr_recruitment_user"/>
+                    <button name="action_withdraw_consent" type="object" string="Withdraw consent &amp; delete data"
+                            confirm="This deletes the candidate's answers, recordings and scores. Continue?"
+                            invisible="state in ('draft', 'cancelled')" groups="hr_recruitment.group_hr_recruitment_user"/>
+                    <field name="state" widget="statusbar" statusbar_visible="invited,in_progress,submitted,scored,reviewed"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box"/>
+                    <div class="oe_title">
+                        <h1><field name="name" readonly="1"/></h1>
+                    </div>
+                    <div class="alert alert-warning" role="alert" invisible="not live_recheck_required">
+                        AI-assistance risk is <field name="risk" readonly="1" class="fw-bold"/>: re-check in the technical round with a short live coding question.
+                    </div>
+                    <div class="alert alert-danger" role="alert" invisible="scoring_state != 'failed'">
+                        Scoring failed: <field name="scoring_error" readonly="1"/>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="applicant_id" readonly="1"/>
+                            <field name="job_id"/>
+                            <field name="campaign_id"/>
+                            <field name="template_id" readonly="state != 'draft'"/>
+                            <field name="portal_url" widget="CopyClipboardChar" invisible="state not in ('invited', 'in_progress')"/>
+                            <field name="expires_at" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="total_score" readonly="1"/>
+                            <field name="band" readonly="1"/>
+                            <field name="risk" readonly="1"/>
+                            <field name="red_flag_count" readonly="1"/>
+                            <field name="needs_review" readonly="1"/>
+                            <field name="duration_minutes" readonly="1"/>
+                            <field name="language" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Scores" name="scores">
+                            <field name="score_ids" readonly="state not in ('scored',)">
+                                <list editable="bottom" create="0" delete="0" decoration-danger="is_red_flag" decoration-warning="needs_review">
+                                    <field name="dimension" readonly="1"/>
+                                    <field name="weight" string="Weight %"/>
+                                    <field name="ai_score_run1" readonly="1" optional="hide"/>
+                                    <field name="ai_score_run2" readonly="1" optional="hide"/>
+                                    <field name="ai_score" readonly="1"/>
+                                    <field name="human_score"/>
+                                    <field name="override_reason"/>
+                                    <field name="final_score"/>
+                                    <field name="rationale" readonly="1"/>
+                                    <field name="needs_review" readonly="1"/>
+                                    <field name="is_red_flag" column_invisible="1"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Review" name="review">
+                            <group>
+                                <group>
+                                    <field name="reviewer_id" widget="many2one_avatar_user"/>
+                                    <field name="decision" readonly="state == 'reviewed'"/>
+                                    <field name="band_confirmed" readonly="1"/>
+                                    <field name="reviewed_at"/>
+                                </group>
+                            </group>
+                            <field name="review_notes" placeholder="Reviewer notes, integrity checks done, comments..." readonly="state == 'reviewed'"/>
+                        </page>
+                        <page string="Answers" name="answers">
+                            <field name="response_ids" readonly="1">
+                                <list>
+                                    <field name="section"/>
+                                    <field name="prompt_text"/>
+                                    <field name="language" optional="show"/>
+                                    <field name="tests_passed"/>
+                                    <field name="tests_total"/>
+                                    <field name="time_spent"/>
+                                </list>
+                                <form>
+                                    <group><field name="section"/><field name="question_id"/><field name="language"/><field name="tests_passed"/><field name="tests_total"/></group>
+                                    <group string="Question"><field name="prompt_text" nolabel="1" colspan="2"/></group>
+                                    <group string="Answer"><field name="answer_text" nolabel="1" colspan="2"/></group>
+                                    <group string="Code"><field name="code" nolabel="1" colspan="2"/></group>
+                                    <group string="Transcript"><field name="transcript_final" nolabel="1" colspan="2"/></group>
+                                </form>
+                            </field>
+                        </page>
+                        <page string="Integrity" name="integrity">
+                            <field name="flag_ids" readonly="1">
+                                <list decoration-danger="weight == 'high'" decoration-warning="weight == 'medium'" decoration-muted="weight == 'event'">
+                                    <field name="timestamp"/>
+                                    <field name="type"/>
+                                    <field name="weight"/>
+                                    <field name="detail"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Consent &amp; audit" name="audit" groups="hr_recruitment.group_hr_recruitment_user">
+                            <group>
+                                <group string="Consent">
+                                    <field name="consent_at"/>
+                                    <field name="consent_version"/>
+                                    <field name="consent_ip"/>
+                                    <field name="consent_declined"/>
+                                </group>
+                                <group string="Runtime">
+                                    <field name="invited_at"/>
+                                    <field name="started_at"/>
+                                    <field name="finished_at"/>
+                                    <field name="resume_count"/>
+                                    <field name="scoring_state"/>
+                                    <field name="scoring_attempts"/>
+                                </group>
+                                <group string="Cost">
+                                    <field name="cost_total"/>
+                                    <field name="tokens_total"/>
+                                </group>
+                            </group>
+                            <field name="call_log_ids" readonly="1">
+                                <list>
+                                    <field name="create_date" string="Time"/>
+                                    <field name="role"/>
+                                    <field name="task"/>
+                                    <field name="section"/>
+                                    <field name="phase"/>
+                                    <field name="model"/>
+                                    <field name="status"/>
+                                    <field name="input_tokens"/>
+                                    <field name="output_tokens"/>
+                                    <field name="cost"/>
+                                    <field name="latency_ms"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+    <record id="ai_interview_session_view_search" model="ir.ui.view">
+        <field name="name">ai.interview.session.search</field>
+        <field name="model">ai.interview.session</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="applicant_id"/>
+                <field name="campaign_id"/>
+                <field name="job_id"/>
+                <filter name="to_review" string="To review" domain="[('state', '=', 'scored')]"/>
+                <filter name="needs_review" string="Needs human review" domain="[('needs_review', '=', True)]"/>
+                <filter name="risky" string="Medium/High AI risk" domain="[('risk', 'in', ('medium', 'high'))]"/>
+                <filter name="red_flags" string="With red flags" domain="[('red_flag_count', '>', 0)]"/>
+                <separator/>
+                <filter name="my_reviews" string="My reviews" domain="[('reviewer_id', '=', uid)]"/>
+                <group>
+                    <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                    <filter name="group_band" string="Band" context="{'group_by': 'band'}"/>
+                    <filter name="group_risk" string="AI risk" context="{'group_by': 'risk'}"/>
+                    <filter name="group_campaign" string="Campaign" context="{'group_by': 'campaign_id'}"/>
+                    <filter name="group_language" string="Language" context="{'group_by': 'language'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    <record id="ai_interview_session_view_graph" model="ir.ui.view">
+        <field name="name">ai.interview.session.graph</field>
+        <field name="model">ai.interview.session</field>
+        <field name="arch" type="xml">
+            <graph string="AI interviews" type="bar">
+                <field name="band"/>
+            </graph>
+        </field>
+    </record>
+    <record id="ai_interview_session_view_pivot" model="ir.ui.view">
+        <field name="name">ai.interview.session.pivot</field>
+        <field name="model">ai.interview.session</field>
+        <field name="arch" type="xml">
+            <pivot string="AI interviews">
+                <field name="campaign_id" type="row"/>
+                <field name="band" type="col"/>
+                <field name="total_score" type="measure"/>
+            </pivot>
+        </field>
+    </record>
+    <record id="action_ai_interview_session" model="ir.actions.act_window">
+        <field name="name">AI interviews</field>
+        <field name="res_model">ai.interview.session</field>
+        <field name="view_mode">list,form,pivot,graph</field>
+        <field name="context">{'create': False}</field>
+    </record>
+    <record id="action_ai_interview_session_to_review" model="ir.actions.act_window">
+        <field name="name">To review</field>
+        <field name="res_model">ai.interview.session</field>
+        <field name="view_mode">list,form,pivot,graph</field>
+        <field name="context">{'create': False, 'search_default_to_review': 1}</field>
+    </record>
+    <record id="action_server_session_remind" model="ir.actions.server">
+        <field name="name">Send reminder</field>
+        <field name="model_id" ref="model_ai_interview_session"/>
+        <field name="binding_model_id" ref="model_ai_interview_session"/>
+        <field name="state">code</field>
+        <field name="code">action = records.action_send_reminder()</field>
+    </record>
+    <record id="action_server_session_next_stage" model="ir.actions.server">
+        <field name="name">Move reviewed candidates to next stage</field>
+        <field name="model_id" ref="model_ai_interview_session"/>
+        <field name="binding_model_id" ref="model_ai_interview_session"/>
+        <field name="state">code</field>
+        <field name="code">action = records.action_move_next_stage()</field>
+    </record>
+</odoo>

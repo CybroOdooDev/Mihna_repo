@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_linda" model="ir.ui.view">
+        <field name="name">res.config.settings.form.linda</field>
+        <field name="model">res.config.settings</field>
+        <field name="inherit_id" ref="hr_recruitment.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//app[@name='hr_recruitment']" position="inside">
+                <block title="AI Interview (Linda)" name="linda_settings">
+                    <setting string="Programming languages" help="Languages candidates can choose; the version of each runtime is shown to the candidate.">
+                        <div class="d-flex gap-3">
+                            <span><field name="linda_lang_python"/> Python</span>
+                            <span><field name="linda_lang_c"/> C</span>
+                            <span><field name="linda_lang_cpp"/> C++</span>
+                            <span><field name="linda_lang_javascript"/> JavaScript</span>
+                        </div>
+                    </setting>
+                    <setting string="Simultaneous interviews" help="Extra candidates wait in a queue until a slot is free. 0 = no limit.">
+                        <field name="linda_max_concurrent"/>
+                    </setting>
+                    <setting string="Auto-invite" help="Send the AI interview automatically when an applicant enters the stage set on the template.">
+                        <field name="linda_auto_invite"/>
+                    </setting>
+                    <setting string="Interviewer voice" help="Text-to-speech voice used to read questions aloud.">
+                        <field name="linda_tts_voice"/>
+                    </setting>
+                    <setting string="Retention (days after the final decision)" help="Data past retention is purged automatically. 0 = keep.">
+                        <div class="row">
+                            <label for="linda_retention_audio_days" class="col-6"/><field name="linda_retention_audio_days" class="col-3"/>
+                            <label for="linda_retention_transcript_days" class="col-6"/><field name="linda_retention_transcript_days" class="col-3"/>
+                            <label for="linda_retention_keystrokes_days" class="col-6"/><field name="linda_retention_keystrokes_days" class="col-3"/>
+                            <label for="linda_retention_scores_days" class="col-6"/><field name="linda_retention_scores_days" class="col-3"/>
+                        </div>
+                    </setting>
+                    <setting string="Providers, notice and rubric" help="LLM, speech and sandbox providers, consent wording and rubric criteria.">
+                        <div class="d-flex flex-column">
+                            <button name="%(linda_ai_interview.action_ai_interview_provider)d" type="action" string="AI &amp; speech providers" class="btn-link" icon="east"/>
+                            <button name="%(linda_ai_interview.action_ai_interview_consent_notice)d" type="action" string="Consent notice" class="btn-link" icon="east"/>
+                            <button name="%(linda_ai_interview.action_ai_interview_criterion)d" type="action" string="Rubric criteria" class="btn-link" icon="east"/>
+                        </div>
+                    </setting>
+                </block>
+            </xpath>
+        </field>
+    </record>
+</odoo>

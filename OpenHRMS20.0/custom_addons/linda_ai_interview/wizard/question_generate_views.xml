@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="ai_interview_question_generate_view_form" model="ir.ui.view">
+        <field name="name">ai.interview.question.generate.form</field>
+        <field name="model">ai.interview.question.generate</field>
+        <field name="arch" type="xml">
+            <form string="Generate pool questions">
+                <p class="text-muted">The generator model writes each problem with stdin/stdout tests, reference solutions in C, C++, Python and JavaScript, and canary text. A problem becomes usable only after every reference solution passes in the sandbox and an admin approves it.</p>
+                <field name="pool_status"/>
+                <group>
+                    <field name="qtype"/>
+                    <field name="count"/>
+                    <field name="difficulty"/>
+                    <field name="validate_now"/>
+                    <field name="guidance" placeholder="e.g. string manipulation, counting frequencies, no recursion"/>
+                </group>
+                <footer>
+                    <button name="action_generate" type="object" string="Generate" class="btn-primary"/>
+                    <button special="cancel" string="Cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+    <record id="action_ai_interview_question_generate" model="ir.actions.act_window">
+        <field name="name">Generate pool questions</field>
+        <field name="res_model">ai.interview.question.generate</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

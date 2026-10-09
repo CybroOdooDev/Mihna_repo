@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="ai_interview_question_view_list" model="ir.ui.view">
+        <field name="name">ai.interview.question.list</field>
+        <field name="model">ai.interview.question</field>
+        <field name="arch" type="xml">
+            <list decoration-muted="state == 'rejected'" decoration-danger="state == 'failed'" decoration-success="state == 'approved'">
+                <field name="name"/>
+                <field name="qtype"/>
+                <field name="voice_kind" optional="hide"/>
+                <field name="difficulty"/>
+                <field name="source"/>
+                <field name="usage_count" optional="show"/>
+                <field name="state" widget="badge" decoration-success="state == 'approved'" decoration-info="state == 'validated'"
+                       decoration-warning="state == 'validating'" decoration-danger="state == 'failed'"/>
+            </list>
+        </field>
+    </record>
+    <record id="ai_interview_question_view_form" model="ir.ui.view">
+        <field name="name">ai.interview.question.form</field>
+        <field name="model">ai.interview.question</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_validate" type="object" string="Validate" class="btn-primary"
+                            invisible="state not in ('draft', 'failed', 'validating')"/>
+                    <button name="action_approve" type="object" string="Approve" class="btn-primary"
+                            invisible="(needs_sandbox and state != 'validated') or (not needs_sandbox and state not in ('draft', 'validated'))"
+                            groups="hr_recruitment.group_hr_recruitment_manager"/>
+                    <button name="action_reject" type="object" string="Reject" invisible="state in ('rejected',)"/>
+                    <button name="action_reset_draft" type="object" string="Reset to draft" invisible="state == 'draft'"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,validated,approved"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger" invisible="active"/>
+                    <div class="oe_title"><h1><field name="name" placeholder="Title"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="qtype"/>
+                            <field name="voice_kind" invisible="qtype != 'voice'"/>
+                            <field name="difficulty"/>
+                            <field name="source"/>
+                        </group>
+                        <group>
+                            <field name="canary"/>
+                            <field name="usage_count"/>
+                            <field name="needs_sandbox" invisible="1"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Question" name="question">
+                            <field name="reference_doc" invisible="qtype != 'learn'" placeholder="The unfamiliar document the candidate reads..."/>
+                            <field name="prompt" placeholder="Question / task / problem statement shown to the candidate"/>
+                            <group invisible="qtype != 'coding'">
+                                <field name="input_spec"/>
+                                <field name="output_spec"/>
+                            </group>
+                            <group string="Variants">
+                                <field name="variants" nolabel="1" colspan="2" placeholder='["Alternative phrasing 1", "Alternative phrasing 2"]'/>
+                            </group>
+                        </page>
+                        <page string="Test cases" name="tests" invisible="not needs_sandbox">
+                            <field name="test_case_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="stdin"/>
+                                    <field name="stdout"/>
+                                    <field name="hidden"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Reference solutions" name="solutions" invisible="not needs_sandbox">
+                            <field name="solution_ids">
+                                <list>
+                                    <field name="language"/>
+                                    <field name="last_result" widget="badge" decoration-success="last_result == 'pass'" decoration-danger="last_result in ('fail', 'error')"/>
+                                </list>
+                                <form>
+                                    <group><field name="language"/><field name="last_result"/></group>
+                                    <field name="code" widget="code" options="{'mode': 'python'}"/>
+                                    <field name="last_log"/>
+                                </form>
+                            </field>
+                        </page>
+                        <page string="Reference AI answers" name="references">
+                            <field name="reference_answer_ids" readonly="1">
+                                <list><field name="model_name"/><field name="language"/><field name="answer"/></list>
+                            </field>
+                        </page>
+                        <page string="Validation log" name="log">
+                            <field name="validation_log"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+    <record id="ai_interview_question_view_search" model="ir.ui.view">
+        <field name="name">ai.interview.question.search</field>
+        <field name="model">ai.interview.question</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="prompt"/>
+                <filter name="approved" string="Approved (in pool)" domain="[('state', '=', 'approved')]"/>
+                <filter name="to_approve" string="To approve" domain="[('state', '=', 'validated')]"/>
+                <filter name="failed" string="Failed validation" domain="[('state', '=', 'failed')]"/>
+                <separator/>
+                <filter name="ai" string="AI-generated" domain="[('source', '=', 'ai')]"/>
+                <filter name="archived" string="Archived" domain="[('active', '=', False)]"/>
+                <group>
+                    <filter name="group_type" string="Type" context="{'group_by': 'qtype'}"/>
+                    <filter name="group_state" string="Status" context="{'group_by': 'state'}"/>
+                    <filter name="group_difficulty" string="Difficulty" context="{'group_by': 'difficulty'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    <record id="action_ai_interview_question" model="ir.actions.act_window">
+        <field name="name">Question bank</field>
+        <field name="res_model">ai.interview.question</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_group_type': 1}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Add questions or generate a coding pool</p>
+            <p>Coding and learn-and-apply questions enter the pool only after every reference solution passes in the sandbox and an admin approves them.</p>
+        </field>
+    </record>
+</odoo>

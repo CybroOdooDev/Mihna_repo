@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_report_scorecard" model="ir.actions.report">
+        <field name="name">AI interview scorecard</field>
+        <field name="model">ai.interview.session</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">linda_ai_interview.report_scorecard</field>
+        <field name="print_report_name">'Scorecard - %s' % (object.name or '').replace('/', '')</field>
+        <field name="binding_model_id" ref="model_ai_interview_session"/>
+        <field name="binding_type">report</field>
+    </record>
+
+    <template id="report_scorecard">
+        <t t-call="web.html_container">
+            <t t-foreach="docs" t-as="s">
+                <t t-call="web.external_layout">
+                    <div class="page" style="font-size: 12px;">
+                        <h2>AI interview scorecard</h2>
+                        <table class="table table-sm table-borderless">
+                            <tr>
+                                <td><strong>Candidate</strong><br/><span t-out="s.applicant_id.partner_name"/></td>
+                                <td><strong>Job</strong><br/><span t-out="s.job_id.name"/></td>
+                                <td><strong>Template</strong><br/><span t-out="s.template_id.name"/></td>
+                                <td><strong>Date</strong><br/><span t-field="s.finished_at" t-options="{'widget': 'date'}"/></td>
+                                <td><strong>Duration</strong><br/><span t-out="s.duration_minutes"/> min</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Total</strong><br/><span style="font-size: 18px;" t-out="'%.0f' % s.total_score"/>/100</td>
+                                <td><strong>Band</strong><br/><span t-field="s.band"/><t t-if="s.band_confirmed"> (confirmed)</t></td>
+                                <td><strong>AI-assistance risk</strong><br/><span t-field="s.risk"/></td>
+                                <td><strong>Red flags</strong><br/><span t-out="s.red_flag_count"/></td>
+                                <td><strong>Status</strong><br/><span t-field="s.state"/></td>
+                            </tr>
+                        </table>
+                        <p class="text-muted">The AI recommends; a named reviewer confirms every advance or rejection. Scores are 1–5 per dimension; the weighted average is shown out of 100.</p>
+
+                        <h4 class="mt-3">Dimension scores</h4>
+                        <t t-foreach="s.score_ids" t-as="sc">
+                            <div style="page-break-inside: avoid; border-top: 1px solid #ddd; padding-top: 6px; margin-top: 6px;">
+                                <strong t-field="sc.dimension"/> —
+                                <strong t-out="sc.final_score"/>/5
+                                <span class="text-muted">(weight <t t-out="sc.weight"/>%, AI <t t-out="sc.ai_score"/>; runs <t t-out="sc.ai_score_run1"/>/<t t-out="sc.ai_score_run2"/>)</span>
+                                <span t-if="sc.is_red_flag" style="color: #c0392b;"> ● red flag</span>
+                                <span t-if="sc.needs_review" style="color: #d68910;"> ● needs human review</span>
+                                <div t-if="sc.human_score"><em>Reviewer override: <t t-out="sc.human_score"/> — <t t-out="sc.override_reason"/> (<t t-out="sc.overridden_by.name"/>)</em></div>
+                                <div><t t-out="sc.rationale"/></div>
+                                <table class="table table-sm mt-1" t-if="sc.criteria">
+                                    <t t-foreach="sc.criteria" t-as="c">
+                                        <tr>
+                                            <td style="width: 30%;"><t t-out="c.get('name')"/></td>
+                                            <td style="width: 5%;"><t t-out="c.get('score')"/></td>
+                                            <td><t t-out="c.get('rationale')"/>
+                                                <t t-foreach="c.get('evidence') or []" t-as="ev">
+                                                    <div class="text-muted">“<t t-out="ev.get('quote')"/>” <small>(<t t-out="ev.get('section')"/>)</small></div>
+                                                </t>
+                                            </td>
+                                        </tr>
+                                    </t>
+                                </table>
+                            </div>
+                        </t>
+
+                        <h4 class="mt-4" style="page-break-before: always;">Coding</h4>
+                        <t t-foreach="s.response_ids.filtered(lambda r: r.section in ('coding', 'learn'))" t-as="r">
+                            <div style="page-break-inside: avoid;">
+                                <strong t-out="r.question_id.name"/> — <span t-field="r.language"/>,
+                                tests <t t-out="r.tests_passed"/>/<t t-out="r.tests_total"/>
+                                <pre style="font-size: 10px; background: #f6f6f6; padding: 6px; white-space: pre-wrap;" t-out="r.code or '(no code)'"/>
+                                <t t-foreach="r.followups or []" t-as="f">
+                                    <div><strong>Q:</strong> <t t-out="f.get('q')"/><br/><strong>A:</strong> <t t-out="f.get('a_final') or f.get('a')"/></div>
+                                </t>
+                                <t t-if="r.doc_questions">
+                                    <div class="mt-1"><strong>Questions asked about the document:</strong></div>
+                                    <t t-foreach="r.doc_questions" t-as="d"><div>• <t t-out="d.get('q')"/></div></t>
+                                </t>
+                            </div>
+                        </t>
+
+                        <h4 class="mt-4">Integrity signals</h4>
+                        <p t-if="not s.flag_ids.filtered('is_signal')">No integrity signals were triggered.</p>
+                        <table class="table table-sm" t-else="">
+                            <tr><th>Time (UTC)</th><th>Signal</th><th>Weight</th><th>Detail</th></tr>
+                            <tr t-foreach="s.flag_ids.filtered('is_signal')" t-as="f">
+                                <td><span t-field="f.timestamp"/></td><td><span t-field="f.type"/></td>
+                                <td><span t-field="f.weight"/></td><td><t t-out="f.detail"/></td>
+                            </tr>
+                        </table>
+                        <p t-if="s.live_recheck_required"><strong>Medium/High risk: give a short live coding question in the technical round.</strong></p>
+
+                        <h4 class="mt-4">Transcript</h4>
+                        <t t-foreach="s.response_ids.filtered(lambda r: r.section in ('written', 'voice'))" t-as="r">
+                            <div style="page-break-inside: avoid; margin-bottom: 6px;">
+                                <strong>Q (<t t-out="r.section"/>):</strong> <t t-out="r.prompt_text"/><br/>
+                                <strong>A:</strong> <t t-out="r.answer_text if r.section == 'written' else r._final_transcript()"/>
+                                <t t-foreach="r.followups or []" t-as="f">
+                                    <div class="ms-3"><strong>Q:</strong> <t t-out="f.get('q')"/> <strong>A:</strong> <t t-out="f.get('a_final') or f.get('a')"/></div>
+                                </t>
+                            </div>
+                        </t>
+                        <p class="text-muted">Audio recordings are available to Recruitment users in Odoo (access-controlled).</p>
+
+                        <h4 class="mt-4">Review</h4>
+                        <p>Reviewer: <t t-out="s.reviewer_id.name or '-'"/> · Decision: <span t-field="s.decision"/> ·
+                           Reviewed: <span t-field="s.reviewed_at"/></p>
+                        <div t-field="s.review_notes"/>
+                    </div>
+                </t>
+            </t>
+        </t>
+    </template>
+</odoo>

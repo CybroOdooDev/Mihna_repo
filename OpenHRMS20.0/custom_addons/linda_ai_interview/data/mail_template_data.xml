@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="mail_template_invite" model="mail.template">
+        <field name="name">Linda: AI interview invitation</field>
+        <field name="model_id" ref="model_ai_interview_session"/>
+        <field name="subject">Your first-round interview for {{ object.job_id.name or 'the role' }}</field>
+        <field name="email_from">{{ (object.company_id.email_formatted or user.email_formatted) }}</field>
+        <field name="email_to">{{ object.applicant_id.email_from }}</field>
+        <field name="auto_delete" eval="False"/>
+        <field name="body_html" type="html">
+<div style="font-size: 14px;">
+    <p>Dear <t t-out="object.applicant_id.partner_name or 'candidate'"/>,</p>
+    <p>Thank you for applying for <b t-out="object.job_id.name or ''"/> at <t t-out="object.company_id.name or ''"/>.
+       The first round is an online interview with <b>Linda</b>, our AI interviewer. It takes about
+       <t t-out="object.template_id.total_minutes"/> minutes in one sitting: a short written task, coding,
+       a learn-and-apply task and a spoken interview.</p>
+    <p>You need a laptop or desktop with a microphone and the latest Chrome, Edge or Firefox, and a quiet place.</p>
+    <p style="margin: 24px 0;">
+        <a t-att-href="object.portal_url" style="background-color:#714B67;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">Start the interview</a>
+    </p>
+    <p>The link is personal and valid until <t t-out="format_datetime(object.expires_at, tz=object.applicant_id.recruiter_id.user_id.tz or user.tz or 'Asia/Kolkata', dt_format='medium')"/>.
+       You can start any time before then.</p>
+    <p>A person from our team reviews every interview and makes the decision. Good luck!</p>
+</div>
+        </field>
+    </record>
+    <record id="mail_template_reminder" model="mail.template">
+        <field name="name">Linda: AI interview reminder</field>
+        <field name="model_id" ref="model_ai_interview_session"/>
+        <field name="subject">Reminder: your interview for {{ object.job_id.name or 'the role' }}</field>
+        <field name="email_from">{{ (object.company_id.email_formatted or user.email_formatted) }}</field>
+        <field name="email_to">{{ object.applicant_id.email_from }}</field>
+        <field name="auto_delete" eval="False"/>
+        <field name="body_html" type="html">
+<div style="font-size: 14px;">
+    <p>Dear <t t-out="object.applicant_id.partner_name or 'candidate'"/>,</p>
+    <p>This is a reminder that your online first-round interview is waiting for you.</p>
+    <p style="margin: 24px 0;">
+        <a t-att-href="object.portal_url" style="background-color:#714B67;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none;">Start the interview</a>
+    </p>
+    <p>The link is valid until <t t-out="format_datetime(object.expires_at, tz=object.applicant_id.recruiter_id.user_id.tz or user.tz or 'Asia/Kolkata', dt_format='medium')"/>.</p>
+</div>
+        </field>
+    </record>
+</odoo>

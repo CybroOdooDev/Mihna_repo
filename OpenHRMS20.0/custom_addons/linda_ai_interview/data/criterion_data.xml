@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="criterion_coding_1" model="ai.interview.criterion">
+        <field name="dimension">coding</field><field name="sequence">10</field>
+        <field name="name">Correctness</field>
+        <field name="description">Does the final code solve the problem for normal and hidden inputs?</field>
+        <field name="descriptor_1">No working solution, or no code.</field>
+        <field name="descriptor_2">Works only for the simplest case.</field>
+        <field name="descriptor_3">Works for typical inputs; fails some edge or hidden tests.</field>
+        <field name="descriptor_4">Passes nearly all tests; minor slip.</field>
+        <field name="descriptor_5">Passes all tests with a clean, correct solution.</field>
+    </record>
+    <record id="criterion_coding_2" model="ai.interview.criterion">
+        <field name="dimension">coding</field><field name="sequence">20</field>
+        <field name="name">Approach and decomposition</field>
+        <field name="description">How the problem is broken into steps and data structures.</field>
+        <field name="descriptor_1">No discernible approach.</field>
+        <field name="descriptor_2">Approach is confused or brute-force without understanding.</field>
+        <field name="descriptor_3">Reasonable approach with some unnecessary complexity.</field>
+        <field name="descriptor_4">Clear approach with sensible steps.</field>
+        <field name="descriptor_5">Clear, efficient approach a fresher would rarely produce, well decomposed.</field>
+    </record>
+    <record id="criterion_coding_3" model="ai.interview.criterion">
+        <field name="dimension">coding</field><field name="sequence">30</field>
+        <field name="name">Edge-case handling</field>
+        <field name="description">Empty/minimum input, duplicates, negatives, boundaries.</field>
+        <field name="descriptor_1">Edge cases ignored and not understood when asked.</field>
+        <field name="descriptor_2">Edge cases mostly missed; vague when asked.</field>
+        <field name="descriptor_3">Some edge cases handled or correctly discussed.</field>
+        <field name="descriptor_4">Most edge cases handled and explained.</field>
+        <field name="descriptor_5">Edge cases anticipated and handled deliberately.</field>
+    </record>
+    <record id="criterion_coding_4" model="ai.interview.criterion">
+        <field name="dimension">coding</field><field name="sequence">40</field>
+        <field name="name">Code readability</field>
+        <field name="description">Naming, structure, consistent formatting.</field>
+        <field name="descriptor_1">Unreadable.</field>
+        <field name="descriptor_2">Hard to follow: poor names, tangled structure.</field>
+        <field name="descriptor_3">Readable with some unclear names or structure.</field>
+        <field name="descriptor_4">Clean and readable.</field>
+        <field name="descriptor_5">Very clean, idiomatic for the chosen language.</field>
+    </record>
+    <record id="criterion_coding_5" model="ai.interview.criterion">
+        <field name="dimension">coding</field><field name="sequence">50</field>
+        <field name="name">Quality of explanation</field>
+        <field name="description">Answers to follow-ups about their own code (explain, trace, change).</field>
+        <field name="descriptor_1">Cannot explain their own code.</field>
+        <field name="descriptor_2">Explanations are vague or partly wrong.</field>
+        <field name="descriptor_3">Explains the main idea; struggles with details or the change request.</field>
+        <field name="descriptor_4">Explains clearly and handles the change request.</field>
+        <field name="descriptor_5">Explains precisely, traces inputs correctly and adapts the code confidently.</field>
+    </record>
+    <record id="criterion_learning_1" model="ai.interview.criterion">
+        <field name="dimension">learning</field><field name="sequence">10</field>
+        <field name="name">Speed of applying the new concept</field>
+        <field name="description">How quickly they turn the new document into working code.</field>
+        <field name="descriptor_1">Could not apply the concept.</field>
+        <field name="descriptor_2">Applied it only partially, late in the section.</field>
+        <field name="descriptor_3">Applied it within the time with some delay.</field>
+        <field name="descriptor_4">Applied it promptly.</field>
+        <field name="descriptor_5">Applied it immediately and accurately.</field>
+    </record>
+    <record id="criterion_learning_2" model="ai.interview.criterion">
+        <field name="dimension">learning</field><field name="sequence">20</field>
+        <field name="name">Quality of questions asked</field>
+        <field name="description">Questions to the document assistant (none is acceptable if not needed).</field>
+        <field name="descriptor_1">Questions show they did not read the doc, or asked for the solution.</field>
+        <field name="descriptor_2">Mostly unfocused questions.</field>
+        <field name="descriptor_3">Reasonable questions; some answered in the doc.</field>
+        <field name="descriptor_4">Focused questions that clarify real ambiguities.</field>
+        <field name="descriptor_5">Sharp, well-targeted questions (or none needed and the result is correct).</field>
+    </record>
+    <record id="criterion_learning_3" model="ai.interview.criterion">
+        <field name="dimension">learning</field><field name="sequence">30</field>
+        <field name="name">Recovery after errors</field>
+        <field name="description">Behaviour after failed runs.</field>
+        <field name="descriptor_1">Gave up or kept repeating the same mistake.</field>
+        <field name="descriptor_2">Slow, mostly random changes.</field>
+        <field name="descriptor_3">Fixed some errors with effort.</field>
+        <field name="descriptor_4">Diagnosed and fixed errors efficiently.</field>
+        <field name="descriptor_5">Quickly found root causes and fixed them.</field>
+    </record>
+    <record id="criterion_learning_4" model="ai.interview.criterion">
+        <field name="dimension">learning</field><field name="sequence">40</field>
+        <field name="name">Correctness of final result</field>
+        <field name="description">Final tests on the learn-and-apply task.</field>
+        <field name="descriptor_1">No working result.</field>
+        <field name="descriptor_2">Works only for trivial inputs.</field>
+        <field name="descriptor_3">Partly correct.</field>
+        <field name="descriptor_4">Mostly correct.</field>
+        <field name="descriptor_5">Fully correct.</field>
+    </record>
+    <record id="criterion_written_english_1" model="ai.interview.criterion">
+        <field name="dimension">written_english</field><field name="sequence">10</field>
+        <field name="name">Grammar</field>
+        <field name="description">Grammar, spelling, punctuation.</field>
+        <field name="descriptor_1">Errors block understanding.</field>
+        <field name="descriptor_2">Frequent errors that distract.</field>
+        <field name="descriptor_3">Some errors; meaning clear.</field>
+        <field name="descriptor_4">Few minor errors.</field>
+        <field name="descriptor_5">Virtually error-free.</field>
+    </record>
+    <record id="criterion_written_english_2" model="ai.interview.criterion">
+        <field name="dimension">written_english</field><field name="sequence">20</field>
+        <field name="name">Clarity</field>
+        <field name="description">Is the message easy to understand?</field>
+        <field name="descriptor_1">Message unclear.</field>
+        <field name="descriptor_2">Reader must guess the meaning.</field>
+        <field name="descriptor_3">Clear overall with some vague parts.</field>
+        <field name="descriptor_4">Clear and specific.</field>
+        <field name="descriptor_5">Exceptionally clear and precise.</field>
+    </record>
+    <record id="criterion_written_english_3" model="ai.interview.criterion">
+        <field name="dimension">written_english</field><field name="sequence">30</field>
+        <field name="name">Structure</field>
+        <field name="description">Logical order, paragraphs, greeting/closing for emails.</field>
+        <field name="descriptor_1">No structure.</field>
+        <field name="descriptor_2">Weak structure.</field>
+        <field name="descriptor_3">Basic structure.</field>
+        <field name="descriptor_4">Well organised.</field>
+        <field name="descriptor_5">Excellent, professional structure.</field>
+    </record>
+    <record id="criterion_written_english_4" model="ai.interview.criterion">
+        <field name="dimension">written_english</field><field name="sequence">40</field>
+        <field name="name">Tone appropriate to a client</field>
+        <field name="description">Polite, professional, takes responsibility where needed.</field>
+        <field name="descriptor_1">Rude or inappropriate.</field>
+        <field name="descriptor_2">Too casual or defensive.</field>
+        <field name="descriptor_3">Acceptable tone with lapses.</field>
+        <field name="descriptor_4">Professional and courteous.</field>
+        <field name="descriptor_5">Professional, empathetic and confident.</field>
+    </record>
+    <record id="criterion_written_english_5" model="ai.interview.criterion">
+        <field name="dimension">written_english</field><field name="sequence">50</field>
+        <field name="name">Brevity</field>
+        <field name="description">Says what is needed without padding.</field>
+        <field name="descriptor_1">Too short to be useful or extremely padded.</field>
+        <field name="descriptor_2">Noticeably padded or missing key points.</field>
+        <field name="descriptor_3">Somewhat wordy.</field>
+        <field name="descriptor_4">Concise.</field>
+        <field name="descriptor_5">Concise and complete.</field>
+    </record>
+    <record id="criterion_oral_english_1" model="ai.interview.criterion">
+        <field name="dimension">oral_english</field><field name="sequence">10</field>
+        <field name="name">Fluency</field>
+        <field name="description">Speaks with reasonable flow (intelligibility, not accent).</field>
+        <field name="descriptor_1">Very hard to follow.</field>
+        <field name="descriptor_2">Frequent long pauses or breakdowns.</field>
+        <field name="descriptor_3">Some hesitation; understandable.</field>
+        <field name="descriptor_4">Mostly fluent.</field>
+        <field name="descriptor_5">Fluent and natural.</field>
+    </record>
+    <record id="criterion_oral_english_2" model="ai.interview.criterion">
+        <field name="dimension">oral_english</field><field name="sequence">20</field>
+        <field name="name">Comprehension</field>
+        <field name="description">Answers the actual question asked.</field>
+        <field name="descriptor_1">Does not understand the questions.</field>
+        <field name="descriptor_2">Often misses the point.</field>
+        <field name="descriptor_3">Usually answers the question.</field>
+        <field name="descriptor_4">Answers questions accurately.</field>
+        <field name="descriptor_5">Answers precisely, including follow-ups.</field>
+    </record>
+    <record id="criterion_oral_english_3" model="ai.interview.criterion">
+        <field name="dimension">oral_english</field><field name="sequence">30</field>
+        <field name="name">Coherence</field>
+        <field name="description">Ideas are connected and easy to follow.</field>
+        <field name="descriptor_1">Incoherent.</field>
+        <field name="descriptor_2">Hard to follow.</field>
+        <field name="descriptor_3">Mostly coherent.</field>
+        <field name="descriptor_4">Coherent and organised.</field>
+        <field name="descriptor_5">Very well organised answers.</field>
+    </record>
+    <record id="criterion_oral_english_4" model="ai.interview.criterion">
+        <field name="dimension">oral_english</field><field name="sequence">40</field>
+        <field name="name">Vocabulary range</field>
+        <field name="description">Range and accuracy of words used.</field>
+        <field name="descriptor_1">Very limited vocabulary.</field>
+        <field name="descriptor_2">Limited; frequent wrong words.</field>
+        <field name="descriptor_3">Adequate for the topics.</field>
+        <field name="descriptor_4">Good range.</field>
+        <field name="descriptor_5">Wide, precise vocabulary.</field>
+    </record>
+    <record id="criterion_attitude_1" model="ai.interview.criterion">
+        <field name="dimension">attitude</field><field name="sequence">10</field>
+        <field name="name">Ownership</field>
+        <field name="description">Admits mistakes, proposes fixes, doesn't blame others.</field>
+        <field name="descriptor_1">Blames others or denies mistakes.</field>
+        <field name="descriptor_2">Reluctant to own mistakes.</field>
+        <field name="descriptor_3">Owns mistakes when prompted.</field>
+        <field name="descriptor_4">Owns mistakes and proposes fixes.</field>
+        <field name="descriptor_5">Owns mistakes proactively with a clear plan to prevent repeats.</field>
+    </record>
+    <record id="criterion_attitude_2" model="ai.interview.criterion">
+        <field name="dimension">attitude</field><field name="sequence">20</field>
+        <field name="name">Respectful disagreement with seniors</field>
+        <field name="description">Raises concerns politely through the right channel, then commits.</field>
+        <field name="descriptor_1">Defiant or would ignore the decision.</field>
+        <field name="descriptor_2">Would argue or comply resentfully.</field>
+        <field name="descriptor_3">Would raise concerns but unclear on committing.</field>
+        <field name="descriptor_4">Raises concerns politely, then commits.</field>
+        <field name="descriptor_5">Raises concerns with evidence through the right channel and fully commits.</field>
+    </record>
+    <record id="criterion_attitude_3" model="ai.interview.criterion">
+        <field name="dimension">attitude</field><field name="sequence">30</field>
+        <field name="name">Treatment of colleagues and clients</field>
+        <field name="description">Courteous; no contempt or blame in how they describe others.</field>
+        <field name="descriptor_1">Contemptuous or hostile.</field>
+        <field name="descriptor_2">Dismissive language about others.</field>
+        <field name="descriptor_3">Generally polite.</field>
+        <field name="descriptor_4">Courteous and considerate.</field>
+        <field name="descriptor_5">Consistently respectful and empathetic.</field>
+    </record>
+    <record id="criterion_attitude_4" model="ai.interview.criterion">
+        <field name="dimension">attitude</field><field name="sequence">40</field>
+        <field name="name">Professional conduct during the interview</field>
+        <field name="description">Courtesy and staying on task.</field>
+        <field name="descriptor_1">Rude or off-task.</field>
+        <field name="descriptor_2">Often off-task.</field>
+        <field name="descriptor_3">Mostly on task.</field>
+        <field name="descriptor_4">Courteous and focused.</field>
+        <field name="descriptor_5">Exemplary conduct.</field>
+    </record>
+    <record id="criterion_attitude_5" model="ai.interview.criterion">
+        <field name="dimension">attitude</field><field name="sequence">50</field>
+        <field name="name">Motivation fit</field>
+        <field name="description">Reasons for joining and career goals vs. the role.</field>
+        <field name="descriptor_1">No motivation given or clearly misaligned.</field>
+        <field name="descriptor_2">Vague or generic reasons.</field>
+        <field name="descriptor_3">Some genuine interest.</field>
+        <field name="descriptor_4">Clear motivation aligned with the role.</field>
+        <field name="descriptor_5">Specific, well-researched motivation and goals that match the role.</field>
+    </record>
+</odoo>

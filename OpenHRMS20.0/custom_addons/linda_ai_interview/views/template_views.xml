@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="ai_interview_template_view_list" model="ir.ui.view">
+        <field name="name">ai.interview.template.list</field>
+        <field name="model">ai.interview.template</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="job_ids" widget="many2many_tags"/>
+                <field name="total_minutes"/>
+                <field name="tone"/>
+            </list>
+        </field>
+    </record>
+    <record id="ai_interview_template_view_form" model="ir.ui.view">
+        <field name="name">ai.interview.template.form</field>
+        <field name="model">ai.interview.template</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger" invisible="active"/>
+                    <div class="oe_title"><h1><field name="name" placeholder="e.g. Fresher Odoo Developer"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="job_ids" widget="many2many_tags"/>
+                            <field name="tone"/>
+                            <field name="total_minutes"/>
+                            <field name="invite_hours"/>
+                        </group>
+                        <group>
+                            <field name="max_resumes"/>
+                            <field name="auto_invite_stage_id"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Sections" name="sections">
+                            <field name="section_ids">
+                                <list>
+                                    <field name="section_type"/>
+                                    <field name="min_minutes"/>
+                                    <field name="max_minutes"/>
+                                    <field name="question_count"/>
+                                    <field name="followup_count"/>
+                                    <field name="difficulty"/>
+                                    <field name="active" widget="boolean_toggle"/>
+                                </list>
+                                <form>
+                                    <group>
+                                        <group>
+                                            <field name="section_type"/>
+                                            <field name="difficulty"/>
+                                            <field name="question_count"/>
+                                            <field name="followup_count"/>
+                                        </group>
+                                        <group>
+                                            <field name="min_minutes"/>
+                                            <field name="max_minutes"/>
+                                            <field name="active"/>
+                                        </group>
+                                    </group>
+                                    <group string="AI guidance">
+                                        <field name="guidance" nolabel="1" colspan="2" placeholder="Topics to cover, target difficulty, sample questions..."/>
+                                    </group>
+                                    <group string="Things to avoid">
+                                        <field name="avoid" nolabel="1" colspan="2"/>
+                                    </group>
+                                    <group>
+                                        <field name="mandatory_question_ids" widget="many2many_tags"/>
+                                        <field name="example_question_ids" widget="many2many_tags"/>
+                                    </group>
+                                </form>
+                            </field>
+                            <p class="text-muted">Sections always run in this order: Written English → Coding → Learn and apply → Voice interview. The AI paces itself within each section's minimum and maximum time and the total cap.</p>
+                        </page>
+                        <page string="Scoring" name="scoring">
+                            <group>
+                                <group string="Dimension weights (must total 100%)">
+                                    <field name="weight_coding"/>
+                                    <field name="weight_learning"/>
+                                    <field name="weight_attitude"/>
+                                    <field name="weight_oral_english"/>
+                                    <field name="weight_written_english"/>
+                                </group>
+                                <group string="Recommendation bands">
+                                    <field name="band_strong"/>
+                                    <field name="band_borderline"/>
+                                </group>
+                            </group>
+                        </page>
+                        <page string="Languages" name="languages">
+                            <group>
+                                <field name="lang_python"/>
+                                <field name="lang_c"/>
+                                <field name="lang_cpp"/>
+                                <field name="lang_javascript"/>
+                            </group>
+                        </page>
+                        <page string="Notes" name="notes"><field name="notes"/></page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+    <record id="action_ai_interview_template" model="ir.actions.act_window">
+        <field name="name">Interview templates</field>
+        <field name="res_model">ai.interview.template</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

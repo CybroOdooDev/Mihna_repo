@@ -1,0 +1,9 @@
+id,name,model_id,group_id/id,operation,domain
+access_hr_insurance_policy_officer,hr.insurance.policy.officer,insurance.policy,hr.group_hr_user,crud,
+access_hr_insurance_policy_employee,hr.insurance.policy.employee,insurance.policy,hr.group_hr_manager,crud,
+access_hr_insurance_policy_manager,hr.insurance.policy.manager,insurance.policy,base.group_user,r,
+access_hr_insurance_officer,hr.insurance.officer,hr.insurance,hr.group_hr_user,crud,
+access_hr_insurance_employee,hr.insurance.employee,hr.insurance,hr.group_hr_manager,crud,
+access_hr_insurance_base_user,hr.insurance.base.user,hr.insurance,base.group_user,r,"[('employee_id.user_id', '=', user.id)]"
+rule_hr_insurance_company,Hr Insurance Multi Company,hr.insurance,,crud,"[('company_id', 'in', company_ids + [False])]"
+rule_insurance_policy_company,Hr Insurance Policy Multi Company,insurance.policy,,crud,"[('company_id', 'in', company_ids + [False])]"

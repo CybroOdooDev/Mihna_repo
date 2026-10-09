@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Linda – AI Interview for Odoo 19</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap"
+          rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css"/>
+    <link rel="stylesheet"
+          href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.carousel.min.css"/>
+    <style>
+        :root {
+          --primary-color: #00438B;
+          --bg-white: #fff;
+          --text-color: #121212;
+          --text-color-light: #64728f;
+        }
+
+        body {
+          font-family: "Montserrat", sans-serif;
+        }
+
+        .nav-tabs .nav-item.show .nav-link,
+        .nav-tabs .nav-link.active {
+          color: var(--text-color);
+          font-family: Montserrat;
+          font-size: 16px !important;
+          font-weight: 500 !important;
+          border-radius: 30px;
+          line-height: normal;
+          text-transform: capitalize;
+          background-color: #F5F5F5;
+          border: none;
+          margin-bottom: 0;
+          padding: 12px 24px;
+        }
+
+        .nav-tabs .nav-link:focus,
+        .nav-tabs .nav-link:hover {
+          border-color: transparent;
+          isolation: isolate;
+        }
+
+        .nav-tabs .nav-link:focus-visible {
+          border-color: transparent;
+          box-shadow: none;
+        }
+
+        /* owl-carousel */
+        .owl-carousel .owl-nav {
+          position: absolute;
+          top: 42%;
+          width: 100%;
+          display: flex;
+          justify-content: space-between;
+          transform: translateY(-42%);
+        }
+
+        .owl-carousel .owl-nav button.owl-prev {
+          position: absolute;
+          right: -36px;
+          font-size: 28px;
+          background-color: #e4e4e4;
+          border-radius: 20px;
+          width: 40px;
+          height: 40px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+
+        .owl-carousel .owl-nav button.owl-next {
+          position: absolute;
+          left: -36px;
+          font-size: 28px;
+          background-color: #e4e4e4;
+          border-radius: 20px;
+          width: 40px;
+          height: 40px;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+        }
+    </style>
+</head>
+
+<body>
+<!-- overview -->
+<div class="container">
+    <div class="my-5">
+
+        <div class="tab-content" id="myTabContent">
+            <div class="text-center d-flex justify-content-end gap-2 my-3">
+                <span class="px-3 py-1"
+                      style="background-color:#017E84;color: #fff; font-size: 0.8rem;font-weight:600;border: 1px solid #017E84;border-radius: 30px;">
+                    Community
+                </span>
+                <span class="px-3 py-1"
+                      style="background-color:#00438B;color: #fff; font-size: 0.8rem;font-weight:600;border: 1px solid #00438B;border-radius: 30px;">
+                    Enterprise
+                </span>
+                <span class="px-3 py-1"
+                      style="background-color:#714B67;color: #fff; font-size: 0.8rem;font-weight:600;border: 1px solid #714B67;border-radius: 30px;">
+                    Odoo 19
+                </span>
+            </div>
+            <div class="tab-pane fade show active" id="home" role="tabpanel" aria-labelledby="home-tab">
+                <div class="position-relative" style="border-radius: 16px; background: #f8f8f8; padding: 20px 0;">
+
+                    <div class="row " style="padding: 2rem 0rem 0 !important;">
+                        <div class="col-lg-8 mx-auto gap-4 d-flex flex-column align-items-center">
+                            <h1 class="text-center text-uppercase my-0" style="
+                                color: var(--text-color);
+                                font-size: 44px;
+                                font-weight: 700;
+                                line-height: normal;
+                            ">
+                                Linda – AI Interview
+                            </h1>
+                            <p class="my-1 text-center text-uppercase" style="
+                                letter-spacing: 3px !important;
+                                color: var(--primary-color);
+                                font-weight: bold;
+                                text-align: center;
+                                font-size: 14px;
+                                font-weight: 600;
+                                line-height: 20px;
+                                text-transform: uppercase;
+                            ">
+                                AI-Led First-Round Technical, Coding & Voice Interviews with Evidence-Backed Scorecards
+                            </p>
+                        </div>
+
+                        <div class="col-lg-12 d-flex justify-content-center gap-4 align-items-center"
+                             style="margin: 2.5rem 0;">
+                            <img src="./img/cybro-logo.png" width="100%" height="auto" style="width: 220px;"
+                                 class="img-responsive" alt="Cybrosys Technologies"/>
+                        </div>
+
+                        <div class="col-md-12 text-center" style="z-index: 5;">
+                            <a href="mailto:odoo@cybrosys.com" target="_blank" style="
+                                background-color: transparent;
+                                border-radius: 35px;
+                                font-family: Montserrat;
+                                display: inline-block;
+                                padding: 7px 33px;
+                                border: 1px solid var(--primary-color);
+                                color: var(--primary-color);
+                                text-decoration: none;
+                            " class="mx-1 mb-2 deep-1 deep_hover">
+                                <img class="img" style="width: 24px" src="./img/email (2).svg" alt="Email"/>
+                                <span class="pl-2" style="font-size: 16px; vertical-align: middle">Email Us</span>
+                            </a>
+                            <a href="skype:cybroopenerp?chat" target="_blank" style="
+                                background-color: #00438B;
+                                font-family: Montserrat;
+                                display: inline-block;
+                                padding: 7px 33px;
+                                border: 1px solid #00438B;
+                                border-radius: 35px;
+                                text-decoration: none;
+                            " class="mx-1 mb-2 deep-1 deep_hover">
+                                <img class="img" style="width: 24px" src="./img/tms.png" alt="Teams"/>
+                                <span class="pl-2"
+                                      style="color: #fff; font-size: 16px; vertical-align: middle">Teams</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="position-absolute" style="bottom: 0; z-index: 1; width: 100%;">
+                        <img src="./img/banner-bg.svg" class="img-fluid w-100" alt="Banner background">
+                    </div>
+                    <div class="position-absolute" style="bottom: 0; right: 0; z-index: 2;">
+                        <img src="./img/patter.svg" alt="Pattern">
+                    </div>
+                </div>
+
+                <!-- key-highlight -->
+                <div class="my-5" style="border-radius: 16px;
+                     padding: 60px 40px;
+                     border: 1px solid #EBEEF2;
+                     background-position: center;
+                     object-fit: cover;
+                     background-image: url('./img/blue-abstract-gradient-wave-wallpaper.jpg');
+                     box-shadow: 0px 5px 20px -11px rgba(0, 0, 0, 0.25);">
+                    <div class="row position-relative overflow-hidden">
+                        <div class="col-lg-12 d-flex flex-column justify-content-center align-items-center">
+                            <h2 style="color: var(--text-color);
+                                       text-align: center;
+                                       font-size: 40px;
+                                       font-weight: 700;
+                                       text-transform: uppercase;
+                                       padding-bottom: 50px;">
+                                Key Highlights
+                            </h2>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="mb-4 position-relative d-flex flex-column justify-content-center gap-3"
+                                 style="border-radius: 12px; background: #FFF; padding:32px; z-index: 2; height: 90%;">
+                                <div class="d-flex justify-content-center align-items-center"
+                                     style="background-color:#00438B !important; border-radius:8px !important; height:42px; width:42px">
+                                    <img src="./img/feature-icon.svg" class="img-responsive" height="22px" width="22px" alt="icon">
+                                </div>
+                                <h5 class="m-0" style="color:#000 !important; font-weight:bold">
+                                    Multi-Turn Voice & Coding
+                                </h5>
+                                <p class="m-0"
+                                   style="font-size:0.9rem; color:var(--text-color-light); font-size: 15px; font-weight: 400; line-height: 1.5;">
+                                    Linda conducts real-time conversational voice interviews, live in-browser coding tests, and written assessments tailored for developers.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="mb-4 position-relative d-flex flex-column justify-content-center gap-3"
+                                 style="border-radius: 12px; background: #FFF; padding:32px; z-index: 2; height: 90%;">
+                                <div class="d-flex justify-content-center align-items-center"
+                                     style="background-color:#00438B !important; border-radius:8px !important; height:42px; width:42px">
+                                    <img src="./img/feature-icon.svg" class="img-responsive" height="22px" width="22px" alt="icon">
+                                </div>
+                                <h5 class="m-0" style="color:#000 !important; font-weight:bold">
+                                    5-Dimension Evidence Rubrics
+                                </h5>
+                                <p class="m-0"
+                                   style="font-size:0.9rem; color:var(--text-color-light); font-size: 15px; font-weight: 400; line-height: 1.5;">
+                                    Scores candidates objectively on Attitude, Coding, Learn & Apply, and Oral English with exact quoted evidence from candidate transcripts.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="mb-4 position-relative d-flex flex-column justify-content-center gap-3"
+                                 style="border-radius: 12px; background: #FFF; padding:32px; z-index: 2; height: 90%;">
+                                <div class="d-flex justify-content-center align-items-center"
+                                     style="background-color:#00438B !important; border-radius:8px !important; height:42px; width:42px">
+                                    <img src="./img/feature-icon.svg" class="img-responsive" height="22px" width="22px" alt="icon">
+                                </div>
+                                <h5 class="m-0" style="color:#000 !important; font-weight:bold">
+                                    Anti-Cheat & Keystroke Signals
+                                </h5>
+                                <p class="m-0"
+                                   style="font-size:0.9rem; color:var(--text-color-light); font-size: 15px; font-weight: 400; line-height: 1.5;">
+                                    Monitors paste velocity, keystroke patterns, and external LLM assistance anomalies to guarantee candidate authenticity and assessment integrity.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="mb-4 position-relative d-flex flex-column justify-content-center gap-3"
+                                 style="border-radius: 12px; background: #FFF; padding:32px; z-index: 2; height: 90%;">
+                                <div class="d-flex justify-content-center align-items-center"
+                                     style="background-color:#00438B !important; border-radius:8px !important; height:42px; width:42px">
+                                    <img src="./img/feature-icon.svg" class="img-responsive" height="22px" width="22px" alt="icon">
+                                </div>
+                                <h5 class="m-0" style="color:#000 !important; font-weight:bold">
+                                    Multi-LLM & Speech Engines
+                                </h5>
+                                <p class="m-0"
+                                   style="font-size:0.9rem; color:var(--text-color-light); font-size: 15px; font-weight: 400; line-height: 1.5;">
+                                    Plug-and-play support for Anthropic Claude (Haiku & Sonnet), OpenAI GPT-4o, Groq, Deepgram STT, and ElevenLabs TTS audio models.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="mb-4 position-relative d-flex flex-column justify-content-center gap-3"
+                                 style="border-radius: 12px; background: #FFF; padding:32px; z-index: 2; height: 90%;">
+                                <div class="d-flex justify-content-center align-items-center"
+                                     style="background-color:#00438B !important; border-radius:8px !important; height:42px; width:42px">
+                                    <img src="./img/feature-icon.svg" class="img-responsive" height="22px" width="22px" alt="icon">
+                                </div>
+                                <h5 class="m-0" style="color:#000 !important; font-weight:bold">
+                                    Sandboxed Code Verification
+                                </h5>
+                                <p class="m-0"
+                                   style="font-size:0.9rem; color:var(--text-color-light); font-size: 15px; font-weight: 400; line-height: 1.5;">
+                                    Executes applicant coding submissions safely in a secure sandbox against test assertions with execution logs and runtime validation.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="mb-4 position-relative d-flex flex-column justify-content-center gap-3"
+                                 style="border-radius: 12px; background: #FFF; padding:32px; z-index: 2; height: 90%;">
+                                <div class="d-flex justify-content-center align-items-center"
+                                     style="background-color:#00438B !important; border-radius:8px !important; height:42px; width:42px">
+                                    <img src="./img/feature-icon.svg" class="img-responsive" height="22px" width="22px" alt="icon">
+                                </div>
+                                <h5 class="m-0" style="color:#000 !important; font-weight:bold">
+                                    Human-in-the-Loop Decision Gate
+                                </h5>
+                                <p class="m-0"
+                                   style="font-size:0.9rem; color:var(--text-color-light); font-size: 15px; font-weight: 400; line-height: 1.5;">
+                                    Recruiters maintain 100% control. A dedicated triage cockpit allows review, notes, stage advances, or rejections with a single click.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- banner-2 -->
+                <div class="my-5">
+                    <div style="padding: 4rem; background-color: #00438B; border-radius: 12px; position: relative;">
+                        <div class="wrapper-info" style="display: flex; flex-direction: column; gap: 20px;">
+                            <span class="wrapper-subtitle"
+                                  style="font-size: 38px; font-weight: 700; color: #fff; line-height: 48px; text-transform: capitalize; max-width: 600px;">
+                                Ready to Transform Your Technical Hiring with AI?
+                            </span>
+                            <h3 class="wrapper-details"
+                                style="font-size: 18px; font-weight: 400; color: #fff; line-height: 28px; max-width: 550px;">
+                                Automate first-round interviews, eliminate manual screening fatigue, and identify top technical talent effortlessly.
+                            </h3>
+                            <div class="d-flex flex-wrap gap-3">
+                                <a href="mailto:odoo@cybrosys.com" class="shop-btn" style="cursor: pointer; border-radius: 16px; display: flex; justify-content: center; align-items: center; gap: 7px;
+                                    border: 1px solid rgba(255, 255, 255, 0.20);
+                                    background: linear-gradient(93deg, rgba(255, 255, 255, 0.08) 6.01%, rgba(255, 255, 255, 0.17) 90.83%);
+                                    backdrop-filter: blur(10px); color: #fff; padding: 12px 16px; text-decoration: none;">
+                                    <span style="border-radius: 12px; background: rgba(255, 255, 255, 0.10); backdrop-filter: blur(6px); padding: 10px;">
+                                        <img src="./img/banner-mail.svg" alt="Mail">
+                                    </span>
+                                    <span style="font-weight: 500;">odoo@cybrosys.com</span>
+                                </a>
+                                <a href="https://wa.me/919074270811" target="_blank" class="shop-btn" style="cursor: pointer; border-radius: 16px; display: flex; justify-content: center; align-items: center; gap: 7px;
+                                    border: 1px solid rgba(255, 255, 255, 0.20);
+                                    background: linear-gradient(93deg, rgba(255, 255, 255, 0.08) 6.01%, rgba(255, 255, 255, 0.17) 90.83%);
+                                    backdrop-filter: blur(10px); color: #fff; padding: 12px 22px; text-decoration: none;">
+                                    <span style="border-radius: 12px; background: rgba(255, 255, 255, 0.10); backdrop-filter: blur(6px); padding: 10px;">
+                                        <img src="./img/banner-call.svg" alt="Call">
+                                    </span>
+                                    <span style="font-weight: 500;">+91 9074270811</span>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="d-none d-lg-block" style="position: absolute; bottom: 0; right: 0;">
+                            <img src="./img/banner-logo-pattern.svg" style="width: 480px;" alt="Pattern">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- screenshot and other tabs -->
+                <div class="mb-4 bg-white"
+                     style="border: 1px solid #EBEEF2; border-radius: 6px; box-shadow: 0px 8px 20px -4px rgba(0, 0, 0, 0.10);">
+                    <div>
+                        <ul class="nav nav-tabs justify-content-center bg-white py-2" id="myTab" role="tablist" style="border-radius: 6px 6px 0 0;">
+                            <li class="nav-item">
+                                <a aria-controls="overview" aria-selected="true" class="nav-link active"
+                                   data-bs-toggle="tab" href="#overview" id="overview-tab" role="tab"
+                                   style="color:#121212; font-weight:500; font-size:16px">
+                                    Screenshots
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a aria-controls="feature" aria-selected="false" class="nav-link py-2"
+                                   data-bs-toggle="tab" href="#feature" id="feature-tab" role="tab"
+                                   style="color:#121212; font-weight:500; font-size:16px">
+                                    Features
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a aria-controls="faq" aria-selected="false" class="nav-link" data-bs-toggle="tab"
+                                   href="#faq" id="faq-tab" role="tab"
+                                   style="color:#121212; font-weight:500; font-size:16px">
+                                    FAQs
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a aria-controls="releases" aria-selected="false" class="nav-link"
+                                   data-bs-toggle="tab" href="#releases" id="releases-tab" role="tab"
+                                   style="color:#121212; font-weight:500; font-size:16px">
+                                    Releases
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="tab-content p-md-5 p-2 py-3" id="myTabContent">
+                        
+                        <!-- TAB 1: SCREENSHOTS -->
+                        <div aria-labelledby="overview-tab" class="tab-pane fade show active" id="overview" role="tabpanel">
+
+                            <!-- Step 1 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">1. Global Settings & Interview Configuration</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Navigate to <b>Recruitment &rarr; Configuration &rarr; Settings</b> to activate the Linda AI Interview suite. Configure primary LLM providers, assign default voice synthesizer models, and establish company-wide interview guardrails with instant links to Providers, Question Bank, and Rubrics.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Global Settings" class="img-fluid" loading="lazy" src="./assets/screenshots/AI1.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 2 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">2. AI & Speech Providers Menu</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Access the comprehensive <b>AI Interview (Linda) &rarr; AI & speech providers</b> view. Manage specialized AI adapters across roles: Anthropic Claude for deep reasoning and live interview dialogue, Deepgram for speech-to-text, and ElevenLabs for natural conversational audio generation.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="AI and Speech Providers Menu" class="img-fluid" loading="lazy" src="./assets/screenshots/AI2.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 3 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">3. Provider Setup & Instant Connectivity Test</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Configure API credentials, target models (e.g. <code>claude-haiku-4-5</code>), and role assignments. Click the <b>Test Connection</b> button to perform a live handshake ping with the AI server, providing instant visual confirmation with a green notification banner.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Provider Configuration and Test Connection" class="img-fluid" loading="lazy" src="./assets/screenshots/AI3.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 4 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">4. Role-Tailored Interview Templates & Section Builder</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Build modular, multi-phase interview templates (e.g., <i>Fresher Odoo Developer – First Round</i>). Define distinct sequential sections including warm-up questions, interactive coding challenges, learn-and-apply exercises, and conversational voice rounds with customized time allocations.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Interview Template Form" class="img-fluid" loading="lazy" src="./assets/screenshots/AI4.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 5 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">5. Curated Question Bank & Classification</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Maintain a centralized library of technical questions categorized by type: <b>Coding</b>, <b>Learn and apply</b>, <b>Voice</b>, and <b>Written English</b>. Each item includes approval status badges, target job roles, difficulty levels, and hidden verification test cases.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Question Bank List" class="img-fluid" loading="lazy" src="./assets/screenshots/AI5.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 6 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">6. AI-Assisted Question Generator Wizard</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Expand your technical questions instantly using the <b>Generate Pool Questions</b> wizard. Specify target topics, role profiles, and difficulty levels; the AI generates high-quality technical challenges, reference solutions, and test assertions ready for review.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Generate Pool Questions Wizard" class="img-fluid" loading="lazy" src="./assets/screenshots/AI6.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 7 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">7. Objective Multi-Dimensional Rubric Criteria</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Standardize candidate evaluation across four foundational dimensions: <b>Attitude & Professionalism</b>, <b>Coding Competency</b>, <b>Learning Agility</b>, and <b>Oral English Communication</b>. Ensures consistent, unbiased scoring across all applicants.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Rubric Criteria List" class="img-fluid" loading="lazy" src="./assets/screenshots/AI7.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 8 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">8. Candidate Privacy & Consent Notices</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Comply with global privacy regulations (GDPR & local data protection laws). Maintain version-controlled consent notices informing candidates about AI evaluation, audio recording, data retention policies, and explicit opt-in agreements.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Consent Notice Form" class="img-fluid" loading="lazy" src="./assets/screenshots/AI8.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 9 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">9. High-Volume Intake Recruitment Campaigns</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Manage high-volume campus hiring or batch recruitment drives using <b>Intake Campaigns</b>. Monitor invitations sent, completion rates, and average scores from an active dashboard to streamline candidate throughput.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Recruitment Campaign Form" class="img-fluid" loading="lazy" src="./assets/screenshots/AI9.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 10 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">10. One-Click AI Interview Dispatch from Applicant Pipeline</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Seamlessly embedded into standard Odoo Recruitment. On any applicant card (e.g. <i>Sara - Trainee</i>), recruiters can dispatch an invitation with a single click using the dedicated <b>Send AI Interview</b> button.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Send AI Interview Button on Applicant" class="img-fluid" loading="lazy" src="./assets/screenshots/AI10.0.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 11 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">11. Real-Time Smart Button Counters & Chatter Logs</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Every dispatched interview increments the <b>AI Interviews</b> smart counter button and logs a detailed message into the Odoo chatter with direct links to the generated candidate session.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Smart Button and Chatter Audit Log" class="img-fluid" loading="lazy" src="./assets/screenshots/AI11.0.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 12 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">12. Responsive Candidate Invitation Email</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Candidates receive an automated, mobile-friendly invitation email containing interview expectations, section overviews, and a secure, time-limited <b>Start the interview</b> access token.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Candidate Invitation Email" class="img-fluid" loading="lazy" src="./assets/screenshots/AI12.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 13 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">13. Candidate Portal - Welcome & Privacy Agreement</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Candidates land on a clean, modern portal welcoming them by name. Linda explains the interview layout, equipment requirements, and presents clear privacy terms requiring candidate acknowledgment before entering.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Candidate Portal Welcome Screen" class="img-fluid" loading="lazy" src="./assets/screenshots/AI13.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 14 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">14. Pre-Flight Audio & Hardware System Verification</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                An automated pre-flight technical check validates browser compatibility, requests microphone permissions, and tests real-time audio input levels to ensure candidates experience zero disruptions during the voice round.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Pre-Flight System Check" class="img-fluid" loading="lazy" src="./assets/screenshots/AI14.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 15 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">15. Candidate Interview Submission & Completion</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Upon completing the final section, candidate answers, code solutions, and audio recordings are securely synchronized with Odoo. A friendly confirmation message informs the applicant that results are under review.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Candidate Portal Submission" class="img-fluid" loading="lazy" src="./assets/screenshots/AI19.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 16 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">16. Recruiter "To Review" Triage Dashboard</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Recruiters access the dedicated <b>To Review</b> triage queue. Completed interviews display aggregate scores (e.g. <code>60.00 / 100</code>), recommendation badges (<i>Advance</i>, <i>Borderline</i>, <i>Reject</i>), risk flags, and red flag counters.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Recruiter To Review Queue" class="img-fluid" loading="lazy" src="./assets/screenshots/AI20.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 17 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">17. In-Depth Candidate Scorecard & Dimension Breakdown</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Drill down into the session form's <b>Scores</b> tab to inspect granular sub-scores across all evaluation dimensions, risk indicators (paste speed, AI assistance cues), sandbox execution outputs, and scheduled reviewer activities.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Scores Tab and Dimension Breakdown" class="img-fluid" loading="lazy" src="./assets/screenshots/AI21.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 18 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">18. Human-in-the-Loop Review Gate & Hiring Decision</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Human recruiters retain ultimate decision authority. Under the <b>Review</b> tab, choose the final outcome (<i>Advance to technical round</i>, <i>Reject</i>, or <i>Keep on file</i>), document feedback, and click <b>Confirm review</b>.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Review Decision Tab" class="img-fluid" loading="lazy" src="./assets/screenshots/AI22.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 19 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">19. Locked Review Confirmation & Audit Traceability</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Once confirmed, the session shifts to <b>Reviewed</b> state. Reviewer identity, timestamps, and decision notes are permanently locked into the audit trail, automatically marking recruiter schedule tasks as done.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Confirmed Review Audit Trail" class="img-fluid" loading="lazy" src="./assets/screenshots/AI23.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 20 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">20. Automated Pipeline Stage Advancement</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                Upon confirming advancement, Linda automatically moves the applicant from the initial interview stage to the next recruitment pipeline column (e.g. <i>Second Interview / Technical Round</i>), eliminating manual stage drag-and-drop.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Applicant Pipeline Stage Advance" class="img-fluid" loading="lazy" src="./assets/screenshots/AI24.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 21 -->
+                            <div class="position-relative mb-4" style="border-radius:10px; background-color:#f8f9fa; border: 1px solid #eee;">
+                                <div class="p-md-5 p-3 position-relative">
+                                    <div class="row">
+                                        <div class="col-md-12">
+                                            <h2 style="font-weight:bold; font-size:calc(1.1rem + 0.8vw); line-height:120%; text-align:center; text-transform:capitalize;">
+                                                <span style="color:#00438B">21. Comprehensive Applicant Record with AI Scorecard</span>
+                                            </h2>
+                                        </div>
+                                        <div class="col-md-12 mb-4">
+                                            <p style="font-weight:400; font-size:16px; line-height:150%; text-align:center; color:var(--text-color-light)">
+                                                The candidate's profile in Odoo Recruitment permanently retains the composite score, recommendation status, and link to the full evaluation scorecard, empowering hiring managers during final decision-making.
+                                            </p>
+                                        </div>
+                                        <div class="col-md-12 text-center">
+                                            <div class="d-inline-block p-3 shadow-sm" style="background-color:#fff; border-radius:10px">
+                                                <img alt="Final Applicant Scorecard Record" class="img-fluid" loading="lazy" src="./assets/screenshots/AI25.png">
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <!-- TAB 2: FEATURES -->
+                        <div aria-labelledby="feature-tab" class="tab-pane fade show py-1" id="feature" role="tabpanel">
+                            <div class="row py-4">
+                                <div class="col-md-6 col-sm-12 p-3">
+                                    <div class="d-flex flex-column align-items-start h-100"
+                                         style="padding:30px; border-radius:12px; background-color:#00438b17">
+                                        <div class="d-flex align-items-center justify-content-center mb-3">
+                                            <div class="d-flex align-items-center justify-content-center"
+                                                 style="width:36px; height:36px; border-radius:50%; background-color:#00438B; margin-right:12px">
+                                                <i class="fa fa-star" style="color:#fff; font-size:14px"></i>
+                                            </div>
+                                            <p style="color:#1A202C; font-weight:700; font-size:1.15rem; margin-bottom:0">
+                                                Multi-LLM & Voice Engine Agility
+                                            </p>
+                                        </div>
+                                        <p style="color:var(--text-color-light); font-size:14px; margin-bottom:0; line-height: 1.6;">
+                                            Supports Anthropic Claude (Haiku & Sonnet), OpenAI (GPT-4o), Groq, Deepgram speech-to-text, and ElevenLabs conversational speech synthesis.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-sm-12 p-3">
+                                    <div class="d-flex flex-column align-items-start h-100"
+                                         style="padding:30px; border-radius:12px; background-color:#00438b17">
+                                        <div class="d-flex align-items-center justify-content-center mb-3">
+                                            <div class="d-flex align-items-center justify-content-center"
+                                                 style="width:36px; height:36px; border-radius:50%; background-color:#00438B; margin-right:12px">
+                                                <i class="fa fa-star" style="color:#fff; font-size:14px"></i>
+                                            </div>
+                                            <p style="color:#1A202C; font-weight:700; font-size:1.15rem; margin-bottom:0">
+                                                Multi-Turn Voice Interviewing
+                                            </p>
+                                        </div>
+                                        <p style="color:var(--text-color-light); font-size:14px; margin-bottom:0; line-height: 1.6;">
+                                            Conducts dynamic, conversational spoken interviews that adapt follow-up questions in real-time based on the candidate's previous oral responses.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-sm-12 p-3">
+                                    <div class="d-flex flex-column align-items-start h-100"
+                                         style="padding:30px; border-radius:12px; background-color:#00438b17">
+                                        <div class="d-flex align-items-center justify-content-center mb-3">
+                                            <div class="d-flex align-items-center justify-content-center"
+                                                 style="width:36px; height:36px; border-radius:50%; background-color:#00438B; margin-right:12px">
+                                                <i class="fa fa-star" style="color:#fff; font-size:14px"></i>
+                                            </div>
+                                            <p style="color:#1A202C; font-weight:700; font-size:1.15rem; margin-bottom:0">
+                                                Sandboxed Code Execution
+                                            </p>
+                                        </div>
+                                        <p style="color:var(--text-color-light); font-size:14px; margin-bottom:0; line-height: 1.6;">
+                                            Live in-browser code editor that safely compiles and runs candidate Python solutions against pre-configured hidden test cases and edge validations.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-sm-12 p-3">
+                                    <div class="d-flex flex-column align-items-start h-100"
+                                         style="padding:30px; border-radius:12px; background-color:#00438b17">
+                                        <div class="d-flex align-items-center justify-content-center mb-3">
+                                            <div class="d-flex align-items-center justify-content-center"
+                                                 style="width:36px; height:36px; border-radius:50%; background-color:#00438B; margin-right:12px">
+                                                <i class="fa fa-star" style="color:#fff; font-size:14px"></i>
+                                            </div>
+                                            <p style="color:#1A202C; font-weight:700; font-size:1.15rem; margin-bottom:0">
+                                                AI-Powered Question Pool Generator
+                                            </p>
+                                        </div>
+                                        <p style="color:var(--text-color-light); font-size:14px; margin-bottom:0; line-height: 1.6;">
+                                            Built-in generation wizard quickly produces role-specific challenges across coding, concept explanation, and problem-solving with sample solutions.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-sm-12 p-3">
+                                    <div class="d-flex flex-column align-items-start h-100"
+                                         style="padding:30px; border-radius:12px; background-color:#00438b17">
+                                        <div class="d-flex align-items-center justify-content-center mb-3">
+                                            <div class="d-flex align-items-center justify-content-center"
+                                                 style="width:36px; height:36px; border-radius:50%; background-color:#00438B; margin-right:12px">
+                                                <i class="fa fa-star" style="color:#fff; font-size:14px"></i>
+                                            </div>
+                                            <p style="color:#1A202C; font-weight:700; font-size:1.15rem; margin-bottom:0">
+                                                Evidence-Based Rubric Scoring
+                                            </p>
+                                        </div>
+                                        <p style="color:var(--text-color-light); font-size:14px; margin-bottom:0; line-height: 1.6;">
+                                            Evaluates Attitude, Coding, Learning Agility, and English. Every criterion score is backed by exact transcript quotations for verifiable objectivity.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-sm-12 p-3">
+                                    <div class="d-flex flex-column align-items-start h-100"
+                                         style="padding:30px; border-radius:12px; background-color:#00438b17">
+                                        <div class="d-flex align-items-center justify-content-center mb-3">
+                                            <div class="d-flex align-items-center justify-content-center"
+                                                 style="width:36px; height:36px; border-radius:50%; background-color:#00438B; margin-right:12px">
+                                                <i class="fa fa-star" style="color:#fff; font-size:14px"></i>
+                                            </div>
+                                            <p style="color:#1A202C; font-weight:700; font-size:1.15rem; margin-bottom:0">
+                                                Anti-Cheating & Keystroke Dynamics
+                                            </p>
+                                        </div>
+                                        <p style="color:var(--text-color-light); font-size:14px; margin-bottom:0; line-height: 1.6;">
+                                            Tracks paste frequency, typing cadence bursts, and signs of LLM generation, flagging anomalous candidate sessions with high-risk badges.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-sm-12 p-3">
+                                    <div class="d-flex flex-column align-items-start h-100"
+                                         style="padding:30px; border-radius:12px; background-color:#00438b17">
+                                        <div class="d-flex align-items-center justify-content-center mb-3">
+                                            <div class="d-flex align-items-center justify-content-center"
+                                                 style="width:36px; height:36px; border-radius:50%; background-color:#00438B; margin-right:12px">
+                                                <i class="fa fa-star" style="color:#fff; font-size:14px"></i>
+                                            </div>
+                                            <p style="color:#1A202C; font-weight:700; font-size:1.15rem; margin-bottom:0">
+                                                Role-Based Interview Templates
+                                            </p>
+                                        </div>
+                                        <p style="color:var(--text-color-light); font-size:14px; margin-bottom:0; line-height: 1.6;">
+                                            Create reusable templates per job position (e.g. Trainee, Python Dev, Senior Architect) with custom time caps and stage weightings.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-sm-12 p-3">
+                                    <div class="d-flex flex-column align-items-start h-100"
+                                         style="padding:30px; border-radius:12px; background-color:#00438b17">
+                                        <div class="d-flex align-items-center justify-content-center mb-3">
+                                            <div class="d-flex align-items-center justify-content-center"
+                                                 style="width:36px; height:36px; border-radius:50%; background-color:#00438B; margin-right:12px">
+                                                <i class="fa fa-star" style="color:#fff; font-size:14px"></i>
+                                            </div>
+                                            <p style="color:#1A202C; font-weight:700; font-size:1.15rem; margin-bottom:0">
+                                                Candidate Self-Service Web Portal
+                                            </p>
+                                        </div>
+                                        <p style="color:var(--text-color-light); font-size:14px; margin-bottom:0; line-height: 1.6;">
+                                            Zero software installation required for candidates. Works seamlessly in any modern web browser with camera/microphone permissions.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-sm-12 p-3">
+                                    <div class="d-flex flex-column align-items-start h-100"
+                                         style="padding:30px; border-radius:12px; background-color:#00438b17">
+                                        <div class="d-flex align-items-center justify-content-center mb-3">
+                                            <div class="d-flex align-items-center justify-content-center"
+                                                 style="width:36px; height:36px; border-radius:50%; background-color:#00438B; margin-right:12px">
+                                                <i class="fa fa-star" style="color:#fff; font-size:14px"></i>
+                                            </div>
+                                            <p style="color:#1A202C; font-weight:700; font-size:1.15rem; margin-bottom:0">
+                                                Recruiter Triage Cockpit
+                                            </p>
+                                        </div>
+                                        <p style="color:var(--text-color-light); font-size:14px; margin-bottom:0; line-height: 1.6;">
+                                            Filter all pending sessions in the "To Review" queue. Sort by score, recommendation category, or anomaly flags for fast triage.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 col-sm-12 p-3">
+                                    <div class="d-flex flex-column align-items-start h-100"
+                                         style="padding:30px; border-radius:12px; background-color:#00438b17">
+                                        <div class="d-flex align-items-center justify-content-center mb-3">
+                                            <div class="d-flex align-items-center justify-content-center"
+                                                 style="width:36px; height:36px; border-radius:50%; background-color:#00438B; margin-right:12px">
+                                                <i class="fa fa-star" style="color:#fff; font-size:14px"></i>
+                                            </div>
+                                            <p style="color:#1A202C; font-weight:700; font-size:1.15rem; margin-bottom:0">
+                                                Automated Stage Advancement
+                                            </p>
+                                        </div>
+                                        <p style="color:var(--text-color-light); font-size:14px; margin-bottom:0; line-height: 1.6;">
+                                            Confirming an advance decision automatically moves the candidate to the next hiring stage in Odoo Recruitment and closes reviewer tasks.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 3: FAQS -->
+                        <div aria-labelledby="faq-tab" class="tab-pane fade show" id="faq" role="tabpanel">
+                            <div class="row" style="background-color:#fff !important">
+                                <div class="col-md-12">
+                                    <div class="accordion mb-4" id="accordion_faq">
+                                        
+                                        <!-- FAQ 1 -->
+                                        <div style="margin:1rem 0rem">
+                                            <div aria-expanded="true" class="card-header"
+                                                 data-bs-toggle="collapse" data-bs-target="#collapseFAQOne"
+                                                 style="cursor: pointer; background-color:#f8f8f8; border:none; border-top-right-radius:10px; border-top-left-radius:10px; padding: 14px 24px;">
+                                                <a class="card-title text-decoration-none d-flex justify-content-between align-items-center"
+                                                   style="font-size:17px; font-weight:600; color:#040f3a">
+                                                    <span>What is Linda AI Interview, and how does it work?</span>
+                                                    <i class="fa fa-chevron-down" style="color: #00438B; font-size: 14px;"></i>
+                                                </a>
+                                            </div>
+                                            <div class="accordion-collapse collapse show" id="collapseFAQOne"
+                                                 data-bs-parent="#accordion_faq"
+                                                 style="box-shadow: rgba(0, 0, 0, 0.05) 0px 6px 24px 0px; border: 1px solid #f8f8f8; border-bottom-right-radius:10px; border-bottom-left-radius:10px">
+                                                <p style="padding:1rem 1.5rem; font-size:15px; line-height:26px; color:#666; margin-bottom:0;">
+                                                    Linda is an automated AI interviewer built directly inside Odoo 19. It dispatches first-round technical screening interviews via secure email invitations. Candidates enter a browser portal where Linda leads them through written questions, live Python coding challenges executed in a safe sandbox, and an interactive voice round. Once complete, Linda scores the candidate against objective rubrics and presents the findings to your recruiters for human review.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <!-- FAQ 2 -->
+                                        <div style="margin:1rem 0rem">
+                                            <div aria-expanded="false" class="card-header collapsed"
+                                                 data-bs-toggle="collapse" data-bs-target="#collapseFAQTwo"
+                                                 style="cursor: pointer; background-color:#f8f8f8; border:none; border-top-right-radius:10px; border-top-left-radius:10px; padding: 14px 24px;">
+                                                <a class="card-title text-decoration-none d-flex justify-content-between align-items-center"
+                                                   style="font-size:17px; font-weight:600; color:#040f3a">
+                                                    <span>Which AI and speech providers are supported?</span>
+                                                    <i class="fa fa-chevron-down" style="color: #00438B; font-size: 14px;"></i>
+                                                </a>
+                                            </div>
+                                            <div class="accordion-collapse collapse" id="collapseFAQTwo"
+                                                 data-bs-parent="#accordion_faq"
+                                                 style="box-shadow: rgba(0, 0, 0, 0.05) 0px 6px 24px 0px; border: 1px solid #f8f8f8; border-bottom-right-radius:10px; border-bottom-left-radius:10px">
+                                                <p style="padding:1rem 1.5rem; font-size:15px; line-height:26px; color:#666; margin-bottom:0;">
+                                                    The module features an extensible provider architecture. Out of the box, it supports Anthropic Claude (Claude 3.5 Haiku and Sonnet), OpenAI (GPT-4o), and Groq for core LLM evaluation and dialogue. For audio synthesis and transcription, it connects with Deepgram and ElevenLabs. You can also configure test pings directly from Odoo to verify API credentials at any time.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <!-- FAQ 3 -->
+                                        <div style="margin:1rem 0rem">
+                                            <div aria-expanded="false" class="card-header collapsed"
+                                                 data-bs-toggle="collapse" data-bs-target="#collapseFAQThree"
+                                                 style="cursor: pointer; background-color:#f8f8f8; border:none; border-top-right-radius:10px; border-top-left-radius:10px; padding: 14px 24px;">
+                                                <a class="card-title text-decoration-none d-flex justify-content-between align-items-center"
+                                                   style="font-size:17px; font-weight:600; color:#040f3a">
+                                                    <span>Does Linda make hiring decisions automatically?</span>
+                                                    <i class="fa fa-chevron-down" style="color: #00438B; font-size: 14px;"></i>
+                                                </a>
+                                            </div>
+                                            <div class="accordion-collapse collapse" id="collapseFAQThree"
+                                                 data-bs-parent="#accordion_faq"
+                                                 style="box-shadow: rgba(0, 0, 0, 0.05) 0px 6px 24px 0px; border: 1px solid #f8f8f8; border-bottom-right-radius:10px; border-bottom-left-radius:10px">
+                                                <p style="padding:1rem 1.5rem; font-size:15px; line-height:26px; color:#666; margin-bottom:0;">
+                                                    No. Linda acts as an intelligent assistant that does the heavy lifting of conducting and scoring interviews. All final decisions remain strictly with your hiring managers and recruiters through our "Human-in-the-Loop" review gate. Recruiters can view all evidence, transcripts, and code runs before confirming an advance or rejection.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <!-- FAQ 4 -->
+                                        <div style="margin:1rem 0rem">
+                                            <div aria-expanded="false" class="card-header collapsed"
+                                                 data-bs-toggle="collapse" data-bs-target="#collapseFAQFour"
+                                                 style="cursor: pointer; background-color:#f8f8f8; border:none; border-top-right-radius:10px; border-top-left-radius:10px; padding: 14px 24px;">
+                                                <a class="card-title text-decoration-none d-flex justify-content-between align-items-center"
+                                                   style="font-size:17px; font-weight:600; color:#040f3a">
+                                                    <span>How does anti-cheat and AI-assistance detection work?</span>
+                                                    <i class="fa fa-chevron-down" style="color: #00438B; font-size: 14px;"></i>
+                                                </a>
+                                            </div>
+                                            <div class="accordion-collapse collapse" id="collapseFAQFour"
+                                                 data-bs-parent="#accordion_faq"
+                                                 style="box-shadow: rgba(0, 0, 0, 0.05) 0px 6px 24px 0px; border: 1px solid #f8f8f8; border-bottom-right-radius:10px; border-bottom-left-radius:10px">
+                                                <p style="padding:1rem 1.5rem; font-size:15px; line-height:26px; color:#666; margin-bottom:0;">
+                                                    During the interview, the web portal records keystroke velocity, copy-paste bursts, and answer cadence. Answers are also scanned for telltale markers of generative AI. If suspicious activity is detected, Linda flags the session with an anomaly warning and increments a red flag counter for recruiter review.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <!-- FAQ 5 -->
+                                        <div style="margin:1rem 0rem">
+                                            <div aria-expanded="false" class="card-header collapsed"
+                                                 data-bs-toggle="collapse" data-bs-target="#collapseFAQFive"
+                                                 style="cursor: pointer; background-color:#f8f8f8; border:none; border-top-right-radius:10px; border-top-left-radius:10px; padding: 14px 24px;">
+                                                <a class="card-title text-decoration-none d-flex justify-content-between align-items-center"
+                                                   style="font-size:17px; font-weight:600; color:#040f3a">
+                                                    <span>Can we customize interview templates and evaluation rubrics?</span>
+                                                    <i class="fa fa-chevron-down" style="color: #00438B; font-size: 14px;"></i>
+                                                </a>
+                                            </div>
+                                            <div class="accordion-collapse collapse" id="collapseFAQFive"
+                                                 data-bs-parent="#accordion_faq"
+                                                 style="box-shadow: rgba(0, 0, 0, 0.05) 0px 6px 24px 0px; border: 1px solid #f8f8f8; border-bottom-right-radius:10px; border-bottom-left-radius:10px">
+                                                <p style="padding:1rem 1.5rem; font-size:15px; line-height:26px; color:#666; margin-bottom:0;">
+                                                    Yes, completely. You have full control over templates, section sequences, time limits, question pools, and rubric criteria weights. You can maintain distinct templates for freshers, senior engineers, project managers, and QA specialists.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <!-- FAQ 6 -->
+                                        <div style="margin:1rem 0rem">
+                                            <div aria-expanded="false" class="card-header collapsed"
+                                                 data-bs-toggle="collapse" data-bs-target="#collapseFAQSix"
+                                                 style="cursor: pointer; background-color:#f8f8f8; border:none; border-top-right-radius:10px; border-top-left-radius:10px; padding: 14px 24px;">
+                                                <a class="card-title text-decoration-none d-flex justify-content-between align-items-center"
+                                                   style="font-size:17px; font-weight:600; color:#040f3a">
+                                                    <span>Is the module compatible with both Community and Enterprise?</span>
+                                                    <i class="fa fa-chevron-down" style="color: #00438B; font-size: 14px;"></i>
+                                                </a>
+                                            </div>
+                                            <div class="accordion-collapse collapse" id="collapseFAQSix"
+                                                 data-bs-parent="#accordion_faq"
+                                                 style="box-shadow: rgba(0, 0, 0, 0.05) 0px 6px 24px 0px; border: 1px solid #f8f8f8; border-bottom-right-radius:10px; border-bottom-left-radius:10px">
+                                                <p style="padding:1rem 1.5rem; font-size:15px; line-height:26px; color:#666; margin-bottom:0;">
+                                                    Yes. Linda – AI Interview is built natively on Odoo 19 and functions seamlessly in both Odoo Community and Odoo Enterprise environments.
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TAB 4: RELEASES -->
+                        <div aria-labelledby="releases-tab" class="tab-pane fade show" id="releases" role="tabpanel">
+                            
+                            <div class="row pt-4 m-0">
+                                <div class="col-md-3">
+                                    <h4 style="font-size:16px; font-weight:600; color:#514F4F; margin:0; line-height:26px;">
+                                        Release 20.0.1.0.0 (Latest)
+                                    </h4>
+                                    <span style="font-size:14px; color:#7A7979; display:block; margin-bottom:20px;">
+                                        October, 2026
+                                    </span>
+                                </div>
+                                <div class="col-md-8">
+                                    <div style="padding:0 0 30px">
+                                        <div style="margin:0 0 10px">
+                                            <div style="display:inline-block; padding:2px 10px; font-size: 12px; font-weight: 600; color:#00438B; background-color:#b5d9ff; border-radius:20px">
+                                                MIGRATION
+                                            </div>
+                                        </div>
+                                        <div class="d-flex m-0" style="color:#7A7979;">
+                                            <ul class="pl-3 mb-0" style="line-height: 24px;">
+                                                <li>Official migration to Odoo 20.0.</li>
+                                                <li>Migrated security architecture to unified <code>ir.access</code> model and rules format.</li>
+                                                <li>Updated System Parameter access to typed getters and setters (<code>get_str</code>, <code>get_int</code>, <code>get_bool</code>).</li>
+                                                <li>Full support for Odoo 20 binary attachments and updated recruitment data models.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div style="padding:0 0 0; border-bottom:1px solid #E3E3E3"></div>
+                                </div>
+                            </div>
+
+                            <div class="row pt-4 m-0">
+                                <div class="col-md-3">
+                                    <h4 style="font-size:16px; font-weight:600; color:#514F4F; margin:0; line-height:26px;">
+                                        Release 19.0.1.1.0
+                                    </h4>
+                                    <span style="font-size:14px; color:#7A7979; display:block; margin-bottom:20px;">
+                                        October, 2026
+                                    </span>
+                                </div>
+                                <div class="col-md-8">
+                                    <div style="padding:0 0 30px">
+                                        <div style="margin:0 0 10px">
+                                            <div style="display:inline-block; padding:2px 10px; font-size: 12px; font-weight: 600; color:#00438B; background-color:#b5d9ff; border-radius:20px">
+                                                ENHANCEMENT
+                                            </div>
+                                        </div>
+                                        <div class="d-flex m-0" style="color:#7A7979;">
+                                            <ul class="pl-3 mb-0" style="line-height: 24px;">
+                                                <li>Enhanced AI provider connectivity test with real-time ping validation and visual user notifications.</li>
+                                                <li>Optimized candidate audio verification pre-flight checks and permissions handling.</li>
+                                                <li>Improved human-in-the-loop review workflow and automatic pipeline stage progression.</li>
+                                                <li>Added high-risk anomaly indicators and red-flag counter in the recruiter review queue.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div style="padding:0 0 0; border-bottom:1px solid #E3E3E3"></div>
+                                </div>
+                            </div>
+
+                            <div class="row pt-4 m-0">
+                                <div class="col-md-3">
+                                    <h4 style="font-size:16px; font-weight:600; color:#514F4F; margin:0; line-height:26px;">
+                                        Release 19.0.1.0.0
+                                    </h4>
+                                    <span style="font-size:14px; color:#7A7979; display:block; margin-bottom:20px;">
+                                        September, 2026
+                                    </span>
+                                </div>
+                                <div class="col-md-8">
+                                    <div style="padding:0 0 30px">
+                                        <div style="margin:0 0 10px">
+                                            <div style="display:inline-block; padding:2px 10px; font-size: 12px; font-weight: 600; color:#00438B; background-color:#b5d9ff; border-radius:20px">
+                                                INITIAL
+                                            </div>
+                                        </div>
+                                        <div class="d-flex m-0" style="color:#7A7979;">
+                                            <ul class="pl-3 mb-0" style="line-height: 24px;">
+                                                <li>Initial release of Linda AI Interview for Odoo 19.</li>
+                                                <li>Integrated candidate portal with real-time conversational voice and live code execution sandbox.</li>
+                                                <li>5-dimension evidence-based rubrics and automated scorecard generation.</li>
+                                                <li>Full integration with Odoo Recruitment pipeline, smart buttons, and email invitation templates.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    <div style="padding:0 0 0; border-bottom:1px solid #E3E3E3"></div>
+                                </div>
+                            </div>
+
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- SERVICES SECTION -->
+                <section id="services" class="mt-5" style="border-radius: 16px;
+                         border: 1px solid #EBEEF2;
+                         background: var(--Neutral-N0, #FFF);
+                         padding: 60px 40px;
+                         box-shadow: 0px 5px 20px -11px rgba(0, 0, 0, 0.25);">
+                    <div class="text-center mt-2">
+                        <h3 class="mb-0" style="color: #000;
+                            text-align: center;
+                            font-family: Montserrat;
+                            font-size: 38px;
+                            font-style: normal;
+                            font-weight: 700;
+                            line-height: normal;
+                            text-transform: uppercase;
+                            padding-bottom: 45px;">
+                            Our Services
+                        </h3>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-lg-3 col-sm-6 mb-3">
+                            <a href="mailto:odoo@cybrosys.com" style="text-decoration:none">
+                                <div class="btn-lg btn-block p-4 mb-2 d-flex flex-column justify-content-center align-items-center"
+                                     style="font-size:25px; font-weight:bold; background-color:#FFE2E5; margin:auto; gap: 16px; border-radius: 8px;">
+                                    <div class="d-flex justify-content-center align-items-center"
+                                         style="background-color:#FA5A7D; border-radius:50%; height:56px; width:56px">
+                                        <img src="./img/gear.svg" class="img-responsive" height="28px" width="28px" alt="icon">
+                                    </div>
+                                    <span style="font-size: 16px; color: var(--text-color); font-weight: 600;">Odoo Customization</span>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-lg-3 col-sm-6 mb-3">
+                            <a href="mailto:odoo@cybrosys.com" style="text-decoration:none">
+                                <div class="btn-lg btn-block p-4 mb-2 d-flex flex-column justify-content-center align-items-center"
+                                     style="font-size:25px; font-weight:bold; background-color:#FFF4DE; margin:auto; gap: 16px; border-radius: 8px;">
+                                    <div class="d-flex justify-content-center align-items-center"
+                                         style="background-color:#FF947A; border-radius:50%; height:56px; width:56px">
+                                        <img src="./img/wrench-icon.svg" class="img-responsive" height="28px" width="28px" alt="icon">
+                                    </div>
+                                    <span style="font-size: 16px; color: var(--text-color); font-weight: 600;">Odoo Implementation</span>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-lg-3 col-sm-6 mb-3">
+                            <a href="mailto:odoo@cybrosys.com" style="text-decoration:none">
+                                <div class="btn-lg btn-block p-4 mb-2 d-flex flex-column justify-content-center align-items-center"
+                                     style="font-size:25px; font-weight:bold; background-color:#DCFCE7; margin:auto; gap: 16px; border-radius: 8px;">
+                                    <div class="d-flex justify-content-center align-items-center"
+                                         style="background-color:#3CD856; border-radius:50%; height:56px; width:56px">
+                                        <img src="./img/life-ring-icon.svg" class="img-responsive" height="28px" width="28px" alt="icon">
+                                    </div>
+                                    <span style="font-size: 16px; color: var(--text-color); font-weight: 600;">Odoo Support</span>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-lg-3 col-sm-6 mb-3">
+                            <a href="mailto:odoo@cybrosys.com" style="text-decoration:none">
+                                <div class="btn-lg btn-block p-4 mb-2 d-flex flex-column justify-content-center align-items-center"
+                                     style="font-size:25px; font-weight:bold; background-color:#F3E8FF; margin:auto; gap: 16px; border-radius: 8px;">
+                                    <div class="d-flex justify-content-center align-items-center"
+                                         style="background-color:#BF83FF; border-radius:50%; height:56px; width:56px">
+                                        <img src="./img/arrows-repeat.svg" class="img-responsive" height="28px" width="28px" alt="icon">
+                                    </div>
+                                    <span style="font-size: 16px; color: var(--text-color); font-weight: 600;">Odoo Migration</span>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-lg-3 col-sm-6 mb-3">
+                            <a href="mailto:odoo@cybrosys.com" style="text-decoration:none">
+                                <div class="btn-lg btn-block p-4 mb-2 d-flex flex-column justify-content-center align-items-center"
+                                     style="font-size:25px; font-weight:bold; background-color:#F1F9FF; margin:auto; gap: 16px; border-radius: 8px;">
+                                    <div class="d-flex justify-content-center align-items-center"
+                                         style="background-color:#01649C; border-radius:50%; height:56px; width:56px">
+                                        <img src="./img/puzzle-piece-icon.svg" class="img-responsive" height="28px" width="28px" alt="icon">
+                                    </div>
+                                    <span style="font-size: 16px; color: var(--text-color); font-weight: 600;">Odoo Integration</span>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-lg-3 col-sm-6 mb-3">
+                            <a href="mailto:odoo@cybrosys.com" style="text-decoration:none">
+                                <div class="btn-lg btn-block p-4 mb-2 d-flex flex-column justify-content-center align-items-center"
+                                     style="font-size:25px; font-weight:bold; background-color:#EDF8ED; margin:auto; gap: 16px; border-radius: 8px;">
+                                    <div class="d-flex justify-content-center align-items-center"
+                                         style="background-color:#69CC70; border-radius:50%; height:56px; width:56px">
+                                        <img src="./img/odoo-consultancy.svg" class="img-responsive" height="28px" width="28px" alt="icon">
+                                    </div>
+                                    <span style="font-size: 16px; color: var(--text-color); font-weight: 600;">Odoo Consultancy</span>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-lg-3 col-sm-6 mb-3">
+                            <a href="mailto:odoo@cybrosys.com" style="text-decoration:none">
+                                <div class="btn-lg btn-block p-4 mb-2 d-flex flex-column justify-content-center align-items-center"
+                                     style="font-size:25px; font-weight:bold; background-color:#F1F6FF; margin:auto; gap: 16px; border-radius: 8px;">
+                                    <div class="d-flex justify-content-center align-items-center"
+                                         style="background-color:#2E4556; border-radius:50%; height:56px; width:56px">
+                                        <img src="./img/odoo-licencing.svg" class="img-responsive" height="28px" width="28px" alt="icon">
+                                    </div>
+                                    <span style="font-size: 16px; color: var(--text-color); font-weight: 600;">Odoo Licensing</span>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-lg-3 col-sm-6 mb-3">
+                            <a href="mailto:odoo@cybrosys.com" style="text-decoration:none">
+                                <div class="btn-lg btn-block p-4 mb-2 d-flex flex-column justify-content-center align-items-center"
+                                     style="font-size:25px; font-weight:bold; background-color:#FAF6EA; margin:auto; gap: 16px; border-radius: 8px;">
+                                    <div class="d-flex justify-content-center align-items-center"
+                                         style="background-color:#FCD12C; border-radius:50%; height:56px; width:56px">
+                                        <img src="./img/hire-odoo.svg" class="img-responsive" height="28px" width="28px" alt="icon">
+                                    </div>
+                                    <span style="font-size: 16px; color: var(--text-color); font-weight: 600;">Hire Odoo Developer</span>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/owl.carousel.min.js"></script>
+</body>
+</html>

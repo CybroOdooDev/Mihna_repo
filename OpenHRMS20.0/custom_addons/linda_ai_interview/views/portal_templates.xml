@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="portal_interview" name="Linda – candidate interview">
+        <t t-call="web.frontend_layout">
+            <t t-set="no_header" t-value="True"/>
+            <t t-set="no_footer" t-value="True"/>
+            <t t-set="head">
+                <meta name="robots" content="noindex, nofollow"/>
+                <meta name="referrer" content="no-referrer"/>
+            </t>
+            <div id="wrap" class="o_linda_wrap">
+                <owl-component name="linda_ai_interview.CandidateApp" t-att-props="json.dumps({'token': token})"/>
+            </div>
+        </t>
+    </template>
+
+    <template id="portal_message" name="Linda – message">
+        <t t-call="web.frontend_layout">
+            <t t-set="no_header" t-value="True"/>
+            <t t-set="no_footer" t-value="True"/>
+            <div id="wrap" class="o_linda_wrap">
+                <div class="container py-5" style="max-width: 640px;">
+                    <div class="o_linda_card p-5 text-center">
+                        <div class="o_linda_avatar mx-auto mb-3">L</div>
+                        <h2 t-out="title"/>
+                        <p class="lead mt-3" t-out="message"/>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+</odoo>

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="ai_interview_campaign_view_list" model="ir.ui.view">
+        <field name="name">ai.interview.campaign.list</field>
+        <field name="model">ai.interview.campaign</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="job_id"/>
+                <field name="date_start"/>
+                <field name="date_end"/>
+                <field name="invited_count"/>
+                <field name="submitted_count"/>
+                <field name="review_pending_count"/>
+                <field name="average_score"/>
+                <field name="user_id" widget="many2one_avatar_user"/>
+                <field name="state" widget="badge" decoration-success="state == 'running'" decoration-muted="state == 'closed'"/>
+            </list>
+        </field>
+    </record>
+    <record id="ai_interview_campaign_view_form" model="ir.ui.view">
+        <field name="name">ai.interview.campaign.form</field>
+        <field name="model">ai.interview.campaign</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_start" type="object" string="Start campaign" class="btn-primary" invisible="state != 'draft'"/>
+                    <button name="action_invite_applicants" type="object" string="Invite applicants" class="btn-primary" invisible="state != 'running'"/>
+                    <button name="action_open_dashboard" type="object" string="Dashboard" invisible="state == 'draft'"/>
+                    <button name="action_close" type="object" string="Close" invisible="state != 'running'"/>
+                    <button name="action_reset" type="object" string="Reset to draft" invisible="state == 'draft'"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="action_view_sessions" type="object" class="oe_stat_button" icon="forum">
+                            <field name="invited_count" widget="statinfo" string="Invited"/>
+                        </button>
+                        <button name="action_open_dashboard" type="object" class="oe_stat_button" icon="bar_chart">
+                            <field name="review_pending_count" widget="statinfo" string="To review"/>
+                        </button>
+                    </div>
+                    <div class="oe_title"><h1><field name="name" placeholder="e.g. Campus drive – Oct 2026"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="job_id"/>
+                            <field name="template_id"/>
+                            <field name="user_id" widget="many2one_avatar_user"/>
+                            <field name="reviewer_ids" widget="many2many_tags_avatar"/>
+                        </group>
+                        <group>
+                            <field name="date_start"/>
+                            <field name="date_end"/>
+                            <field name="completion_rate" widget="percentage" options="{'digits': [16, 1]}" invisible="1"/>
+                            <field name="average_score"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Applicants" name="applicants">
+                            <field name="applicant_ids" context="{'default_job_id': job_id}">
+                                <list>
+                                    <field name="partner_name"/>
+                                    <field name="email_from"/>
+                                    <field name="stage_id"/>
+                                    <field name="ai_state"/>
+                                    <field name="ai_total_score"/>
+                                    <field name="ai_band"/>
+                                </list>
+                            </field>
+                        </page>
+                        <page string="Interviews" name="sessions">
+                            <field name="session_ids" readonly="1">
+                                <list>
+                                    <field name="name"/>
+                                    <field name="state"/>
+                                    <field name="total_score"/>
+                                    <field name="band"/>
+                                    <field name="risk"/>
+                                    <field name="reviewer_id"/>
+                                    <field name="decision"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+                <chatter/>
+            </form>
+        </field>
+    </record>
+    <record id="ai_interview_campaign_view_search" model="ir.ui.view">
+        <field name="name">ai.interview.campaign.search</field>
+        <field name="model">ai.interview.campaign</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="job_id"/>
+                <filter name="running" string="Running" domain="[('state', '=', 'running')]"/>
+                <filter name="mine" string="My campaigns" domain="['|', ('user_id', '=', uid), ('reviewer_ids', 'in', uid)]"/>
+            </search>
+        </field>
+    </record>
+    <record id="action_ai_interview_campaign" model="ir.actions.act_window">
+        <field name="name">Campaigns</field>
+        <field name="res_model">ai.interview.campaign</field>
+        <field name="view_mode">list,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">Create a hiring campaign</p>
+            <p>A campaign groups applicants for a drive (campus, walk-in...) so their AI interviews can be followed on one dashboard.</p>
+        </field>
+    </record>
+</odoo>

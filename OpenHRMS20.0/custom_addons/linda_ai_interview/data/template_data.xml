@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="template_fresher_odoo" model="ai.interview.template">
+        <field name="name">Fresher Odoo Developer – first round</field>
+        <field name="tone">friendly</field>
+        <field name="total_minutes">70</field>
+        <field name="invite_hours">72</field>
+    </record>
+    <record id="template_fresher_odoo_written" model="ai.interview.template.section">
+        <field name="template_id" ref="template_fresher_odoo"/>
+        <field name="section_type">written</field><field name="sequence">10</field>
+        <field name="min_minutes">8</field><field name="max_minutes">10</field>
+        <field name="question_count">2</field><field name="difficulty">2</field>
+        <field name="guidance">Two short tasks: (1) an email to a client about a delay, an error or a change in scope; (2) a short description of a project the candidate worked on. Keep tasks realistic for a software services company. Ask for 120-200 words.</field>
+        <field name="avoid">Topics that need domain knowledge outside software, politics, religion, personal life.</field>
+        <field name="example_question_ids" eval="[(6, 0, [ref('q_written_email'), ref('q_written_project')])]"/>
+    </record>
+    <record id="template_fresher_odoo_coding" model="ai.interview.template.section">
+        <field name="template_id" ref="template_fresher_odoo"/>
+        <field name="section_type">coding</field><field name="sequence">20</field>
+        <field name="min_minutes">20</field><field name="max_minutes">25</field>
+        <field name="question_count">1</field><field name="followup_count">3</field><field name="difficulty">2</field>
+        <field name="guidance">Fresher-level: arrays, strings, loops, conditions, simple data structures, searching, sorting, counting. Follow-ups: ask the candidate to explain a specific line, trace an edge case, and change a requirement.</field>
+    </record>
+    <record id="template_fresher_odoo_learn" model="ai.interview.template.section">
+        <field name="template_id" ref="template_fresher_odoo"/>
+        <field name="section_type">learn</field><field name="sequence">30</field>
+        <field name="min_minutes">12</field><field name="max_minutes">15</field>
+        <field name="question_count">1</field><field name="difficulty">2</field>
+        <field name="guidance">A 1-2 page made-up spec (data format or rule set) the candidate has never seen, and a small stdin/stdout task applying it.</field>
+    </record>
+    <record id="template_fresher_odoo_voice" model="ai.interview.template.section">
+        <field name="template_id" ref="template_fresher_odoo"/>
+        <field name="section_type">voice</field><field name="sequence">40</field>
+        <field name="min_minutes">15</field><field name="max_minutes">20</field>
+        <field name="question_count">5</field><field name="followup_count">1</field><field name="difficulty">2</field>
+        <field name="guidance">Start with the introduction and motivation questions, then three situational (attitude) questions about ownership, respectful disagreement with seniors, and treatment of colleagues and clients. One follow-up per question based on what the candidate actually said.</field>
+        <field name="avoid">Personal questions (age, family, religion, marital status, health). Questions about salary.</field>
+        <field name="mandatory_question_ids" eval="[(6, 0, [ref('q_voice_intro'), ref('q_voice_motivation')])]"/>
+        <field name="example_question_ids" eval="[(6, 0, [ref('q_voice_situational_1'), ref('q_voice_situational_2'), ref('q_voice_situational_3'), ref('q_voice_situational_4'), ref('q_voice_situational_5')])]"/>
+    </record>
+</odoo>

@@ -1,0 +1,33 @@
+id,name,model_id,group_id/id,operation,domain
+rule_session_company,Linda: session multi-company,ai.interview.session,,crud,"[('company_id', 'in', company_ids + [False])]"
+access_provider_manager,provider manager,ai.interview.provider,hr_recruitment.group_hr_recruitment_manager,crud,
+access_call_log_user,call log officer,ai.interview.call.log,hr_recruitment.group_hr_recruitment_user,r,
+access_call_log_manager,call log manager,ai.interview.call.log,hr_recruitment.group_hr_recruitment_manager,rd,
+access_template_interviewer,template interviewer,ai.interview.template,hr_recruitment.group_hr_recruitment_interviewer,r,
+access_template_manager,template manager,ai.interview.template,hr_recruitment.group_hr_recruitment_manager,crud,
+access_template_section_interviewer,template section interviewer,ai.interview.template.section,hr_recruitment.group_hr_recruitment_interviewer,r,
+access_template_section_manager,template section manager,ai.interview.template.section,hr_recruitment.group_hr_recruitment_manager,crud,
+access_question_interviewer,question interviewer,ai.interview.question,hr_recruitment.group_hr_recruitment_interviewer,r,
+access_question_manager,question manager,ai.interview.question,hr_recruitment.group_hr_recruitment_manager,crud,
+access_question_test_interviewer,question test interviewer,ai.interview.question.test,hr_recruitment.group_hr_recruitment_interviewer,r,
+access_question_test_manager,question test manager,ai.interview.question.test,hr_recruitment.group_hr_recruitment_manager,crud,
+access_question_solution_manager,question solution manager,ai.interview.question.solution,hr_recruitment.group_hr_recruitment_manager,crud,
+access_question_reference_manager,question reference manager,ai.interview.question.reference,hr_recruitment.group_hr_recruitment_manager,crud,
+access_criterion_interviewer,criterion interviewer,ai.interview.criterion,hr_recruitment.group_hr_recruitment_interviewer,r,
+access_criterion_manager,criterion manager,ai.interview.criterion,hr_recruitment.group_hr_recruitment_manager,crud,
+access_notice_user,notice officer,ai.interview.consent.notice,hr_recruitment.group_hr_recruitment_user,r,
+access_notice_manager,notice manager,ai.interview.consent.notice,hr_recruitment.group_hr_recruitment_manager,crud,
+access_campaign_interviewer,campaign interviewer,ai.interview.campaign,hr_recruitment.group_hr_recruitment_interviewer,r,"['|', ('reviewer_ids', 'in', user.id), ('user_id', '=', user.id)]"
+access_campaign_user,campaign officer,ai.interview.campaign,hr_recruitment.group_hr_recruitment_user,crud,
+access_session_interviewer,session interviewer,ai.interview.session,hr_recruitment.group_hr_recruitment_interviewer,ru,"['|', '|', ('campaign_id.reviewer_ids', 'in', user.id), ('reviewer_id', '=', user.id), ('job_id.interviewer_ids', 'in', user.id)]"
+access_session_user,session officer,ai.interview.session,hr_recruitment.group_hr_recruitment_user,crud,
+access_response_interviewer,response interviewer,ai.interview.response,hr_recruitment.group_hr_recruitment_interviewer,r,"['|', '|', ('session_id.campaign_id.reviewer_ids', 'in', user.id), ('session_id.reviewer_id', '=', user.id), ('session_id.job_id.interviewer_ids', 'in', user.id)]"
+access_response_user,response officer,ai.interview.response,hr_recruitment.group_hr_recruitment_user,crud,
+access_response_manager,response manager,ai.interview.response,hr_recruitment.group_hr_recruitment_manager,crud,
+access_score_interviewer,score interviewer,ai.interview.score,hr_recruitment.group_hr_recruitment_interviewer,ru,"['|', '|', ('session_id.campaign_id.reviewer_ids', 'in', user.id), ('session_id.reviewer_id', '=', user.id), ('session_id.job_id.interviewer_ids', 'in', user.id)]"
+access_score_user,score officer,ai.interview.score,hr_recruitment.group_hr_recruitment_user,crud,
+access_score_manager,score manager,ai.interview.score,hr_recruitment.group_hr_recruitment_manager,crud,
+access_flag_interviewer,flag interviewer,ai.interview.flag,hr_recruitment.group_hr_recruitment_interviewer,r,"['|', '|', ('session_id.campaign_id.reviewer_ids', 'in', user.id), ('session_id.reviewer_id', '=', user.id), ('session_id.job_id.interviewer_ids', 'in', user.id)]"
+access_flag_user,flag officer,ai.interview.flag,hr_recruitment.group_hr_recruitment_user,crud,
+access_flag_manager,flag manager,ai.interview.flag,hr_recruitment.group_hr_recruitment_manager,crud,
+access_generate_manager,generate wizard,ai.interview.question.generate,hr_recruitment.group_hr_recruitment_manager,crud,

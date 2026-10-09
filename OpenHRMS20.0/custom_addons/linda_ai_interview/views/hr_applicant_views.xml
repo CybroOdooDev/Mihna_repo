@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="hr_applicant_view_form_linda" model="ir.ui.view">
+        <field name="name">hr.applicant.form.linda</field>
+        <field name="model">hr.applicant</field>
+        <field name="inherit_id" ref="hr_recruitment.hr_applicant_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_send_ai_interview" type="object" string="Send AI Interview" class="btn-secondary"
+                        invisible="not ai_can_invite or not id or not active"
+                        groups="hr_recruitment.group_hr_recruitment_user"/>
+            </xpath>
+            <div name="button_box" position="inside">
+                <button name="action_view_ai_sessions" type="object" class="oe_stat_button" icon="mic"
+                        invisible="ai_session_count == 0">
+                    <field name="ai_session_count" widget="statinfo" string="AI interviews"/>
+                </button>
+            </div>
+            <xpath expr="//notebook" position="inside">
+                <page string="AI Interview" name="ai_interview" invisible="not ai_latest_session_id">
+                    <div class="alert alert-warning" role="alert" invisible="not ai_live_recheck">
+                        Medium/High AI-assistance risk: re-check with a short live coding question in the technical round.
+                    </div>
+                    <group>
+                        <group>
+                            <field name="ai_latest_session_id" readonly="1"/>
+                            <field name="ai_state"/>
+                            <field name="ai_total_score"/>
+                        </group>
+                        <group>
+                            <field name="ai_band"/>
+                            <field name="ai_risk"/>
+                            <field name="ai_red_flag_count"/>
+                        </group>
+                    </group>
+                    <button name="action_open_ai_dashboard" type="object" string="Open full scorecard" class="btn-link"
+                            icon="open_in_new"/>
+                    <field name="ai_score_ids" readonly="1">
+                        <list decoration-danger="is_red_flag" decoration-warning="needs_review">
+                            <field name="dimension"/>
+                            <field name="ai_score"/>
+                            <field name="human_score"/>
+                            <field name="final_score"/>
+                            <field name="rationale"/>
+                            <field name="needs_review"/>
+                            <field name="is_red_flag" column_invisible="1"/>
+                        </list>
+                    </field>
+                    <field name="ai_flag_ids" readonly="1" domain="[('is_signal', '=', True)]">
+                        <list decoration-danger="weight == 'high'" decoration-warning="weight == 'medium'">
+                            <field name="timestamp"/>
+                            <field name="type"/>
+                            <field name="weight"/>
+                            <field name="detail"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+    <record id="hr_applicant_view_list_linda" model="ir.ui.view">
+        <field name="name">hr.applicant.list.linda</field>
+        <field name="model">hr.applicant</field>
+        <field name="inherit_id" ref="hr_recruitment.crm_case_tree_view_job"/>
+        <field name="arch" type="xml">
+            <xpath expr="//list" position="inside">
+                <field name="ai_state" optional="hide"/>
+                <field name="ai_total_score" optional="hide"/>
+                <field name="ai_band" optional="hide"/>
+                <field name="ai_risk" optional="hide"/>
+            </xpath>
+        </field>
+    </record>
+    <record id="hr_applicant_view_kanban_linda" model="ir.ui.view">
+        <field name="name">hr.applicant.kanban.linda</field>
+        <field name="model">hr.applicant</field>
+        <field name="inherit_id" ref="hr_recruitment.hr_kanban_view_applicant"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='partner_name']" position="after">
+                <field name="ai_band" invisible="not ai_band" widget="badge"
+                       decoration-success="ai_band == 'strong'" decoration-warning="ai_band == 'borderline'"
+                       decoration-danger="ai_band == 'not_recommended'"/>
+            </xpath>
+        </field>
+    </record>
+    <record id="hr_applicant_view_search_linda" model="ir.ui.view">
+        <field name="name">hr.applicant.search.linda</field>
+        <field name="model">hr.applicant</field>
+        <field name="inherit_id" ref="hr_recruitment.hr_applicant_view_search_bis"/>
+        <field name="arch" type="xml">
+            <xpath expr="//filter[@name='ongoing']" position="after">
+                <separator/>
+                <filter name="ai_strong" string="AI: Strong" domain="[('ai_band', '=', 'strong')]"/>
+                <filter name="ai_borderline" string="AI: Borderline" domain="[('ai_band', '=', 'borderline')]"/>
+                <filter name="ai_not_recommended" string="AI: Not recommended" domain="[('ai_band', '=', 'not_recommended')]"/>
+                <filter name="ai_to_review" string="AI: To review" domain="[('ai_state', '=', 'scored')]"/>
+                <filter name="ai_risky" string="AI: Medium/High risk" domain="[('ai_risk', 'in', ('medium', 'high'))]"/>
+            </xpath>
+            <xpath expr="//search" position="inside">
+                <group>
+                    <filter name="group_ai_band" string="AI band" context="{'group_by': 'ai_band'}"/>
+                    <filter name="group_ai_state" string="AI interview status" context="{'group_by': 'ai_state'}"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+    <record id="action_server_applicant_send_ai" model="ir.actions.server">
+        <field name="name">Send AI Interview</field>
+        <field name="model_id" ref="hr_recruitment.model_hr_applicant"/>
+        <field name="binding_model_id" ref="hr_recruitment.model_hr_applicant"/>
+        <field name="group_ids" eval="[(4, ref('hr_recruitment.group_hr_recruitment_user'))]"/>
+        <field name="state">code</field>
+        <field name="code">action = records.action_send_ai_interview()</field>
+    </record>
+</odoo>

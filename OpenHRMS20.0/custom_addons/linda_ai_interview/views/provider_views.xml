@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="ai_interview_provider_view_list" model="ir.ui.view">
+        <field name="name">ai.interview.provider.list</field>
+        <field name="model">ai.interview.provider</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="name"/>
+                <field name="role"/>
+                <field name="kind"/>
+                <field name="model"/>
+                <field name="base_url" optional="hide"/>
+                <field name="active" widget="boolean_toggle"/>
+            </list>
+        </field>
+    </record>
+    <record id="ai_interview_provider_view_form" model="ir.ui.view">
+        <field name="name">ai.interview.provider.form</field>
+        <field name="model">ai.interview.provider</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_test_connection" type="object" string="Test connection" class="btn-secondary"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="Archived" bg_color="text-bg-danger" invisible="active"/>
+                    <div class="oe_title"><h1><field name="name" placeholder="e.g. Claude Sonnet – scorer"/></h1></div>
+                    <group>
+                        <group>
+                            <field name="role"/>
+                            <field name="kind"/>
+                            <field name="model" invisible="kind in ('mock', 'judge0', 'dev_local')"/>
+                            <field name="base_url" invisible="kind == 'mock'"/>
+                            <field name="api_key" password="True" invisible="kind == 'mock'"/>
+                            <field name="workspace_id" invisible="kind != 'anthropic'" placeholder="wrkspc_… (only for keys not scoped to a workspace)"/>
+                            <field name="sequence"/>
+                            <field name="active" invisible="1"/>
+                        </group>
+                        <group>
+                            <field name="timeout"/>
+                            <field name="effort" invisible="kind != 'anthropic'"/>
+                            <field name="refusal_fallback" invisible="kind != 'anthropic'"/>
+                            <field name="voice" invisible="kind != 'kokoro'"/>
+                            <field name="price_input" invisible="role not in ('llm_interviewer', 'llm_scorer', 'llm_generator')"/>
+                            <field name="price_output" invisible="role not in ('llm_interviewer', 'llm_scorer', 'llm_generator')"/>
+                        </group>
+                    </group>
+                    <group string="Sandbox" invisible="role != 'sandbox'">
+                        <field name="time_limits"/>
+                        <field name="language_ids" invisible="kind != 'judge0'"/>
+                        <field name="allow_dev_local" invisible="kind != 'dev_local'"/>
+                    </group>
+                    <div class="alert alert-warning" role="alert" invisible="kind != 'dev_local'">
+                        The local sandbox runs candidate code on the Odoo server. Use it only for development; production must use an isolated Judge0 with no network access.
+                    </div>
+                    <field name="notes" placeholder="Notes..."/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_ai_interview_provider" model="ir.actions.act_window">
+        <field name="name">AI &amp; speech providers</field>
+        <field name="res_model">ai.interview.provider</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'active_test': False}</field>
+    </record>
+
+    <record id="ai_interview_call_log_view_list" model="ir.ui.view">
+        <field name="name">ai.interview.call.log.list</field>
+        <field name="model">ai.interview.call.log</field>
+        <field name="arch" type="xml">
+            <list create="0" edit="0" decoration-danger="status == 'error'">
+                <field name="create_date" string="Time"/>
+                <field name="session_id"/>
+                <field name="role"/>
+                <field name="task"/>
+                <field name="model"/>
+                <field name="status"/>
+                <field name="input_tokens" sum="Total"/>
+                <field name="output_tokens" sum="Total"/>
+                <field name="cost" sum="Total"/>
+                <field name="latency_ms"/>
+            </list>
+        </field>
+    </record>
+    <record id="ai_interview_call_log_view_form" model="ir.ui.view">
+        <field name="name">ai.interview.call.log.form</field>
+        <field name="model">ai.interview.call.log</field>
+        <field name="arch" type="xml">
+            <form create="0" edit="0">
+                <sheet>
+                    <group>
+                        <group><field name="session_id"/><field name="question_id"/><field name="role"/><field name="task"/><field name="provider_id"/><field name="model"/></group>
+                        <group><field name="status"/><field name="input_tokens"/><field name="output_tokens"/><field name="cost"/><field name="latency_ms"/></group>
+                    </group>
+                    <field name="error" invisible="not error"/>
+                    <notebook>
+                        <page string="Request"><field name="request"/></page>
+                        <page string="Response"><field name="response"/></page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="ai_interview_call_log_view_search" model="ir.ui.view">
+        <field name="name">ai.interview.call.log.search</field>
+        <field name="model">ai.interview.call.log</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="session_id"/>
+                <field name="task"/>
+                <filter name="errors" string="Errors" domain="[('status', '=', 'error')]"/>
+                <group>
+                    <filter name="group_role" string="Role" context="{'group_by': 'role'}"/>
+                    <filter name="group_model" string="Model" context="{'group_by': 'model'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+    <record id="action_ai_interview_call_log" model="ir.actions.act_window">
+        <field name="name">AI call log</field>
+        <field name="res_model">ai.interview.call.log</field>
+        <field name="view_mode">list,form,pivot,graph</field>
+    </record>
+</odoo>

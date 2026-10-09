@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="linda_ai_interview.CodeArea">
+        <div class="o_linda_code" t-att-class="{'o_linda_code_text': !props.code}">
+            <div t-if="props.code" class="o_linda_gutter" t-ref="gutter">
+                <div t-foreach="lineNumbers" t-as="n" t-key="n" t-out="n"/>
+            </div>
+            <textarea t-ref="textarea" t-att-rows="props.rows" spellcheck="false" autocomplete="off"
+                      autocorrect="off" autocapitalize="off" t-att-readonly="props.readonly"
+                      t-att-placeholder="props.placeholder"
+                      t-on-input="onInput" t-on-keydown="onKeydown" t-on-paste="onPaste" t-on-drop="onDrop"
+                      t-on-scroll="onScroll"/>
+        </div>
+    </t>
+
+    <t t-name="linda_ai_interview.QuestionText">
+        <div class="o_linda_question" t-on-copy="blockCopy" t-on-cut="blockCopy" t-on-contextmenu="blockCopy">
+            <span t-out="text"/>
+            <span t-if="canary" class="o_linda_canary" aria-hidden="true"> <t t-out="canary"/></span>
+        </div>
+    </t>
+
+    <t t-name="linda_ai_interview.CandidateApp">
+        <div class="o_linda_app">
+            <header class="o_linda_top">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="o_linda_avatar">L</div>
+                    <div>
+                        <div class="fw-bold">Linda</div>
+                        <div class="small text-muted">AI interviewer<t t-if="state.data?.company"> · <t t-out="state.data.company"/></t></div>
+                    </div>
+                </div>
+                <div t-if="state.screen === 'interview'" class="o_linda_steps d-none d-md-flex">
+                    <t t-foreach="progress" t-as="s" t-key="s.type">
+                        <span class="o_linda_step" t-att-class="{'o_current': s.current, 'o_done': s.done}" t-out="s.label"/>
+                    </t>
+                </div>
+                <div t-if="state.screen === 'interview'" class="text-end">
+                    <div class="o_linda_timer" t-att-class="{'text-danger': timeWarning}">
+                        <i class="fa fa-clock-o me-1"/><t t-out="fmt(state.remaining)"/>
+                    </div>
+                    <div class="small text-muted">Total left <t t-out="fmt(state.totalRemaining)"/></div>
+                </div>
+            </header>
+
+            <div t-if="state.notice" class="alert alert-warning o_linda_notice d-flex justify-content-between" role="alert">
+                <span t-out="state.notice"/>
+                <button class="btn-close" t-on-click="dismissNotice" aria-label="Close"/>
+            </div>
+
+            <main class="o_linda_main container">
+                <!-- Loading / error / terminal screens -->
+                <div t-if="state.screen === 'loading'" class="o_linda_card text-center p-5">
+                    <i class="fa fa-spinner fa-spin fa-2x"/>
+                </div>
+                <div t-elif="state.screen === 'error'" class="o_linda_card p-5 text-center">
+                    <h3>Something went wrong</h3>
+                    <p t-out="state.error"/>
+                </div>
+                <div t-elif="state.screen === 'mobile'" class="o_linda_card p-5 text-center">
+                    <h3>Please use a laptop or desktop</h3>
+                    <p>The interview needs a computer with a microphone and the latest Chrome, Edge or Firefox.</p>
+                </div>
+                <div t-elif="state.screen === 'expired'" class="o_linda_card p-5 text-center">
+                    <h3>This link is no longer valid</h3>
+                    <p>Please contact HR if you need a new invitation.</p>
+                </div>
+                <div t-elif="state.screen === 'cancelled'" class="o_linda_card p-5 text-center">
+                    <h3>The interview has been stopped</h3>
+                    <p>Your interview data has been deleted. HR will contact you if needed.</p>
+                </div>
+                <div t-elif="state.screen === 'declined'" class="o_linda_card p-5 text-center">
+                    <h3>Thank you for letting us know</h3>
+                    <p>Without your consent we cannot run the AI interview. The recruitment team has been informed and will contact you about other options. If you change your mind, reload this page.</p>
+                </div>
+                <div t-elif="state.screen === 'done'" class="o_linda_card p-5 text-center">
+                    <div class="o_linda_avatar o_linda_avatar_lg mx-auto mb-3">L</div>
+                    <h2>Thank you, <t t-out="state.data.candidate"/>!</h2>
+                    <p class="lead">Your interview has been submitted.</p>
+                    <p>A person from our recruitment team will review it and contact you about the next step, usually within 5 working days. You can close this window.</p>
+                </div>
+
+                <!-- Consent -->
+                <div t-elif="state.screen === 'consent'" class="o_linda_card p-4 p-md-5">
+                    <h2 class="mb-1">Hello <t t-out="state.data.candidate"/>, I'm Linda.</h2>
+                    <p class="lead">I'll run your first-round interview for <b t-out="state.data.job"/>. It takes about <t t-out="state.data.total_minutes"/> minutes in one sitting.</p>
+                    <ol class="o_linda_plan">
+                        <li t-foreach="state.data.sections" t-as="s" t-key="s.type"><t t-out="s.label"/> – up to <t t-out="Math.round(s.max_seconds / 60)"/> min</li>
+                    </ol>
+                    <div class="o_linda_notice_box" t-out="noticeHtml"/>
+                    <div class="form-check my-3">
+                        <input class="form-check-input" type="checkbox" id="linda_consent" t-model="state.consentChecked"/>
+                        <label class="form-check-label" for="linda_consent">
+                            I have read the notice and I agree to my answers, code, typing activity, audio and transcripts being recorded and processed for this application.
+                        </label>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary btn-lg" t-att-disabled="!state.consentChecked or state.busy" t-on-click="() => this.onConsent(true)">I agree, continue</button>
+                        <button class="btn btn-outline-secondary btn-lg" t-att-disabled="state.busy" t-on-click="() => this.onConsent(false)">I do not agree</button>
+                    </div>
+                </div>
+
+                <!-- System check -->
+                <div t-elif="state.screen === 'check'" class="o_linda_card p-4 p-md-5">
+                    <h2>Quick system check</h2>
+                    <ul class="list-unstyled o_linda_checks">
+                        <li><i t-att-class="state.check.browser === 'ok' ? 'fa fa-check-circle text-success' : (state.check.browser === 'fail' ? 'fa fa-times-circle text-danger' : 'fa fa-circle-o')"/>
+                            Browser supports recording and full-screen
+                            <div t-if="state.check.browser === 'fail'" class="small text-danger">Please use the latest Chrome, Edge or Firefox on a computer.</div>
+                        </li>
+                        <li><i t-att-class="state.check.mic === 'ok' ? 'fa fa-check-circle text-success' : (state.check.mic === 'fail' ? 'fa fa-times-circle text-danger' : 'fa fa-microphone')"/>
+                            Microphone – <t t-if="state.check.mic === 'ok'">working</t><t t-elif="state.check.mic === 'fail'">not available: allow microphone access and reload</t><t t-else="">say something…</t>
+                            <div class="o_linda_meter"><div t-att-style="'width:' + state.check.level + '%'"/></div>
+                        </li>
+                    </ul>
+                    <div class="alert alert-info">
+                        <b>Before you start</b>
+                        <ul class="mb-0">
+                            <li>The interview runs in full-screen. Leaving full-screen pauses the timer and is recorded.</li>
+                            <li>Copy and paste are disabled. Type your answers yourself.</li>
+                            <li>Sections run in order and cannot be reopened once finished.</li>
+                            <li>If you get disconnected, open the link again: you continue where you stopped (up to <t t-out="state.data.max_resumes"/> times).</li>
+                        </ul>
+                    </div>
+                    <button class="btn btn-primary btn-lg" t-att-disabled="!canStart or state.busy" t-on-click="onStart">Start the interview</button>
+                </div>
+
+                <!-- Waiting room -->
+                <div t-elif="state.screen === 'waiting'" class="o_linda_card p-5 text-center">
+                    <i class="fa fa-hourglass-half fa-2x mb-3"/>
+                    <h3>Another interview is in progress</h3>
+                    <p>You are in the queue. Please keep this page open; your interview starts automatically when a slot is free.</p>
+                </div>
+
+                <!-- Interview -->
+                <t t-elif="state.screen === 'interview'">
+                    <div t-if="state.fullscreenLost" class="o_linda_overlay">
+                        <div class="o_linda_card p-5 text-center">
+                            <h3>The interview is paused</h3>
+                            <p>The interview runs in full-screen mode. Your timer is paused.</p>
+                            <button class="btn btn-primary btn-lg" t-on-click="resumeFullscreen">Continue in full-screen</button>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h2 class="mb-0" t-out="sectionInfo.label"/>
+                        <button class="btn btn-link text-muted small" t-on-click="withdraw">Withdraw consent</button>
+                    </div>
+
+                    <!-- Written English -->
+                    <t t-if="section === 'written'">
+                        <p class="text-muted">Answer each task in clear, simple English. Submit each answer when you are happy with it.</p>
+                        <div t-foreach="items" t-as="item" t-key="item.id" class="o_linda_card p-4 mb-3">
+                            <div class="small text-muted mb-1">Task <t t-out="item_index + 1"/></div>
+                            <t t-call="linda_ai_interview.QuestionText"><t t-set="text" t-value="item.prompt"/><t t-set="canary" t-value="item.canary"/></t>
+                            <t t-if="!item.final">
+                                <CodeArea value="state.edits[item.id].answer_text" keylog="keylogs[item.id]" code="false" rows="9"
+                                          placeholder="'Type your answer here…'"
+                                          onChange="(v) => this.onText(item, v)" onPaste.bind="onPasteBlocked"/>
+                                <div class="d-flex justify-content-between align-items-center mt-2">
+                                    <span class="small text-muted"><t t-out="wordCount(state.edits[item.id].answer_text)"/> words</span>
+                                    <button class="btn btn-primary" t-att-disabled="state.busy" t-on-click="() => this.submitWritten(item)">Submit answer</button>
+                                </div>
+                            </t>
+                            <div t-else="" class="o_linda_submitted"><i class="fa fa-check text-success me-1"/>Submitted</div>
+                        </div>
+                    </t>
+
+                    <!-- Coding and learn-and-apply -->
+                    <t t-elif="section === 'coding' or section === 'learn'">
+                        <t t-set="item" t-value="currentItem"/>
+                        <div t-if="!item" class="o_linda_card p-4 text-center">
+                            <p class="lead">All done for this section.</p>
+                        </div>
+                        <div t-else="" class="row g-3">
+                            <div class="col-lg-5">
+                                <div class="o_linda_card p-4 o_linda_problem">
+                                    <h4 t-out="item.title"/>
+                                    <div t-if="section === 'learn'" class="o_linda_doc mb-3" t-on-copy="blockCopy" t-on-contextmenu="blockCopy">
+                                        <div class="small text-muted mb-1">Read this document</div>
+                                        <pre t-out="item.doc"/>
+                                    </div>
+                                    <t t-call="linda_ai_interview.QuestionText"><t t-set="text" t-value="item.prompt"/><t t-set="canary" t-value="item.canary"/></t>
+                                    <div t-if="item.input_spec" class="mt-2"><b>Input</b><div t-out="item.input_spec"/></div>
+                                    <div t-if="item.output_spec" class="mt-2"><b>Output</b><div t-out="item.output_spec"/></div>
+                                    <div t-foreach="item.examples" t-as="ex" t-key="ex_index" class="o_linda_example mt-2">
+                                        <div class="small text-muted">Example <t t-out="ex_index + 1"/></div>
+                                        <div class="d-flex gap-2"><pre class="flex-fill" t-out="ex.stdin"/><pre class="flex-fill" t-out="ex.stdout"/></div>
+                                    </div>
+                                    <div t-if="section === 'learn'" class="mt-3">
+                                        <div class="small text-muted mb-1">Ask Linda about the document (your questions are recorded)</div>
+                                        <div t-foreach="item.doc_questions" t-as="d" t-key="d_index" class="o_linda_chat">
+                                            <div class="o_q" t-out="d.q"/><div class="o_a" t-out="d.a"/>
+                                        </div>
+                                        <div class="input-group">
+                                            <input class="form-control" t-model="state.askText[item.id]" placeholder="e.g. Are keys case-sensitive?"
+                                                   t-on-keydown="(ev) => ev.key === 'Enter' and this.askDoc(item)" t-att-disabled="item.final"/>
+                                            <button class="btn btn-outline-primary" t-att-disabled="state.busy or item.final" t-on-click="() => this.askDoc(item)">Ask</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-7">
+                                <div class="o_linda_card p-3">
+                                    <t t-if="!item.final">
+                                        <div class="d-flex gap-2 align-items-center mb-2">
+                                            <label class="small text-muted">Language</label>
+                                            <select class="form-select form-select-sm w-auto" t-att-disabled="languageLocked(item)" t-on-change="(ev) => this.onLanguage(item, ev)">
+                                                <option value="" t-att-selected="!state.edits[item.id].language">Choose…</option>
+                                                <option t-foreach="state.data.languages" t-as="l" t-key="l.code" t-att-value="l.code"
+                                                        t-att-selected="state.edits[item.id].language === l.code" t-out="l.label"/>
+                                            </select>
+                                            <span t-if="languageLocked(item)" class="small text-muted">(locked for this problem)</span>
+                                        </div>
+                                        <CodeArea t-key="item.id" value="state.edits[item.id].code" keylog="keylogs[item.id]" rows="20"
+                                                  onChange="(v) => this.onCode(item, v)" onPaste.bind="onPasteBlocked"/>
+                                        <div class="d-flex gap-2 mt-2">
+                                            <button class="btn btn-outline-secondary" t-att-disabled="state.busy" t-on-click="() => this.runCode(item)"><i class="fa fa-play me-1"/>Run examples</button>
+                                            <button class="btn btn-primary ms-auto" t-att-disabled="state.busy" t-on-click="() => this.submitCode(item)">Submit solution</button>
+                                        </div>
+                                        <div t-if="state.runResults[item.id]" class="mt-3">
+                                            <div t-if="state.runResults[item.id].message" class="small text-muted" t-out="state.runResults[item.id].message"/>
+                                            <div t-foreach="state.runResults[item.id].results" t-as="r" t-key="r_index" class="o_linda_result" t-att-class="r.passed ? 'o_pass' : 'o_fail'">
+                                                <div class="fw-bold"><i t-att-class="r.passed ? 'fa fa-check' : 'fa fa-times'"/> Example <t t-out="r_index + 1"/>: <t t-out="r.passed ? 'passed' : r.status.replace('_', ' ')"/></div>
+                                                <div t-if="!r.passed" class="small">
+                                                    <div>Expected: <code t-out="r.expected"/></div>
+                                                    <div>Your output: <code t-out="r.stdout || '(nothing)'"/></div>
+                                                    <pre t-if="r.stderr" class="small" t-out="r.stderr"/>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </t>
+                                    <t t-else="">
+                                        <pre class="o_linda_final_code" t-out="state.edits[item.id].code"/>
+                                        <t t-set="fup" t-value="pendingFollowup(item)"/>
+                                        <div t-foreach="item.followups" t-as="f" t-key="f.index" class="o_linda_chat">
+                                            <div class="o_q"><b>Linda:</b> <t t-out="f.q"/></div>
+                                            <div t-if="f.a" class="o_a" t-out="f.a"/>
+                                        </div>
+                                        <div t-if="fup" class="mt-2">
+                                            <textarea class="form-control" rows="4" t-model="state.followupText[item.id + '_' + fup.index]"
+                                                      t-on-paste="onBlockedPaste" placeholder="Type your answer…"/>
+                                            <button class="btn btn-primary mt-2" t-att-disabled="state.busy" t-on-click="() => this.answerFollowup(item, fup)">Send answer</button>
+                                        </div>
+                                    </t>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+
+                    <!-- Voice -->
+                    <t t-elif="section === 'voice'">
+                        <t t-set="item" t-value="currentItem"/>
+                        <t t-set="turn" t-value="voiceTurn(item)"/>
+                        <div class="o_linda_card p-4 p-md-5 o_linda_voice text-center">
+                            <t t-if="item and turn">
+                                <div class="o_linda_avatar o_linda_avatar_lg mx-auto mb-3" t-att-class="{'o_speaking': state.voice.playing}">L</div>
+                                <div class="small text-muted mb-2">Question <t t-out="itemNumber(item)"/> of <t t-out="items.length"/><t t-if="turn.index >= 0"> · follow-up</t></div>
+                                <t t-call="linda_ai_interview.QuestionText"><t t-set="text" t-value="turn.text"/><t t-set="canary" t-value="''"/></t>
+                                <button class="btn btn-link" t-att-disabled="state.voice.thinking" t-on-click="() => this.playQuestion(item, turn)"><i class="fa fa-volume-up me-1"/>Listen to the question</button>
+                                <div class="mt-4" t-if="!state.voice.textMode">
+                                    <button t-if="!state.voice.recording" class="btn btn-primary btn-lg o_linda_rec"
+                                            t-att-disabled="state.voice.uploading or state.voice.thinking" t-on-click="startRecording">
+                                        <i class="fa fa-microphone me-2"/>Start answering
+                                    </button>
+                                    <button t-else="" class="btn btn-danger btn-lg o_linda_rec o_recording" t-on-click="() => this.stopRecording(item, turn)">
+                                        <i class="fa fa-stop me-2"/>Stop and send
+                                    </button>
+                                    <div t-if="state.voice.uploading" class="mt-2 text-muted"><i class="fa fa-spinner fa-spin me-1"/>Linda is listening…</div>
+                                    <div t-elif="state.voice.thinking" class="mt-2 text-muted"><i class="fa fa-spinner fa-spin me-1"/>Linda is thinking…</div>
+                                    <div class="small text-muted mt-3">Speak naturally. Your accent is not scored.</div>
+                                </div>
+                                <div class="mt-3 text-start" t-else="">
+                                    <textarea class="form-control" rows="4" t-model="state.voice.typed" placeholder="Type your answer…"
+                                              t-on-paste="onBlockedPaste"/>
+                                    <button class="btn btn-primary mt-2" t-att-disabled="state.busy or state.voice.thinking" t-on-click="() => this.submitTypedVoice(item, turn)">Send answer</button>
+                                </div>
+                                <div t-if="item.transcript and turn.index >= 0" class="small text-muted mt-3">You said: “<t t-out="item.transcript"/>”</div>
+                            </t>
+                            <t t-else="">
+                                <p class="lead">That's all my questions. Thank you!</p>
+                            </t>
+                        </div>
+                    </t>
+
+                    <div class="d-flex justify-content-end mt-3">
+                        <button class="btn btn-lg" t-att-class="canFinishSection ? 'btn-success' : 'btn-outline-secondary'"
+                                t-att-disabled="state.busy" t-on-click="() => this.finishSection()">
+                            Finish section <i class="fa fa-arrow-right ms-1"/>
+                        </button>
+                    </div>
+                </t>
+            </main>
+        </div>
+    </t>
+</templates>

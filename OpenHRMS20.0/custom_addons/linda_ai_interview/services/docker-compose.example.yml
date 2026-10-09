@@ -1,0 +1,17 @@
+# Example self-hosted services for Linda (adjust images/versions and resources to your hardware).
+# Keep these on a private network: Odoo calls them server-side; the candidate browser never does.
+services:
+  whisper:            # speech-to-text, OpenAI-compatible /v1/audio/transcriptions
+    image: fedirz/faster-whisper-server:latest-cpu
+    ports: ["127.0.0.1:8000:8000"]
+    environment:
+      - WHISPER__MODEL=Systran/faster-whisper-small
+  kokoro:             # text-to-speech, OpenAI-compatible /v1/audio/speech
+    image: ghcr.io/remsky/kokoro-fastapi-cpu:latest
+    ports: ["127.0.0.1:8880:8880"]
+  judge0:             # code sandbox (see https://github.com/judge0/judge0 for the full compose with db/redis/workers)
+    image: judge0/judge0:latest
+    privileged: true
+    ports: ["127.0.0.1:2358:2358"]
+    environment:
+      - ENABLE_NETWORK=false

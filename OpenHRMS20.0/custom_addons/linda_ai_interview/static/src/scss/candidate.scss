@@ -1,0 +1,209 @@
+$linda-primary: #714b67;
+
+.o_linda_wrap {
+    min-height: 100vh;
+    background: #f4f2f5;
+}
+
+.o_linda_app {
+    min-height: 100vh;
+    padding-bottom: 48px;
+    user-select: none;
+
+    textarea, input, select { user-select: text; }
+}
+
+.o_linda_top {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 12px 24px;
+    background: #fff;
+    border-bottom: 1px solid #e5e1e6;
+}
+
+.o_linda_main { padding-top: 24px; max-width: 1280px; }
+
+.o_linda_card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+}
+
+.o_linda_avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: $linda-primary;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 20px;
+    &.o_linda_avatar_lg { width: 88px; height: 88px; font-size: 40px; }
+    &.o_speaking { box-shadow: 0 0 0 8px rgba(113, 75, 103, .2); transition: box-shadow .3s; }
+}
+
+.o_linda_steps { gap: 6px; }
+.o_linda_step {
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: #eee;
+    color: #777;
+    font-size: 13px;
+    &.o_current { background: $linda-primary; color: #fff; }
+    &.o_done { background: #d8efe0; color: #1e7b45; }
+}
+
+.o_linda_timer { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+.o_linda_notice {
+    position: sticky;
+    top: 68px;
+    z-index: 19;
+    margin: 8px auto 0;
+    max-width: 1280px;
+}
+
+.o_linda_notice_box {
+    max-height: 320px;
+    overflow: auto;
+    border: 1px solid #e5e1e6;
+    border-radius: 8px;
+    padding: 16px;
+    background: #fbfafb;
+}
+
+.o_linda_question {
+    font-size: 16px;
+    line-height: 1.55;
+    white-space: pre-wrap;
+    margin-bottom: 12px;
+}
+
+// Canary text: not visible on screen but present in the DOM/text if scraped (FRD §9).
+.o_linda_canary {
+    position: absolute !important;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+.o_linda_code {
+    display: flex;
+    border: 1px solid #d5d0d6;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #1f1d24;
+
+    .o_linda_gutter {
+        padding: 10px 8px;
+        text-align: right;
+        color: #77737d;
+        font-family: SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        overflow: hidden;
+        user-select: none;
+        min-width: 42px;
+        background: #26232c;
+    }
+
+    textarea {
+        flex: 1;
+        border: 0;
+        outline: none;
+        resize: vertical;
+        padding: 10px 12px;
+        color: #f0edf2;
+        background: transparent;
+        font-family: SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 13px;
+        line-height: 1.5;
+        white-space: pre;
+        tab-size: 4;
+    }
+
+    &.o_linda_code_text {
+        background: #fff;
+        textarea {
+            color: #222;
+            font-family: inherit;
+            font-size: 15px;
+            white-space: pre-wrap;
+        }
+    }
+}
+
+.o_linda_problem pre, .o_linda_example pre, .o_linda_doc pre {
+    background: #f6f4f7;
+    border-radius: 6px;
+    padding: 8px;
+    white-space: pre-wrap;
+    font-size: 13px;
+}
+
+.o_linda_doc pre { max-height: 360px; overflow: auto; }
+
+.o_linda_final_code {
+    background: #1f1d24;
+    color: #f0edf2;
+    border-radius: 8px;
+    padding: 12px;
+    max-height: 280px;
+    overflow: auto;
+    font-size: 13px;
+}
+
+.o_linda_result {
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    &.o_pass { background: #e8f6ee; }
+    &.o_fail { background: #fdecea; }
+}
+
+.o_linda_chat {
+    margin-bottom: 8px;
+    .o_q { background: #f3eef2; border-radius: 8px; padding: 8px 10px; }
+    .o_a { background: #eef4fb; border-radius: 8px; padding: 8px 10px; margin: 4px 0 0 24px; white-space: pre-wrap; }
+}
+
+.o_linda_meter {
+    height: 8px;
+    max-width: 300px;
+    background: #eee;
+    border-radius: 4px;
+    margin-top: 4px;
+    div { height: 100%; background: #2e9d5b; border-radius: 4px; transition: width .1s; }
+}
+
+.o_linda_checks li { margin-bottom: 12px; font-size: 16px; i { width: 22px; } }
+
+.o_linda_rec.o_recording { animation: o_linda_pulse 1.2s infinite; }
+
+@keyframes o_linda_pulse {
+    0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, .5); }
+    70% { box-shadow: 0 0 0 14px rgba(220, 53, 69, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+}
+
+.o_linda_overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: rgba(30, 25, 35, .75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.o_linda_submitted { color: #1e7b45; }

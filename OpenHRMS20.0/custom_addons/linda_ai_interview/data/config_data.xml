@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="param_lang_python" model="ir.config_parameter"><field name="key">linda_ai_interview.lang_python</field><field name="value">True</field></record>
+    <record id="param_lang_c" model="ir.config_parameter"><field name="key">linda_ai_interview.lang_c</field><field name="value">True</field></record>
+    <record id="param_lang_cpp" model="ir.config_parameter"><field name="key">linda_ai_interview.lang_cpp</field><field name="value">True</field></record>
+    <record id="param_lang_javascript" model="ir.config_parameter"><field name="key">linda_ai_interview.lang_javascript</field><field name="value">True</field></record>
+    <record id="param_max_concurrent" model="ir.config_parameter"><field name="key">linda_ai_interview.max_concurrent</field><field name="value">1</field></record>
+    <record id="param_ret_audio" model="ir.config_parameter"><field name="key">linda_ai_interview.retention_audio_days</field><field name="value">180</field></record>
+    <record id="param_ret_transcript" model="ir.config_parameter"><field name="key">linda_ai_interview.retention_transcript_days</field><field name="value">180</field></record>
+    <record id="param_ret_keystrokes" model="ir.config_parameter"><field name="key">linda_ai_interview.retention_keystrokes_days</field><field name="value">180</field></record>
+    <record id="param_tts_voice" model="ir.config_parameter"><field name="key">linda_ai_interview.tts_voice</field><field name="value">af_heart</field></record>
+
+    <!-- Default providers: Anthropic for the LLM roles (set the API key), mocks for the self-hosted
+         services until their URLs are configured. Model names are free text. -->
+    <record id="provider_interviewer" model="ai.interview.provider">
+        <field name="name">Claude Haiku 4.5 – interviewer</field>
+        <field name="role">llm_interviewer</field><field name="kind">anthropic</field>
+        <field name="model">claude-haiku-4-5</field><field name="timeout">30</field>
+        <field name="price_input">1.0</field><field name="price_output">5.0</field>
+    </record>
+    <record id="provider_scorer" model="ai.interview.provider">
+        <field name="name">Claude Sonnet 5.5 – scorer</field>
+        <field name="role">llm_scorer</field><field name="kind">anthropic</field>
+        <field name="model">claude-sonnet-5-5</field><field name="timeout">300</field>
+        <field name="price_input">2.0</field><field name="price_output">10.0</field>
+    </record>
+    <record id="provider_generator" model="ai.interview.provider">
+        <field name="name">Claude Sonnet 5.5 – generator</field>
+        <field name="role">llm_generator</field><field name="kind">anthropic</field>
+        <field name="model">claude-sonnet-5-5</field><field name="timeout">300</field>
+        <field name="price_input">2.0</field><field name="price_output">10.0</field>
+    </record>
+    <record id="provider_mock_llm_interviewer" model="ai.interview.provider">
+        <field name="name">Mock LLM – interviewer (offline demo)</field><field name="sequence">100</field>
+        <field name="role">llm_interviewer</field><field name="kind">mock</field><field name="active" eval="False"/>
+    </record>
+    <record id="provider_mock_llm_scorer" model="ai.interview.provider">
+        <field name="name">Mock LLM – scorer (offline demo)</field><field name="sequence">100</field>
+        <field name="role">llm_scorer</field><field name="kind">mock</field><field name="active" eval="False"/>
+    </record>
+    <record id="provider_mock_llm_generator" model="ai.interview.provider">
+        <field name="name">Mock LLM – generator (offline demo)</field><field name="sequence">100</field>
+        <field name="role">llm_generator</field><field name="kind">mock</field><field name="active" eval="False"/>
+    </record>
+    <record id="provider_stt_fast" model="ai.interview.provider">
+        <field name="name">Speech-to-text – fast (mock until Whisper is configured)</field>
+        <field name="role">stt_fast</field><field name="kind">mock</field>
+        <field name="base_url">http://localhost:8000/v1</field><field name="model">Systran/faster-whisper-small</field>
+    </record>
+    <record id="provider_stt_accurate" model="ai.interview.provider">
+        <field name="name">Speech-to-text – accurate (mock until Whisper is configured)</field>
+        <field name="role">stt_accurate</field><field name="kind">mock</field>
+        <field name="base_url">http://localhost:8000/v1</field><field name="model">Systran/faster-whisper-large-v3</field>
+    </record>
+    <record id="provider_tts" model="ai.interview.provider">
+        <field name="name">Text-to-speech (mock until Kokoro is configured)</field>
+        <field name="role">tts</field><field name="kind">mock</field>
+        <field name="base_url">http://localhost:8880/v1</field><field name="model">kokoro</field><field name="voice">af_heart</field>
+    </record>
+    <record id="provider_sandbox" model="ai.interview.provider">
+        <field name="name">Code sandbox (mock until Judge0 is configured)</field>
+        <field name="role">sandbox</field><field name="kind">mock</field>
+        <field name="base_url">http://localhost:2358</field>
+    </record>
+
+    <record id="consent_notice_v1" model="ai.interview.consent.notice">
+        <field name="name">Candidate privacy notice</field>
+        <field name="version">1</field>
+        <field name="body" type="html">
+<div>
+<p>Before you start, please read how we use your information. This interview is run by <b>Linda</b>, an AI interviewer, on behalf of Cybrosys Technologies.</p>
+<p><b>What we record:</b> your written answers, the code you write, a log of your typing in the answer boxes, audio recordings and transcripts of your spoken answers, and browser events such as leaving full-screen, switching tabs or trying to paste.</p>
+<p><b>Why:</b> only to assess your application for this role. The AI suggests scores with quoted evidence; a named person at Cybrosys reviews the result and makes every hiring decision. You can ask for a human review at any time.</p>
+<p><b>Who processes it:</b> Cybrosys stores your data in its own recruitment system. Your text is sent to an AI language-model provider for questions and scoring with no-training and minimal-retention settings. Audio and code are processed on our own servers.</p>
+<p><b>How long we keep it:</b> audio, transcripts and typing logs are deleted 6 months after the final decision; only scores and the decision are kept.</p>
+<p><b>Your rights:</b> you can withdraw consent at any time (this stops the interview and deletes your interview data), and you can ask HR to see, correct or delete your data. Contact HR at the address in your invitation e-mail.</p>
+<p>We do not use facial, emotion or voice-tone analysis, and your accent is not scored.</p>
+</div>
+        </field>
+    </record>
+</odoo>

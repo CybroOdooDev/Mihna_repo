@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="ai_interview_criterion_view_list" model="ir.ui.view">
+        <field name="name">ai.interview.criterion.list</field>
+        <field name="model">ai.interview.criterion</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="sequence" widget="handle"/>
+                <field name="dimension"/>
+                <field name="name"/>
+                <field name="description"/>
+            </list>
+        </field>
+    </record>
+    <record id="ai_interview_criterion_view_form" model="ir.ui.view">
+        <field name="name">ai.interview.criterion.form</field>
+        <field name="model">ai.interview.criterion</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="dimension"/>
+                        <field name="name"/>
+                        <field name="description"/>
+                        <field name="active"/>
+                    </group>
+                    <group string="Score descriptors">
+                        <field name="descriptor_5"/>
+                        <field name="descriptor_4"/>
+                        <field name="descriptor_3"/>
+                        <field name="descriptor_2"/>
+                        <field name="descriptor_1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="ai_interview_criterion_view_search" model="ir.ui.view">
+        <field name="name">ai.interview.criterion.search</field>
+        <field name="model">ai.interview.criterion</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <group><filter name="group_dimension" string="Dimension" context="{'group_by': 'dimension'}"/></group>
+            </search>
+        </field>
+    </record>
+    <record id="action_ai_interview_criterion" model="ir.actions.act_window">
+        <field name="name">Rubric criteria</field>
+        <field name="res_model">ai.interview.criterion</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_group_dimension': 1}</field>
+    </record>
+
+    <record id="ai_interview_consent_notice_view_list" model="ir.ui.view">
+        <field name="name">ai.interview.consent.notice.list</field>
+        <field name="model">ai.interview.consent.notice</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="version"/>
+                <field name="name"/>
+                <field name="date_published"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+    <record id="ai_interview_consent_notice_view_form" model="ir.ui.view">
+        <field name="name">ai.interview.consent.notice.form</field>
+        <field name="model">ai.interview.consent.notice</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <div class="alert alert-info" role="alert">Editing the wording of a notice that candidates already accepted creates a new version, so each consent stays traceable.</div>
+                    <group><field name="name"/><field name="version"/><field name="date_published"/><field name="active"/></group>
+                    <field name="body"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+    <record id="action_ai_interview_consent_notice" model="ir.actions.act_window">
+        <field name="name">Consent notice</field>
+        <field name="res_model">ai.interview.consent.notice</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'active_test': False}</field>
+    </record>
+</odoo>
